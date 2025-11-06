@@ -1,0 +1,66 @@
+spring:
+  application:
+    name: inspect-hub
+  profiles:
+    active: dev
+
+  # Jackson 설정
+  jackson:
+    time-zone: Asia/Seoul
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+
+  # 다국어 설정
+  messages:
+    basename: messages/messages
+    encoding: UTF-8
+
+# Server 설정
+server:
+  port: 8090
+  servlet:
+    context-path: /api
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  error:
+    include-message: always
+    include-binding-errors: always
+
+# Actuator 설정
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+# Logging 설정
+logging:
+  level:
+    root: INFO
+    com.inspecthub.aml: DEBUG
+    org.springframework.security: DEBUG
+  pattern:
+    console: '%d{yyyy-MM-dd HH:mm:ss} - %msg%n'
+    file: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n'
+
+# MyBatis 설정
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+    default-fetch-size: 100
+    default-statement-timeout: 30
+    cache-enabled: true
+    lazy-loading-enabled: false
+    aggressive-lazy-loading: false
+  mapper-locations: classpath:mybatis/mapper/**/*.xml
+  type-aliases-package: com.inspecthub.aml.server.domain

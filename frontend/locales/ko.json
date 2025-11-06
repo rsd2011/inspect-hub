@@ -1,0 +1,37 @@
+{
+  "common": {
+    "save": "저장",
+    "cancel": "취소",
+    "delete": "삭제",
+    "edit": "수정",
+    "search": "검색",
+    "reset": "초기화",
+    "confirm": "확인",
+    "close": "닫기",
+    "submit": "제출",
+    "approve": "승인",
+    "reject": "반려",
+    "export": "내보내기",
+    "import": "가져오기",
+    "download": "다운로드",
+    "upload": "업로드",
+    "yes": "예",
+    "no": "아니오"
+  },
+  "menu": {
+    "dashboard": "대시보드",
+    "detection": "탐지",
+    "investigation": "조사",
+    "reporting": "보고",
+    "policy": "정책 관리",
+    "user": "사용자 관리",
+    "audit": "감사",
+    "settings": "설정"
+  },
+  "validation": {
+    "required": "필수 입력 항목입니다.",
+    "email": "유효한 이메일 주소를 입력하세요.",
+    "min": "최소 {min}자 이상 입력하세요.",
+    "max": "최대 {max}자까지 입력할 수 있습니다."
+  }
+}

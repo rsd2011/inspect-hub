@@ -1,0 +1,88 @@
+plugins {
+    id 'base'
+    id 'com.github.node-gradle.node' version '7.1.0'
+}
+
+node {
+    // Node.js version
+    version = '20.18.0'
+
+    // Download Node.js
+    download = true
+
+    // Node.js working directory
+    workDir = file("${project.projectDir}/.gradle/nodejs")
+
+    // npm working directory
+    npmWorkDir = file("${project.projectDir}/.gradle/npm")
+
+    // Base URL for Node.js download
+    distBaseUrl = 'https://nodejs.org/dist'
+}
+
+// Run development server
+task npmDev(type: com.github.gradle.node.npm.task.NpmTask) {
+    dependsOn 'npmInstall'
+    description = 'Run Nuxt development server'
+    args = ['run', 'dev']
+}
+
+// Build production
+task npmBuild(type: com.github.gradle.node.npm.task.NpmTask) {
+    dependsOn 'npmInstall'
+    description = 'Build Nuxt application for production'
+    args = ['run', 'build']
+
+    inputs.files(fileTree('pages'), fileTree('components'), fileTree('layouts'),
+                 fileTree('plugins'), fileTree('composables'), fileTree('stores'),
+                 file('nuxt.config.ts'), file('tailwind.config.js'), file('package.json'))
+    outputs.dir('dist')
+}
+
+// Generate static files (SPA mode)
+task npmGenerate(type: com.github.gradle.node.npm.task.NpmTask) {
+    dependsOn 'npmInstall'
+    description = 'Generate static files for SPA deployment'
+    args = ['run', 'generate']
+
+    inputs.files(fileTree('pages'), fileTree('components'), fileTree('layouts'),
+                 fileTree('plugins'), fileTree('composables'), fileTree('stores'),
+                 file('nuxt.config.ts'), file('tailwind.config.js'), file('package.json'))
+    outputs.dir('.output')
+}
+
+// Run tests
+task npmTest(type: com.github.gradle.node.npm.task.NpmTask) {
+    dependsOn 'npmInstall'
+    description = 'Run tests'
+    args = ['run', 'test']
+}
+
+// Lint code
+task npmLint(type: com.github.gradle.node.npm.task.NpmTask) {
+    dependsOn 'npmInstall'
+    description = 'Lint code'
+    args = ['run', 'lint']
+}
+
+// Type check
+task npmTypecheck(type: com.github.gradle.node.npm.task.NpmTask) {
+    dependsOn 'npmInstall'
+    description = 'Run TypeScript type checking'
+    args = ['run', 'typecheck']
+}
+
+// Clean task
+task cleanFrontend(type: Delete) {
+    description = 'Clean frontend build outputs'
+    delete '.output', 'dist', '.nuxt', 'node_modules/.cache'
+}
+
+// Make build task depend on npmGenerate
+build.dependsOn npmGenerate
+
+// Make clean task depend on cleanFrontend
+clean.dependsOn cleanFrontend
+
+// Make check task depend on lint and typecheck
+check.dependsOn npmLint, npmTypecheck

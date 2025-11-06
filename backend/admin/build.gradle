@@ -1,0 +1,34 @@
+plugins {
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
+}
+
+bootJar {
+    enabled = false
+}
+
+jar {
+    enabled = true
+}
+
+dependencies {
+    // Module dependencies
+    implementation project(':backend:common')
+
+    // Spring Boot
+    implementation libs.bundles.spring.boot.basic
+    implementation libs.spring.boot.starter.mail
+
+    // MyBatis
+    implementation libs.mybatis.spring.boot.starter
+
+    // Lombok
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
+
+    // Test
+    testImplementation libs.bundles.test.basic
+    testImplementation libs.mybatis.spring.boot.starter.test
+}
+
+description = 'Admin Module - User/Org/Permission/Menu/Audit management'

@@ -1,0 +1,37 @@
+plugins {
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
+}
+
+bootJar {
+    enabled = false
+}
+
+jar {
+    enabled = true
+}
+
+dependencies {
+    // Module dependencies
+    implementation project(':backend:common')
+    implementation project(':backend:investigation')
+
+    // Spring Boot
+    implementation libs.bundles.spring.boot.basic
+
+    // MyBatis
+    implementation libs.mybatis.spring.boot.starter
+
+    // PDF generation
+    implementation libs.pdfbox
+
+    // Lombok
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
+
+    // Test
+    testImplementation libs.bundles.test.basic
+    testImplementation libs.mybatis.spring.boot.starter.test
+}
+
+description = 'Reporting Module - STR/CTR report generation and FIU submission'

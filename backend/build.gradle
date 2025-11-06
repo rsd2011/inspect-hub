@@ -1,0 +1,8 @@
+// backend 상위 모듈 설정
+// 실제 코드는 없고 common과 server만 관리
+
+subprojects {
+    repositories {
+        mavenCentral()
+    }
+}

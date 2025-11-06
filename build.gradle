@@ -1,0 +1,77 @@
+plugins {
+    id 'java'
+    id 'jacoco'
+    alias(libs.plugins.spring.boot) apply false
+    alias(libs.plugins.spring.dependency.management) apply false
+}
+
+group = 'com.inspecthub'
+version = '0.0.1-SNAPSHOT'
+
+// Common configuration for all subprojects
+subprojects {
+    group = 'com.inspecthub'
+    version = '0.0.1-SNAPSHOT'
+
+    // Apply Java plugin for backend modules only
+    if (project.name != 'frontend') {
+        apply plugin: 'java'
+        apply plugin: 'jacoco'
+
+        java {
+            sourceCompatibility = '21'
+            targetCompatibility = '21'
+        }
+
+        repositories {
+            mavenCentral()
+        }
+
+        tasks.withType(JavaCompile).configureEach {
+            options.encoding = 'UTF-8'
+        }
+
+        tasks.withType(Test).configureEach {
+            useJUnitPlatform()
+            finalizedBy jacocoTestReport
+        }
+
+        jacoco {
+            toolVersion = '0.8.11'
+        }
+
+        jacocoTestReport {
+            dependsOn test
+            reports {
+                xml.required = true
+                html.required = true
+            }
+        }
+
+        jacocoTestCoverageVerification {
+            violationRules {
+                rule {
+                    limit {
+                        minimum = 0.80
+                    }
+                }
+            }
+        }
+
+        check.dependsOn jacocoTestCoverageVerification
+    }
+}
+
+// 전체 빌드 시 frontend도 함께 빌드
+task buildAll {
+    dependsOn ':backend:server:build', ':frontend:build'
+    description = 'Build all modules (backend + frontend)'
+    group = 'build'
+}
+
+// 개발 서버 실행
+task dev {
+    dependsOn ':frontend:npmDev'
+    description = 'Run frontend development server'
+    group = 'application'
+}

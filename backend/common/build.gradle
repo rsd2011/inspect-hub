@@ -1,0 +1,20 @@
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    // Jackson
+    implementation libs.bundles.jackson
+
+    // Validation
+    implementation libs.jakarta.validation.api
+
+    // Lombok
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
+
+    // Test
+    testImplementation libs.bundles.test.basic
+}
+
+description = 'Common Module - Shared entities, DTOs, utilities, and exceptions'

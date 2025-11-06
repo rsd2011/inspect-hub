@@ -1,0 +1,5 @@
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:your-secret-key-change-this-in-production-minimum-256-bits-required-for-HS256-algorithm}
+  access-token-validity-ms: 3600000  # 1 hour
+  refresh-token-validity-ms: 86400000  # 24 hours

@@ -1,0 +1,39 @@
+plugins {
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
+}
+
+bootJar {
+    enabled = false
+}
+
+jar {
+    enabled = true
+}
+
+dependencies {
+    // Module dependencies
+    implementation project(':backend:common')
+
+    // Spring Boot
+    implementation libs.bundles.spring.boot.basic
+    implementation libs.spring.boot.starter.web
+    implementation libs.spring.boot.starter.security
+
+    // MyBatis
+    implementation libs.mybatis.spring.boot.starter
+
+    // JWT
+    implementation libs.bundles.jjwt
+
+    // Lombok
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
+
+    // Test
+    testImplementation libs.bundles.test.basic
+    testImplementation libs.spring.security.test
+    testImplementation libs.mybatis.spring.boot.starter.test
+}
+
+description = 'Auth Module - Authentication and Authorization (JWT, Spring Security)'

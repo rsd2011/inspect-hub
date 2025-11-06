@@ -1,0 +1,68 @@
+plugins {
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
+}
+
+bootJar {
+    enabled = true
+    archiveFileName = 'inspect-hub-server.jar'
+}
+
+jar {
+    enabled = false
+}
+
+dependencies {
+    // All domain modules
+    implementation project(':backend:common')
+    implementation project(':backend:policy')
+    implementation project(':backend:detection')
+    implementation project(':backend:investigation')
+    implementation project(':backend:reporting')
+    implementation project(':backend:batch')
+    implementation project(':backend:simulation')
+    implementation project(':backend:admin')
+    implementation project(':backend:auth')
+
+    // Spring Boot Starters
+    implementation libs.spring.boot.starter.web
+    implementation libs.spring.boot.starter.validation
+    implementation libs.spring.boot.starter.security
+    implementation libs.spring.boot.starter.actuator
+    implementation libs.spring.boot.starter.data.redis
+
+    // MyBatis
+    implementation libs.mybatis.spring.boot.starter
+
+    // Database
+    runtimeOnly libs.postgresql
+    runtimeOnly libs.h2
+
+    // Kafka
+    implementation libs.spring.kafka
+
+    // JWT
+    implementation libs.bundles.jjwt
+
+    // Swagger/OpenAPI
+    implementation libs.springdoc.openapi
+
+    // Lombok
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
+
+    // MapStruct
+    implementation libs.mapstruct
+    annotationProcessor libs.mapstruct.processor
+    annotationProcessor libs.lombok.mapstruct.binding
+
+    // Observability
+    implementation libs.micrometer.tracing.bridge.brave
+
+    // Test
+    testImplementation libs.bundles.test.basic
+    testImplementation libs.spring.security.test
+    testImplementation libs.mybatis.spring.boot.starter.test
+}
+
+description = 'Main Application Server - API Gateway'

@@ -1,0 +1,130 @@
+[versions]
+# Spring
+spring-boot = "3.3.2"
+spring-dependency-management = "1.1.6"
+
+# Persistence
+mybatis = "3.0.3"
+postgresql = "42.7.3"
+h2 = "2.2.224"
+
+# Utilities
+lombok = "1.18.34"
+mapstruct = "1.5.5.Final"
+lombok-mapstruct-binding = "0.2.0"
+jackson = "2.17.2"
+
+# Validation
+jakarta-validation = "3.0.2"
+
+# Security
+jjwt = "0.12.6"
+
+# Documentation
+springdoc = "2.6.0"
+
+# PDF
+pdfbox = "3.0.1"
+
+# Test
+junit = "5.10.3"
+assertj = "3.26.0"
+
+[libraries]
+# Spring Boot Starters
+spring-boot-starter = { module = "org.springframework.boot:spring-boot-starter" }
+spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
+spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
+spring-boot-starter-security = { module = "org.springframework.boot:spring-boot-starter-security" }
+spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
+spring-boot-starter-data-redis = { module = "org.springframework.boot:spring-boot-starter-data-redis" }
+spring-boot-starter-mail = { module = "org.springframework.boot:spring-boot-starter-mail" }
+spring-boot-starter-batch = { module = "org.springframework.boot:spring-boot-starter-batch" }
+spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+
+# MyBatis
+mybatis-spring-boot-starter = { module = "org.mybatis.spring.boot:mybatis-spring-boot-starter", version.ref = "mybatis" }
+mybatis-spring-boot-starter-test = { module = "org.mybatis.spring.boot:mybatis-spring-boot-starter-test", version.ref = "mybatis" }
+
+# Database
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+h2 = { module = "com.h2database:h2", version.ref = "h2" }
+
+# Lombok
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
+
+# MapStruct
+mapstruct = { module = "org.mapstruct:mapstruct", version.ref = "mapstruct" }
+mapstruct-processor = { module = "org.mapstruct:mapstruct-processor", version.ref = "mapstruct" }
+lombok-mapstruct-binding = { module = "org.projectlombok:lombok-mapstruct-binding", version.ref = "lombok-mapstruct-binding" }
+
+# Jackson
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+jackson-datatype-jsr310 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson" }
+
+# Validation
+jakarta-validation-api = { module = "jakarta.validation:jakarta.validation-api", version.ref = "jakarta-validation" }
+
+# JWT
+jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
+jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }
+jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
+
+# Documentation
+springdoc-openapi = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
+
+# PDF
+pdfbox = { module = "org.apache.pdfbox:pdfbox", version.ref = "pdfbox" }
+
+# Kafka
+spring-kafka = { module = "org.springframework.kafka:spring-kafka" }
+
+# Security Test
+spring-security-test = { module = "org.springframework.security:spring-security-test" }
+
+# Batch Test
+spring-batch-test = { module = "org.springframework.batch:spring-batch-test" }
+
+# Observability
+micrometer-tracing-bridge-brave = { module = "io.micrometer:micrometer-tracing-bridge-brave" }
+
+# Test
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+
+[bundles]
+# Common bundles for reusability
+spring-boot-basic = [
+    "spring-boot-starter",
+    "spring-boot-starter-validation"
+]
+
+mybatis-full = [
+    "mybatis-spring-boot-starter",
+    "mybatis-spring-boot-starter-test"
+]
+
+jackson = [
+    "jackson-databind",
+    "jackson-datatype-jsr310"
+]
+
+jjwt = [
+    "jjwt-api",
+    "jjwt-impl",
+    "jjwt-jackson"
+]
+
+test-basic = [
+    "spring-boot-starter-test",
+    "junit-jupiter",
+    "assertj-core"
+]
+
+lombok-full = [
+    "lombok"
+]
+
+[plugins]
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }
