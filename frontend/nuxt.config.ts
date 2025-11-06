@@ -57,6 +57,9 @@ export default defineNuxtConfig({
 
   // Vite configuration
   vite: {
+    server: {
+      allowedHosts: ['inspecthub.rsd-toy.com']
+    },
     css: {
       preprocessorOptions: {
         scss: {

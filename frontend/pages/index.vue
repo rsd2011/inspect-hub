@@ -9,11 +9,27 @@
       </template>
       <template #content>
         <p>AML Integrated Compliance Monitoring System</p>
+        <div class="tw-mt-4">
+          <p>로그인한 사용자: {{ authStore.user?.username }}</p>
+          <Button label="로그아웃" @click="handleLogout" class="tw-mt-2" />
+        </div>
       </template>
     </Card>
   </div>
 </template>
 
 <script setup lang="ts">
-// Dashboard page
+import { useAuthStore } from '~/stores/auth'
+
+definePageMeta({
+  middleware: ['auth']
+})
+
+const authStore = useAuthStore()
+const router = useRouter()
+
+async function handleLogout() {
+  await authStore.logout()
+  router.push('/login')
+}
 </script>

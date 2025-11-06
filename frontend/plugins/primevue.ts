@@ -3,6 +3,8 @@ import PrimeVue from 'primevue/config'
 import Aura from '@primevue/themes/aura'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
+import Password from 'primevue/password'
+import Message from 'primevue/message'
 import Toast from 'primevue/toast'
 import ToastService from 'primevue/toastservice'
 import ConfirmationService from 'primevue/confirmationservice'
@@ -41,6 +43,8 @@ export default defineNuxtPlugin((nuxtApp) => {
   // Register components globally
   nuxtApp.vueApp.component('Button', Button)
   nuxtApp.vueApp.component('InputText', InputText)
+  nuxtApp.vueApp.component('Password', Password)
+  nuxtApp.vueApp.component('Message', Message)
   nuxtApp.vueApp.component('Toast', Toast)
   nuxtApp.vueApp.component('ConfirmDialog', ConfirmDialog)
   nuxtApp.vueApp.component('Dialog', Dialog)
