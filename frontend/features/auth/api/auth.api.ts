@@ -1,34 +1,29 @@
-export interface LoginRequest {
-  username: string
-  password: string
-}
+/**
+ * Authentication API
+ * Supports both traditional login and SSO login
+ */
 
-export interface LoginResponse {
-  userId: string
-  username: string
-  accessToken: string
-  refreshToken: string
-  roles: string[]
-  expiresIn: number
-}
-
-export interface TokenRefreshRequest {
-  refreshToken: string
-}
-
-export interface TokenRefreshResponse {
-  accessToken: string
-  refreshToken: string
-  expiresIn: number
-}
+import type { LoginRequest, SSOLoginRequest, LoginResponse, TokenRefreshRequest, TokenRefreshResponse } from '../model/types'
 
 export const authApi = {
   /**
-   * 로그인 API
+   * Traditional login API (username/password)
    */
   async login(request: LoginRequest): Promise<LoginResponse> {
     const config = useRuntimeConfig()
     const response = await $fetch<LoginResponse>(`${config.public.apiBase}/auth/login`, {
+      method: 'POST',
+      body: request,
+    })
+    return response
+  },
+
+  /**
+   * SSO login API (SSO token)
+   */
+  async loginSSO(request: SSOLoginRequest): Promise<LoginResponse> {
+    const config = useRuntimeConfig()
+    const response = await $fetch<LoginResponse>(`${config.public.apiBase}/auth/sso/login`, {
       method: 'POST',
       body: request,
     })

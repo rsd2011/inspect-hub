@@ -6,5 +6,15 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true
-  }
+  },
+  "exclude": [
+    "node_modules",
+    ".nuxt",
+    "dist",
+    "coverage",
+    "**/__tests__/**",
+    "**/*.spec.ts",
+    "**/*.test.ts",
+    "tests/**"
+  ]
 }
