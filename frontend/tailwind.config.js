@@ -12,6 +12,11 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Noto Sans KR', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        // Optional: 영문 전용 폰트가 필요한 경우
+        // mono: ['JetBrains Mono', 'Consolas', 'Monaco', 'Courier New', 'monospace']
+      },
       colors: {
         primary: {
           50: '#eff6ff',

@@ -1,0 +1,46 @@
+digraph modules {
+  rankdir=LR;
+  node [shape=box];
+
+  // Infrastructure
+  common [style=filled,fillcolor=lightblue];
+
+  // Domain
+  detection [style=filled,fillcolor=lightgreen];
+  investigation [style=filled,fillcolor=lightgreen];
+  admin [style=filled,fillcolor=lightgreen];
+  policy [style=filled,fillcolor=lightgreen];
+  simulation [style=filled,fillcolor=lightgreen];
+  reporting [style=filled,fillcolor=lightgreen];
+  batch [style=filled,fillcolor=lightgreen];
+  auth [style=filled,fillcolor=lightgreen];
+
+  // Application
+  server [style=filled,fillcolor=lightyellow];
+
+  // Dependencies
+  admin -> common;
+  auth -> common;
+  batch -> common;
+  batch -> detection;
+  batch -> investigation;
+  detection -> common;
+  detection -> policy;
+  investigation -> common;
+  investigation -> detection;
+  policy -> common;
+  reporting -> common;
+  reporting -> investigation;
+  server -> admin;
+  server -> auth;
+  server -> batch;
+  server -> common;
+  server -> detection;
+  server -> investigation;
+  server -> policy;
+  server -> reporting;
+  server -> simulation;
+  simulation -> common;
+  simulation -> detection;
+  simulation -> policy;
+}
