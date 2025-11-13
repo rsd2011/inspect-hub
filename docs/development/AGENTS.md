@@ -288,13 +288,6 @@ git commit -m "feat(policy): Add duplicate policy name validation
 - **H2 In-memory DB** - 로컬 개발용 기본 데이터베이스
 - **Testcontainers** - 통합 테스트 시 실제 DB/Redis 사용
 
-### ~~Multi-Tenant 주의사항~~ (제거됨)
-
-- ~~`X-Tenant-ID` 헤더 - 모든 API 요청에 필수~~
-- ~~새로운 엔드포인트 추가 시 Tenant 격리 검증 필요~~
-
-**참고**: Multi-tenancy 요구사항이 제거되었습니다. 자세한 내용은 Git 커밋 이력 참조.
-
 ---
 
 ## 📚 추가 참고 문서

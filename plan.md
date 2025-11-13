@@ -204,12 +204,12 @@
 
 ### 단일 테스트 실행
 ```bash
-./gradlew test --tests TenantTest.shouldCreateTenantWithValidName
+./gradlew test --tests PolicyTest.shouldCreatePolicyWithValidVersion
 ```
 
 ### 특정 클래스 테스트 실행
 ```bash
-./gradlew test --tests TenantTest
+./gradlew test --tests PolicyTest
 ```
 
 ### 전체 테스트 실행 (장기 실행 제외)
@@ -229,7 +229,7 @@ open backend/server/build/reports/jacoco/test/html/index.html
 
 - **각 테스트는 독립적으로 실행 가능해야 합니다** (테스트 간 의존성 없음)
 - **Given-When-Then 패턴** 사용 권장
-- **테스트 이름은 행동 중심**으로 작성 (예: `shouldRejectDuplicateTenantName`)
+- **테스트 이름은 행동 중심**으로 작성 (예: `shouldRejectDuplicatePolicyName`)
 - **Mockito 사용 최소화** - 실제 객체 우선, Mock은 외부 의존성에만 사용
 - **Testcontainers 사용** - 통합 테스트에서 실제 DB 사용
 - **@Transactional 주의** - 테스트 후 자동 롤백 확인
