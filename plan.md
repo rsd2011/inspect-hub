@@ -22,14 +22,14 @@
 
 #### Value Objects
 - [ ] UserId 생성 테스트 - ULID 형식 검증
-- [ ] Email 생성 테스트 - 유효한 이메일 형식
-- [ ] Email 형식 검증 테스트 - 잘못된 형식 거부
+- [ ] EmployeeId 생성 테스트 - 유효한 사원ID 형식
+- [ ] EmployeeId 형식 검증 테스트 - 잘못된 형식 거부
 - [ ] Password 암호화 테스트 - BCrypt 해시
 - [ ] Password 검증 테스트 - matches() 메서드
 
 #### Aggregate Root: User
-- [ ] User 생성 테스트 - 필수 필드 검증 (userId, email)
-- [ ] User 이메일 변경 테스트 - 유효한 Email 객체
+- [ ] User 생성 테스트 - 필수 필드 검증 (userId, employeeId)
+- [ ] User 사원ID 변경 테스트 - 유효한 EmployeeId 객체
 - [ ] User 비밀번호 변경 테스트 - 암호화된 Password 객체
 - [ ] User 권한 부여 테스트 - Role 추가
 - [ ] User 권한 제거 테스트 - Role 제거
@@ -38,7 +38,7 @@
 - [ ] User 도메인 이벤트 발행 테스트 - UserCreatedEvent
 
 #### Domain Service: UserDomainService
-- [ ] User 이메일 중복 검사 테스트 - 같은 이메일 존재 시 예외
+- [ ] User 사원ID 중복 검사 테스트 - 같은 사원ID 존재 시 예외
 
 ---
 
@@ -78,7 +78,7 @@
 
 #### Application Service
 - [ ] UserApplicationService.createUser 테스트 - 정상 생성
-- [ ] UserApplicationService.createUser 이메일 중복 거부 테스트
+- [ ] UserApplicationService.createUser 사원ID 중복 거부 테스트
 - [ ] UserApplicationService.updateUser 테스트 - 정상 수정
 - [ ] UserApplicationService.changePassword 테스트 - 비밀번호 변경
 - [ ] UserApplicationService.assignRole 테스트 - 권한 부여
@@ -86,7 +86,7 @@
 
 #### Query Service
 - [ ] UserQueryService.findById 테스트 - 존재하는 ID 조회
-- [ ] UserQueryService.findByEmail 테스트 - 이메일로 조회
+- [ ] UserQueryService.findByEmployeeId 테스트 - 사원ID로 조회
 - [ ] UserQueryService.findByRole 테스트 - 역할별 사용자 조회
 
 ---
@@ -120,8 +120,8 @@
 - [ ] UserRepositoryImpl.save 테스트 - INSERT 성공
 - [ ] UserRepositoryImpl.save 테스트 - UPDATE 성공
 - [ ] UserRepositoryImpl.findById 테스트 - 존재하는 ID 조회
-- [ ] UserRepositoryImpl.findByEmail 테스트 - 이메일로 조회
-- [ ] UserRepositoryImpl.existsByEmail 테스트 - 이메일 존재 여부
+- [ ] UserRepositoryImpl.findByEmployeeId 테스트 - 사원ID로 조회
+- [ ] UserRepositoryImpl.existsByEmployeeId 테스트 - 사원ID 존재 여부
 
 ---
 
@@ -141,8 +141,8 @@
 
 #### Controller Tests (MockMvc)
 - [ ] POST /api/v1/users - 정상 생성 (201 Created)
-- [ ] POST /api/v1/users - 이메일 형식 오류 (400 Bad Request)
-- [ ] POST /api/v1/users - 이메일 중복 (409 Conflict)
+- [ ] POST /api/v1/users - 사원ID 형식 오류 (400 Bad Request)
+- [ ] POST /api/v1/users - 사원ID 중복 (409 Conflict)
 - [ ] GET /api/v1/users/{id} - 존재하는 ID (200 OK)
 - [ ] GET /api/v1/users/{id} - 존재하지 않는 ID (404 Not Found)
 - [ ] PUT /api/v1/users/{id} - 정상 수정 (200 OK)

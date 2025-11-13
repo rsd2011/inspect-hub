@@ -465,8 +465,8 @@ ls -la backend/xyz/build.gradle
 **Solution:**
 1. Edit generated DTO files and add meaningful descriptions:
    ```java
-   @Schema(description = "User's email address", example = "user@example.com")
-   private String email;
+   @Schema(description = "Employee ID (사원ID)", example = "EMP001")
+   private String employeeId;
    ```
 2. Update `@Operation` annotations in Controller:
    ```java

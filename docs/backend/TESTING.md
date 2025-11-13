@@ -294,42 +294,42 @@ class UserServiceTest extends BaseUnitTest {
         request = UserCreateRequest.builder()
             .username("testuser")
             .password("Password123!")
-            .email("test@example.com")
+            .employeeId("EMP001")
             .fullName("테스트 사용자")
             .orgId("01ARZ3NDEKTSV4RRFFQ69G5FAV")
             .permGroupCodes(List.of("PG_ADMIN"))
             .build();
-        
+
         user = User.builder()
             .id("01HGW2N7XKQJBZ9VFQR8X7Y3ZT")
             .username("testuser")
             .passwordHash("$2a$12$encodedPassword")
-            .email("test@example.com")
+            .employeeId("EMP001")
             .fullName("테스트 사용자")
             .status("ACTIVE")
             .build();
     }
-    
+
     @Test
     @DisplayName("사용자 생성 - 성공")
     void createUser_Success() {
         // Given
         given(userRepository.existsByUsername(anyString())).willReturn(false);
-        given(userRepository.existsByEmail(anyString())).willReturn(false);
+        given(userRepository.existsByEmployeeId(anyString())).willReturn(false);
         given(ulidGenerator.generate()).willReturn("01HGW2N7XKQJBZ9VFQR8X7Y3ZT");
         given(passwordEncoder.encode(anyString())).willReturn("$2a$12$encodedPassword");
         given(userRepository.save(any(User.class))).willReturn(user);
-        
+
         // When
         UserResponse response = userService.createUser(request);
-        
+
         // Then
         assertThat(response).isNotNull();
         assertThat(response.getUsername()).isEqualTo("testuser");
-        assertThat(response.getEmail()).isEqualTo("test@example.com");
-        
+        assertThat(response.getEmployeeId()).isEqualTo("EMP001");
+
         verify(userRepository).existsByUsername("testuser");
-        verify(userRepository).existsByEmail("test@example.com");
+        verify(userRepository).existsByEmployeeId("EMP001");
         verify(passwordEncoder).encode("Password123!");
         verify(userRepository).save(any(User.class));
     }
