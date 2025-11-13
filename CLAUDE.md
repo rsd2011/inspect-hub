@@ -20,6 +20,51 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **[Architecture](./docs/architecture/DDD_DESIGN.md)** - System design, DDD patterns
 - **[Development Guide](./docs/development/AGENTS.md)** - Coding rules, testing, builds
 
+## TDD Development Workflow
+
+This project follows **Kent Beck's TDD + Domain-Driven Design** methodology.
+
+### "go" Command Workflow
+
+When you type **"go"**:
+
+1. **Find next unchecked test** in `plan.md`
+2. **Execute Red → Green → Refactor cycle:**
+   - **Red**: Write failing test first
+   - **Green**: Implement minimum code to pass
+   - **Refactor**: Improve code while keeping tests green
+3. **Mark test as `[x]`** in `plan.md`
+4. **Commit** (only when all tests pass)
+5. **Wait for next "go"**
+
+### Core Principles
+
+| Principle | Description | Example |
+|-----------|-------------|---------|
+| **Test First** | Write test before implementation | `shouldRejectDuplicatePolicyName()` test → `PolicyDomainService.validateUniqueness()` implementation |
+| **Minimal Implementation** | Just enough code to pass | Hardcoding is OK initially, refactor later |
+| **Tidy First** | Separate structural changes from behavioral changes | Commit 1: `refactor: Extract method`, Commit 2: `feat: Add validation` |
+| **DDD Layers** | Develop in order: Domain → Application → Infrastructure → Interface | Domain tests → Application tests → Controller tests |
+
+### Test Execution
+
+```bash
+# Single test method
+./gradlew test --tests PolicyTest.shouldCreatePolicyWithValidVersion
+
+# Specific test class
+./gradlew test --tests PolicyTest
+
+# All tests
+./gradlew test
+
+# With coverage report
+./gradlew test jacocoTestReport
+open backend/server/build/reports/jacoco/test/html/index.html
+```
+
+**Reference**: See [TDD_DDD_WORKFLOW.md](./docs/development/TDD_DDD_WORKFLOW.md) for detailed 1298-line guide.
+
 ## Tech Stack
 
 **Backend:**
@@ -74,6 +119,12 @@ inspect-hub/
 ## Frontend Architecture
 
 **Architecture Pattern:** Nuxt 4 표준 구조 + Atomic Design (컴포넌트)
+
+**Important Notes:**
+- ⚠️ **NOT using FSD (Feature-Sliced Design)** - This project uses Nuxt 4 standard directory structure
+- ✅ **Nuxt 4 `app/` directory** - Standard Nuxt application layer (components, composables, layouts, pages, etc.)
+- ✅ **Atomic Design for components** - atoms/molecules/organisms structure within `app/components/`
+- ✅ **Auto-imports enabled** - Components, composables automatically available without explicit imports
 
 ### 디렉토리 구조
 
@@ -1554,45 +1605,85 @@ Key terms from PRD (Korean ↔ English):
 
 ## Development Commands
 
-**Once the project is initialized, standard commands will be:**
+### Root Level (Gradle)
+
+```bash
+# Build all modules (backend + frontend)
+./gradlew buildAll
+
+# Run frontend dev server
+./gradlew dev
+
+# Backend server with H2 in-memory DB
+./gradlew :backend:server:bootRun
+
+# Backend with specific profile
+./gradlew :backend:server:bootRun --args='--spring.profiles.active=dev'
+```
 
 ### Backend (Gradle)
-```bash
-# Build all modules
-./gradlew clean build
 
-# Run tests
+```bash
+# Build specific module
+./gradlew :backend:server:build
+
+# All tests
 ./gradlew test
 
-# Run specific test
-./gradlew test --tests com.example.ClassName.methodName
+# Specific test class
+./gradlew test --tests PolicyTest
 
-# Start local server
-./gradlew bootRun
+# Single test method
+./gradlew test --tests PolicyTest.shouldCreatePolicyWithValidVersion
+
+# Exclude long-running tests
+./gradlew test -x longRunningTests
+
+# Coverage report
+./gradlew test jacocoTestReport
+open backend/server/build/reports/jacoco/test/html/index.html
 
 # Check dependencies
 ./gradlew dependencies
 ```
 
-### Frontend (Nuxt)
+### Frontend (Nuxt 4)
+
 ```bash
-# Install dependencies
-npm install
+cd frontend
 
-# Development server
-npm run dev
+# Development
+npm run dev              # Dev server (http://localhost:3000)
+npm run dev:open         # Dev + auto-open browser
 
-# Build for production (SPA mode)
-npm run build
+# Build & Preview
+npm run build            # Production build (SPA mode)
+npm run build:analyze    # Build with bundle analyzer
+npm run preview          # Preview production build
 
-# Preview production build
-npm run preview
+# Code Quality
+npm run lint             # Check code quality
+npm run lint:fix         # Auto-fix linting issues
+npm run typecheck        # TypeScript type checking
 
-# Run tests
-npm run test
+# Unit Testing (Vitest)
+npm test                 # Run unit tests
+npm run test:watch       # Watch mode
+npm run test:ui          # Vitest UI
+npm run test:coverage    # Coverage report
 
-# Lint
-npm run lint
+# E2E Testing (Playwright)
+npm run test:e2e         # Headless E2E tests
+npm run test:e2e:ui      # Playwright UI (recommended)
+npm run test:e2e:headed  # With browser visible
+npm run test:e2e:debug   # Debug mode
+npm run test:e2e:report  # View test report
+
+# Maintenance
+npm run clean            # Clean build artifacts
+npm run clean:modules    # Clean & reinstall node_modules
+npm run audit            # Security audit (production)
+npm run outdated         # Check outdated packages
 ```
 
 ## Important Implementation Notes
