@@ -530,35 +530,46 @@
 
 #### Account Security Policies (계정 보안 정책)
 
-**비활성 계정 잠금 정책:**
-- [ ] 비활성 계정 감지 - 최근 로그인 1년 경과 시 자동 잠금
-- [ ] 비활성 계정 감지 - 최근 로그인 11개월 경과 시 이메일 경고 발송
-- [ ] 비활성 계정 감지 - 최근 로그인 11.5개월 경과 시 2차 이메일 경고 발송
+**정책 관리 (Policy Management):**
+- [ ] SecurityPolicy 엔티티 - id, policyType, enabled, config (JSON), orgId, active
+- [ ] SecurityPolicyType enum - INACTIVE_LOCKOUT, FAILED_ATTEMPTS_LOCKOUT, IP_BLACKLIST, IP_WHITELIST, IP_RATE_LIMIT
+- [ ] 정책 활성화/비활성화 - enabled 플래그로 관리
+- [ ] 조직별 정책 설정 - orgId 기준 (null = 글로벌 정책)
+- [ ] 정책 우선순위 - 조직 정책 > 글로벌 정책
+- [ ] 정책 설정 조회 - getPolicyConfig(policyType, orgId)
+- [ ] 정책 활성 여부 확인 - isPolicyEnabled(policyType, orgId)
+- [ ] 정책 생성/수정 - 관리자 권한 필요 (ROLE_ADMIN)
+- [ ] 정책 적용 범위 - LOCAL 로그인 방식에만 적용 (AD, SSO는 제외)
+- [ ] 정책 감사 로그 - 정책 생성/수정/삭제 시 감사 로그 기록
+
+**비활성 계정 잠금 정책 (선택적 적용):**
+- [ ] 비활성 계정 감지 - 최근 로그인 N일 경과 시 자동 잠금 (기본값: 365일)
+- [ ] 비활성 기간 설정 - config.inactiveDays 필드 (30/90/180/365일)
 - [ ] 비활성 계정 잠금 - 계정 상태 ACTIVE → LOCKED_INACTIVE로 변경
-- [ ] 비활성 계정 잠금 - lockedReason = "INACTIVE_1_YEAR" 기록
+- [ ] 비활성 계정 잠금 - lockedReason = "INACTIVE_{N}_DAYS" 기록
 - [ ] 비활성 계정 잠금 - lockedAt 타임스탬프 기록
 - [ ] 비활성 계정 잠금 해제 - 관리자 승인 필요 (Self-service 불가)
 - [ ] 비활성 계정 잠금 해제 - 해제 시 비밀번호 즉시 변경 강제
 - [ ] 비활성 계정 잠금 - 감사 로그 기록 (action: ACCOUNT_LOCKED, reason: INACTIVE)
+- [ ] 정책 비활성화 시 - 기존 잠금된 계정 자동 해제하지 않음 (관리자 수동 처리)
+- [ ] 배치 작업 - 매일 자정 실행, 비활성 계정 검사 및 잠금
 
-**실패 로그인 횟수 잠금 정책:**
+**실패 로그인 횟수 잠금 정책 (선택적 적용):**
+- [ ] 정책 설정 - config.thresholds 배열: [{attempts: 5, lockMinutes: 5}, {attempts: 10, lockMinutes: 30}, {attempts: 15, lockMinutes: null}]
+- [ ] 임계값 커스터마이징 - 조직별 실패 횟수 및 잠금 시간 설정 가능
 - [ ] 로그인 실패 카운트 - 실패 시 failedLoginAttempts 증가
 - [ ] 로그인 실패 카운트 - 성공 시 failedLoginAttempts 리셋 (0으로)
 - [ ] 로그인 실패 카운트 - lastFailedLoginAt 타임스탬프 업데이트
-- [ ] 계정 잠금 (5회) - 5회 연속 실패 시 5분 잠금
-- [ ] 계정 잠금 (5회) - 계정 상태 ACTIVE → LOCKED_FAILED_ATTEMPTS로 변경
-- [ ] 계정 잠금 (5회) - lockedUntil = now + 5분 설정
-- [ ] 계정 잠금 (5회) - lockedReason = "FAILED_ATTEMPTS_5" 기록
-- [ ] 계정 잠금 (10회) - 10회 연속 실패 시 30분 잠금
-- [ ] 계정 잠금 (10회) - lockedUntil = now + 30분 설정
-- [ ] 계정 잠금 (10회) - lockedReason = "FAILED_ATTEMPTS_10" 기록
-- [ ] 계정 잠금 (15회) - 15회 연속 실패 시 영구 잠금 (관리자 해제 필요)
-- [ ] 계정 잠금 (15회) - lockedUntil = null (영구 잠금)
-- [ ] 계정 잠금 (15회) - lockedReason = "FAILED_ATTEMPTS_15_PERMANENT" 기록
-- [ ] 계정 잠금 해제 - lockedUntil 시간 경과 후 자동 해제 (5분/30분 잠금)
+- [ ] 계정 잠금 (임계값 도달) - 계정 상태 ACTIVE → LOCKED_FAILED_ATTEMPTS로 변경
+- [ ] 계정 잠금 (임계값 도달) - lockedUntil = now + lockMinutes 설정
+- [ ] 계정 잠금 (임계값 도달) - lockedReason = "FAILED_ATTEMPTS_{N}" 기록
+- [ ] 계정 잠금 (영구 잠금) - lockMinutes = null인 임계값 도달 시 영구 잠금
+- [ ] 계정 잠금 (영구 잠금) - lockedUntil = null 설정
+- [ ] 계정 잠금 해제 - lockedUntil 시간 경과 후 자동 해제 (시간 제한 잠금)
 - [ ] 계정 잠금 해제 - 해제 시 failedLoginAttempts 리셋하지 않음 (추적 유지)
 - [ ] 계정 잠금 해제 - 관리자 수동 해제 가능 (강제 해제 버튼)
-- [ ] 계정 잠금 - 감사 로그 기록 (action: ACCOUNT_LOCKED, reason: FAILED_ATTEMPTS, attempts: 5/10/15)
+- [ ] 계정 잠금 - 감사 로그 기록 (action: ACCOUNT_LOCKED, reason: FAILED_ATTEMPTS, attempts: N)
+- [ ] 정책 비활성화 시 - 로그인 실패 카운트는 계속 유지 (추적 목적)
 
 **계정 상태 관리:**
 - [ ] AccountStatus.ACTIVE - 정상 활성 계정
@@ -578,67 +589,78 @@
 - [ ] 비활성화된 계정 로그인 시도 - AccountDisabledException 예외 발생
 - [ ] 만료된 계정 로그인 시도 - AccountExpiredException 예외 발생
 
-**보안 알림:**
-- [ ] 계정 잠금 알림 - 사용자 이메일 발송 (잠금 사유, 해제 방법)
-- [ ] 계정 잠금 알림 - 관리자 알림 (10회 이상 실패 시)
-- [ ] 비정상 로그인 알림 - 새로운 IP에서 로그인 성공 시 이메일
-- [ ] 비정상 로그인 알림 - 새로운 디바이스에서 로그인 성공 시 이메일
-- [ ] 비정상 로그인 알림 - 해외 IP에서 로그인 성공 시 이메일
-- [ ] 비정상 로그인 알림 - 근무 시간 외 로그인 성공 시 알림 (22:00-06:00)
+**IP 블랙리스트 정책 (선택적 적용):**
+- [ ] 정책 설정 - config.failureThreshold (기본값: 30), config.blockHours (기본값: 24)
+- [ ] IP 블랙리스트 등록 - 동일 IP에서 N회 이상 실패 시 등록
+- [ ] IP 블랙리스트 저장 - IP_BLACKLIST 테이블 (ip, blockedAt, expiresAt, reason)
+- [ ] IP 블랙리스트 차단 - 블랙리스트 IP 로그인 시도 즉시 403 응답
+- [ ] IP 블랙리스트 해제 - expiresAt 시간 경과 후 자동 해제
+- [ ] IP 블랙리스트 해제 - 관리자 수동 해제 가능
+- [ ] IP 블랙리스트 감사 로그 - 등록/해제 시 감사 로그 기록
+- [ ] Redis 캐싱 - 블랙리스트 IP 캐싱으로 성능 최적화
 
-**IP 기반 보안:**
-- [ ] IP 블랙리스트 - 동일 IP에서 30회 이상 실패 시 블랙리스트 등록
-- [ ] IP 블랙리스트 - 블랙리스트 IP 로그인 시도 즉시 차단
-- [ ] IP 블랙리스트 - 24시간 후 자동 해제
-- [ ] IP 블랙리스트 - 관리자 수동 해제 가능
-- [ ] IP 화이트리스트 - 신뢰된 IP 대역 설정 (사내 네트워크)
-- [ ] IP 화이트리스트 - 화이트리스트 IP는 잠금 정책 제외
-- [ ] IP Rate Limiting - 동일 IP에서 분당 10회 초과 시 429 응답
-- [ ] IP Rate Limiting - Redis 기반 카운터 (TTL 1분)
+**IP 화이트리스트 정책 (선택적 적용):**
+- [ ] 정책 설정 - config.allowedIpRanges 배열 (CIDR 표기법)
+- [ ] IP 화이트리스트 저장 - IP_WHITELIST 테이블 (ipRange, description, orgId)
+- [ ] IP 화이트리스트 검증 - CIDR 범위 내 IP 확인
+- [ ] IP 화이트리스트 제외 - 화이트리스트 IP는 실패 잠금 정책 제외
+- [ ] IP 화이트리스트 제외 - 화이트리스트 IP는 블랙리스트 등록 제외
+- [ ] IP 화이트리스트 관리 - 관리자만 추가/수정/삭제 가능
+
+**IP Rate Limiting 정책 (선택적 적용):**
+- [ ] 정책 설정 - config.maxRequestsPerMinute (기본값: 10)
+- [ ] Rate Limit 카운터 - Redis 기반 카운터 (키: "rate_limit:ip:{ip}")
+- [ ] Rate Limit TTL - 1분 자동 만료
+- [ ] Rate Limit 초과 - 429 Too Many Requests 응답
+- [ ] Rate Limit 헤더 - X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset 헤더 포함
+- [ ] Rate Limit 감사 로그 - 초과 시 감사 로그 기록
 
 #### Password Management Policies (비밀번호 관리 정책)
 
-**비밀번호 만료 정책:**
-- [ ] 비밀번호 만료 - 비밀번호 생성/변경 후 90일 경과 시 만료
-- [ ] 비밀번호 만료 경고 - 만료 14일 전 이메일 1차 경고
-- [ ] 비밀번호 만료 경고 - 만료 7일 전 이메일 2차 경고
-- [ ] 비밀번호 만료 경고 - 만료 3일 전 이메일 3차 경고
-- [ ] 비밀번호 만료 경고 - 만료 1일 전 이메일 최종 경고
-- [ ] 비밀번호 만료 경고 - 로그인 시 만료까지 남은 일수 표시
+**비밀번호 정책 유형:**
+- [ ] PasswordPolicyType enum - EXPIRATION, COMPLEXITY, HISTORY
+- [ ] 정책별 독립 활성화 - 각 정책 개별적으로 enabled/disabled 설정 가능
+- [ ] LOCAL 로그인 전용 - 비밀번호 정책은 LOCAL 로그인에만 적용
+
+**비밀번호 만료 정책 (선택적 적용):**
+- [ ] 정책 설정 - config.expirationDays (기본값: 90, 옵션: 30/60/90/180/365)
+- [ ] 비밀번호 만료 - 비밀번호 생성/변경 후 N일 경과 시 만료
 - [ ] 비밀번호 만료 - passwordExpiresAt 필드로 관리
 - [ ] 비밀번호 만료 - 만료 후 로그인 시 PasswordExpiredException 예외
 - [ ] 비밀번호 만료 - 만료 후 즉시 변경 페이지로 리다이렉트
 - [ ] 비밀번호 만료 - 변경 완료 전 다른 페이지 접근 차단
-- [ ] 비밀번호 만료 정책 설정 - 조직별 만료 기간 설정 가능 (30/60/90/180일)
-- [ ] 비밀번호 만료 정책 설정 - 글로벌 기본값 90일
+- [ ] 비밀번호 만료 경고 - 로그인 시 만료까지 남은 일수 UI 표시
+- [ ] 비밀번호 만료 경고 - 로그인 응답에 daysUntilExpiration 필드 포함
+- [ ] 정책 비활성화 시 - passwordExpiresAt은 유지하지만 검증 스킵
 
-**비밀번호 복잡도 정책:**
-- [ ] 비밀번호 복잡도 - 최소 길이 8자
-- [ ] 비밀번호 복잡도 - 최대 길이 100자
-- [ ] 비밀번호 복잡도 - 영문 대문자 1개 이상 포함 필수
-- [ ] 비밀번호 복잡도 - 영문 소문자 1개 이상 포함 필수
-- [ ] 비밀번호 복잡도 - 숫자 1개 이상 포함 필수
-- [ ] 비밀번호 복잡도 - 특수문자 1개 이상 포함 필수 (!@#$%^&*()_+-=[]{}|;:,.<>?)
-- [ ] 비밀번호 복잡도 - 연속된 문자 3개 이상 금지 (abc, 123, aaa 등)
+**비밀번호 복잡도 정책 (선택적 적용):**
+- [ ] 정책 설정 - config: {minLength, maxLength, requireUppercase, requireLowercase, requireDigit, requireSpecial}
+- [ ] 비밀번호 복잡도 - 최소 길이 (기본값: 8, 조정 가능)
+- [ ] 비밀번호 복잡도 - 최대 길이 (기본값: 100)
+- [ ] 비밀번호 복잡도 - 영문 대문자 포함 여부 (기본값: true)
+- [ ] 비밀번호 복잡도 - 영문 소문자 포함 여부 (기본값: true)
+- [ ] 비밀번호 복잡도 - 숫자 포함 여부 (기본값: true)
+- [ ] 비밀번호 복잡도 - 특수문자 포함 여부 (기본값: true, 허용 문자: !@#$%^&*()_+-=[]{}|;:,.<>?)
+- [ ] 비밀번호 복잡도 - 연속된 문자 3개 이상 금지 (abc, 123, aaa)
 - [ ] 비밀번호 복잡도 - 사원ID 포함 금지
-- [ ] 비밀번호 복잡도 - 이름 포함 금지 (영문 이름)
+- [ ] 비밀번호 복잡도 - 사용자 이름 포함 금지
 - [ ] 비밀번호 복잡도 - 일반적인 단어 금지 (password, admin, 123456 등)
 - [ ] 비밀번호 복잡도 - 공백 문자 금지
 - [ ] 비밀번호 복잡도 검증 - PasswordComplexityValidator 클래스
 - [ ] 비밀번호 복잡도 검증 - 검증 실패 시 구체적인 오류 메시지 반환
-- [ ] 비밀번호 복잡도 정책 설정 - 조직별 복잡도 규칙 커스터마이징 가능
+- [ ] 정책 비활성화 시 - 복잡도 검증 스킵
 
-**비밀번호 히스토리 정책:**
-- [ ] 비밀번호 히스토리 - 최근 5개 비밀번호 재사용 금지
+**비밀번호 히스토리 정책 (선택적 적용):**
+- [ ] 정책 설정 - config.historyCount (기본값: 5, 옵션: 3/5/10)
+- [ ] 비밀번호 히스토리 - 최근 N개 비밀번호 재사용 금지
 - [ ] 비밀번호 히스토리 - PASSWORD_HISTORY 테이블에 BCrypt 해시 저장
 - [ ] 비밀번호 히스토리 - userId, passwordHash, createdAt 필드
 - [ ] 비밀번호 히스토리 - 비밀번호 변경 시 자동 저장
-- [ ] 비밀번호 히스토리 - 새 비밀번호 설정 시 최근 5개와 비교
+- [ ] 비밀번호 히스토리 - 새 비밀번호 설정 시 최근 N개와 비교
 - [ ] 비밀번호 히스토리 - 재사용 감지 시 PasswordReusedException 예외
-- [ ] 비밀번호 히스토리 - 6번째 이전 비밀번호는 재사용 허용
-- [ ] 비밀번호 히스토리 - 히스토리 개수 설정 가능 (3/5/10개)
-- [ ] 비밀번호 히스토리 - 글로벌 기본값 5개
+- [ ] 비밀번호 히스토리 - N+1번째 이전 비밀번호는 재사용 허용
 - [ ] 비밀번호 히스토리 - 파티셔닝 전략 (userId 기준)
+- [ ] 정책 비활성화 시 - 히스토리 저장은 계속하지만 검증 스킵
 
 **강제 비밀번호 변경:**
 - [ ] 강제 변경 - 최초 로그인 시 비밀번호 변경 필수
@@ -650,24 +672,21 @@
 - [ ] 강제 변경 완료 전 - API 접근 차단 (비밀번호 변경 API 제외)
 - [ ] 강제 변경 완료 전 - 로그인 성공하지만 즉시 변경 페이지로 리다이렉트
 - [ ] 강제 변경 완료 후 - mustChangePassword = false 설정
-- [ ] 강제 변경 이메일 - 강제 변경 설정 시 사용자 이메일 발송
 
 **비밀번호 변경 프로세스:**
 - [ ] 비밀번호 변경 - 현재 비밀번호 검증 필수
-- [ ] 비밀번호 변경 - 새 비밀번호 복잡도 검증
-- [ ] 비밀번호 변경 - 새 비밀번호 히스토리 검증 (재사용 금지)
+- [ ] 비밀번호 변경 - 활성화된 정책에 따라 검증 (복잡도, 히스토리, 만료)
 - [ ] 비밀번호 변경 - 새 비밀번호 현재 비밀번호와 동일 금지
 - [ ] 비밀번호 변경 - BCrypt로 해시 (strength=10)
 - [ ] 비밀번호 변경 - User.password 업데이트
 - [ ] 비밀번호 변경 - User.passwordChangedAt 타임스탬프 업데이트
-- [ ] 비밀번호 변경 - User.passwordExpiresAt = now + 90일 설정
-- [ ] 비밀번호 변경 - PASSWORD_HISTORY 테이블에 이전 비밀번호 저장
+- [ ] 비밀번호 변경 - User.passwordExpiresAt = now + expirationDays 설정 (만료 정책 활성화 시)
+- [ ] 비밀번호 변경 - PASSWORD_HISTORY 테이블에 이전 비밀번호 저장 (히스토리 정책 활성화 시)
 - [ ] 비밀번호 변경 - 모든 Refresh Token 무효화 (재로그인 필요)
 - [ ] 비밀번호 변경 - 감사 로그 기록 (action: PASSWORD_CHANGED, userId)
-- [ ] 비밀번호 변경 - 이메일 알림 발송 (비밀번호 변경 완료)
 - [ ] 비밀번호 변경 실패 - 현재 비밀번호 불일치 시 InvalidPasswordException
-- [ ] 비밀번호 변경 실패 - 복잡도 미달 시 PasswordComplexityException
-- [ ] 비밀번호 변경 실패 - 재사용 감지 시 PasswordReusedException
+- [ ] 비밀번호 변경 실패 - 복잡도 미달 시 PasswordComplexityException (정책 활성화 시)
+- [ ] 비밀번호 변경 실패 - 재사용 감지 시 PasswordReusedException (정책 활성화 시)
 
 **비밀번호 변경 API:**
 - [ ] POST /api/v1/auth/change-password - 비밀번호 변경
@@ -678,96 +697,50 @@
 
 #### Password Reset Policies (비밀번호 초기화 정책)
 
-**비밀번호 리셋 토큰 생성:**
-- [ ] 리셋 토큰 생성 - 이메일 주소 기반 요청
-- [ ] 리셋 토큰 생성 - SecureRandom으로 64자 토큰 생성
-- [ ] 리셋 토큰 생성 - SHA-256으로 토큰 해시 후 저장
-- [ ] 리셋 토큰 생성 - PASSWORD_RESET_TOKEN 테이블 저장
-- [ ] 리셋 토큰 생성 - userId, tokenHash, expiresAt, used 필드
-- [ ] 리셋 토큰 생성 - expiresAt = now + 1시간 설정
-- [ ] 리셋 토큰 생성 - used = false 초기값
-- [ ] 리셋 토큰 생성 - 이전 미사용 토큰 모두 무효화
-- [ ] 리셋 토큰 생성 - 이메일로 리셋 링크 발송
-- [ ] 리셋 토큰 생성 - 링크 형식: /reset-password?token={token}
-- [ ] 리셋 토큰 생성 - 존재하지 않는 이메일이어도 동일 응답 (보안)
-- [ ] 리셋 토큰 생성 - 감사 로그 기록 (action: PASSWORD_RESET_REQUESTED, email)
-
-**리셋 토큰 검증:**
-- [ ] 리셋 토큰 검증 - 토큰 SHA-256 해시 후 DB 조회
-- [ ] 리셋 토큰 검증 - 토큰 존재 확인
-- [ ] 리셋 토큰 검증 - 토큰 만료 확인 (expiresAt > now)
-- [ ] 리셋 토큰 검증 - 토큰 사용 여부 확인 (used = false)
-- [ ] 리셋 토큰 검증 성공 - 토큰과 연결된 userId 반환
-- [ ] 리셋 토큰 검증 실패 - 존재하지 않는 토큰 (InvalidResetTokenException)
-- [ ] 리셋 토큰 검증 실패 - 만료된 토큰 (ExpiredResetTokenException)
-- [ ] 리셋 토큰 검증 실패 - 이미 사용된 토큰 (UsedResetTokenException)
-- [ ] 리셋 토큰 검증 - 검증 실패 시 감사 로그 기록
-
-**비밀번호 리셋 실행:**
-- [ ] 비밀번호 리셋 - 유효한 토큰 + 새 비밀번호 제공
-- [ ] 비밀번호 리셋 - 새 비밀번호 복잡도 검증
-- [ ] 비밀번호 리셋 - 새 비밀번호 히스토리 검증 (재사용 금지)
-- [ ] 비밀번호 리셋 - BCrypt로 해시 (strength=10)
-- [ ] 비밀번호 리셋 - User.password 업데이트
-- [ ] 비밀번호 리셋 - User.passwordChangedAt 타임스탬프 업데이트
-- [ ] 비밀번호 리셋 - User.passwordExpiresAt = now + 90일 설정
-- [ ] 비밀번호 리셋 - User.mustChangePassword = false 설정
-- [ ] 비밀번호 리셋 - User.failedLoginAttempts = 0 리셋
-- [ ] 비밀번호 리셋 - 계정 잠금 상태면 해제 (LOCKED → ACTIVE)
-- [ ] 비밀번호 리셋 - PASSWORD_RESET_TOKEN.used = true 업데이트
-- [ ] 비밀번호 리셋 - PASSWORD_RESET_TOKEN.usedAt 타임스탬프 기록
-- [ ] 비밀번호 리셋 - PASSWORD_HISTORY 테이블에 이전 비밀번호 저장
-- [ ] 비밀번호 리셋 - 모든 Refresh Token 무효화
-- [ ] 비밀번호 리셋 - 감사 로그 기록 (action: PASSWORD_RESET_COMPLETED, userId)
-- [ ] 비밀번호 리셋 - 이메일 알림 발송 (비밀번호 리셋 완료)
-
-**리셋 Rate Limiting:**
-- [ ] 리셋 요청 제한 - 동일 이메일 1분당 1회
-- [ ] 리셋 요청 제한 - 동일 이메일 1시간당 3회
-- [ ] 리셋 요청 제한 - 동일 이메일 24시간당 5회
-- [ ] 리셋 요청 제한 - 초과 시 429 Too Many Requests 응답
-- [ ] 리셋 요청 제한 - Redis 기반 카운터 (TTL 설정)
-- [ ] 리셋 요청 제한 - IP별 제한 (분당 5회)
-
 **관리자 비밀번호 리셋:**
-- [ ] 관리자 리셋 - 관리자 권한 확인 (ROLE_ADMIN)
-- [ ] 관리자 리셋 - 대상 사용자 선택
-- [ ] 관리자 리셋 - 임시 비밀번호 생성 (12자, 복잡도 만족)
-- [ ] 관리자 리셋 - 임시 비밀번호로 User.password 업데이트
+- [ ] 관리자 리셋 - 관리자 권한 확인 (ROLE_ADMIN 또는 ROLE_USER_MANAGER)
+- [ ] 관리자 리셋 - 대상 사용자 선택 (userId 또는 employeeId 기준)
+- [ ] 관리자 리셋 - 임시 비밀번호 생성 (SecureRandom, 12자)
+- [ ] 관리자 리셋 - 임시 비밀번호 복잡도 자동 만족 (대문자+소문자+숫자+특수문자)
+- [ ] 관리자 리셋 - BCrypt로 해시 후 User.password 업데이트
 - [ ] 관리자 리셋 - User.mustChangePassword = true 설정
-- [ ] 관리자 리셋 - 이메일로 임시 비밀번호 발송
+- [ ] 관리자 리셋 - User.passwordChangedAt 타임스탬프 업데이트
+- [ ] 관리자 리셋 - User.passwordExpiresAt = now + expirationDays 설정 (만료 정책 활성화 시)
+- [ ] 관리자 리셋 - User.failedLoginAttempts = 0 리셋
+- [ ] 관리자 리셋 - 계정 잠금 상태면 해제 (LOCKED_* → ACTIVE)
+- [ ] 관리자 리셋 - PASSWORD_HISTORY 테이블에 이전 비밀번호 저장 (히스토리 정책 활성화 시)
+- [ ] 관리자 리셋 - 모든 Refresh Token 무효화
 - [ ] 관리자 리셋 - 감사 로그 기록 (action: ADMIN_PASSWORD_RESET, adminId, targetUserId)
 - [ ] 관리자 리셋 - Self-reset 금지 (관리자 자신 리셋 불가)
 
-**리셋 보안:**
-- [ ] 리셋 이메일 - 토큰을 URL에만 포함 (본문에 노출 금지)
-- [ ] 리셋 이메일 - HTTPS 링크만 사용
-- [ ] 리셋 이메일 - 요청하지 않은 경우 안내 문구 포함
-- [ ] 리셋 토큰 - 1회용 (사용 후 즉시 무효화)
-- [ ] 리셋 토큰 - 평문 저장 금지 (SHA-256 해시만 저장)
-- [ ] 리셋 토큰 - 예측 불가능한 난수 사용 (SecureRandom)
-- [ ] 리셋 토큰 - 충분한 엔트로피 (64자, 256비트)
+**관리자 리셋 API:**
+- [ ] POST /api/v1/admin/users/{userId}/reset-password - 비밀번호 리셋
+- [ ] Request DTO - (없음, userId는 path parameter)
+- [ ] Response DTO - success, temporaryPassword (평문, 1회만 표시)
+- [ ] 인증 필수 - JWT Access Token + ROLE_ADMIN 권한
+- [ ] Rate Limiting - 동일 관리자 1분당 5회 제한
 
-**리셋 API:**
-- [ ] POST /api/v1/auth/request-reset - 리셋 토큰 요청
-- [ ] Request DTO - email
-- [ ] Response DTO - success, message (항상 동일 응답)
-- [ ] GET /api/v1/auth/validate-reset-token - 토큰 검증
-- [ ] Request Param - token
-- [ ] Response DTO - valid, userId (valid=true인 경우만)
-- [ ] POST /api/v1/auth/reset-password - 비밀번호 리셋 실행
-- [ ] Request DTO - token, newPassword, newPasswordConfirm
-- [ ] Response DTO - success, message
-- [ ] Rate Limiting 적용 (위에 명시된 제한)
+**임시 비밀번호 전달:**
+- [ ] 임시 비밀번호 표시 - API 응답에만 1회 포함
+- [ ] 임시 비밀번호 표시 - UI에서 복사 버튼 제공
+- [ ] 임시 비밀번호 표시 - 관리자가 사용자에게 직접 전달 (오프라인 또는 메신저)
+- [ ] 임시 비밀번호 보안 - DB에 평문 저장 금지 (BCrypt 해시만 저장)
+- [ ] 임시 비밀번호 보안 - 로그에 평문 기록 금지
+
+**리셋 후 최초 로그인:**
+- [ ] 최초 로그인 - mustChangePassword = true 확인
+- [ ] 최초 로그인 - 임시 비밀번호로 로그인 성공
+- [ ] 최초 로그인 - 로그인 후 즉시 비밀번호 변경 페이지로 리다이렉트
+- [ ] 최초 로그인 - 비밀번호 변경 완료 전 다른 API 호출 차단 (401 Unauthorized)
+- [ ] 최초 로그인 - 비밀번호 변경 완료 후 mustChangePassword = false 설정
+- [ ] 최초 로그인 - 비밀번호 변경 후 정상 시스템 접근 가능
 
 **리셋 테스트 시나리오:**
-- [ ] 시나리오 1: 정상 리셋 플로우 (요청 → 이메일 → 토큰 검증 → 비밀번호 설정)
-- [ ] 시나리오 2: 만료된 토큰 사용 시도 (1시간 경과 후)
-- [ ] 시나리오 3: 토큰 재사용 시도 (이미 사용된 토큰)
-- [ ] 시나리오 4: 잘못된 토큰 사용 시도 (존재하지 않는 토큰)
-- [ ] 시나리오 5: Rate Limit 초과 (동일 이메일 1분 내 2회 요청)
-- [ ] 시나리오 6: 관리자 임시 비밀번호 발급 → 사용자 최초 로그인 → 강제 변경
-- [ ] 시나리오 7: 리셋 중 다른 토큰 요청 (기존 토큰 무효화 확인)
+- [ ] 시나리오 1: 관리자 임시 비밀번호 발급 → 사용자 최초 로그인 → 강제 변경 → 정상 접근
+- [ ] 시나리오 2: 잠긴 계정 리셋 → 계정 잠금 해제 → 임시 비밀번호 로그인 성공
+- [ ] 시나리오 3: Self-reset 시도 → 403 Forbidden (관리자가 자신 리셋 불가)
+- [ ] 시나리오 4: 권한 없는 사용자 리셋 시도 → 403 Forbidden
+- [ ] 시나리오 5: Rate Limit 초과 (동일 관리자 1분 내 6회 리셋) → 429 Too Many Requests
 
 #### Authentication - Health Check & Fallback
 
