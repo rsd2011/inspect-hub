@@ -102,7 +102,7 @@
 
 **DO:**
 - ✅ 작은 기능 증분을 정의하는 테스트 작성
-- ✅ 의미 있는 테스트 이름 사용 (예: `shouldRejectDuplicateTenantName`)
+- ✅ 의미 있는 테스트 이름 사용 (예: `shouldRejectDuplicatePolicyName`)
 - ✅ 명확하고 정보가 풍부한 실패 메시지 작성
 - ✅ Given-When-Then 패턴 사용
 
@@ -114,20 +114,20 @@
 **예제:**
 ```java
 @Test
-@DisplayName("중복된 이름의 Tenant 생성 시 예외 발생")
-void shouldRejectDuplicateTenantName() {
+@DisplayName("중복된 이름의 Policy 생성 시 예외 발생")
+void shouldRejectDuplicatePolicyName() {
     // Given
-    String duplicateName = "Existing Bank";
-    Tenant existingTenant = Tenant.create(new TenantId(), duplicateName);
-    tenantRepository.save(existingTenant);
+    String duplicateName = "KYC-Standard-v1";
+    Policy existingPolicy = Policy.create(new PolicyId(), duplicateName, PolicyType.KYC);
+    policyRepository.save(existingPolicy);
 
     // When & Then
     assertThatThrownBy(() -> {
-        Tenant newTenant = Tenant.create(new TenantId(), duplicateName);
-        tenantDomainService.validateUniqueness(newTenant);
+        Policy newPolicy = Policy.create(new PolicyId(), duplicateName, PolicyType.KYC);
+        policyDomainService.validateUniqueness(newPolicy);
     })
-    .isInstanceOf(DuplicateTenantException.class)
-    .hasMessageContaining("이미 존재하는 테넌트 이름입니다");
+    .isInstanceOf(DuplicatePolicyException.class)
+    .hasMessageContaining("이미 존재하는 정책 이름입니다");
 }
 ```
 
@@ -146,14 +146,14 @@ void shouldRejectDuplicateTenantName() {
 **예제:**
 ```java
 // 최소 구현 (나중에 리팩토링)
-public class TenantDomainService {
+public class PolicyDomainService {
 
-    private final TenantRepository tenantRepository;
+    private final PolicyRepository policyRepository;
 
-    public void validateUniqueness(Tenant tenant) {
-        boolean exists = tenantRepository.existsByName(tenant.getName());
+    public void validateUniqueness(Policy policy) {
+        boolean exists = policyRepository.existsByName(policy.getName());
         if (exists) {
-            throw new DuplicateTenantException("이미 존재하는 테넌트 이름입니다");
+            throw new DuplicatePolicyException("이미 존재하는 정책 이름입니다");
         }
     }
 }
@@ -175,24 +175,24 @@ public class TenantDomainService {
 **예제:**
 ```java
 // 리팩토링 후 (의도 명확화, 추출)
-public class TenantDomainService {
+public class PolicyDomainService {
 
-    private final TenantRepository tenantRepository;
+    private final PolicyRepository policyRepository;
 
-    public void validateUniqueness(Tenant tenant) {
-        if (isDuplicateName(tenant.getName())) {
-            throw new DuplicateTenantException(
-                createDuplicateErrorMessage(tenant.getName())
+    public void validateUniqueness(Policy policy) {
+        if (isDuplicateName(policy.getName())) {
+            throw new DuplicatePolicyException(
+                createDuplicateErrorMessage(policy.getName())
             );
         }
     }
 
     private boolean isDuplicateName(String name) {
-        return tenantRepository.existsByName(name);
+        return policyRepository.existsByName(name);
     }
 
     private String createDuplicateErrorMessage(String name) {
-        return String.format("이미 존재하는 테넌트 이름입니다: %s", name);
+        return String.format("이미 존재하는 정책 이름입니다: %s", name);
     }
 }
 ```
@@ -210,16 +210,16 @@ public class TenantDomainService {
 ```java
 // 1. API-level 테스트 (통합 테스트)
 @Test
-void shouldReturn409WhenCreatingDuplicateTenant() {
-    // Given: 기존 Tenant 존재
-    CreateTenantRequest request = new CreateTenantRequest("Existing Bank");
-    tenantController.createTenant(request);
+void shouldReturn409WhenCreatingDuplicatePolicy() {
+    // Given: 기존 Policy 존재
+    CreatePolicyRequest request = new CreatePolicyRequest("KYC-Standard-v1", "KYC");
+    policyController.createPolicy(request);
 
     // When: 중복 이름으로 생성 시도
-    CreateTenantRequest duplicateRequest = new CreateTenantRequest("Existing Bank");
+    CreatePolicyRequest duplicateRequest = new CreatePolicyRequest("KYC-Standard-v1", "KYC");
 
     // Then: 409 Conflict
-    mockMvc.perform(post("/api/v1/tenants")
+    mockMvc.perform(post("/api/v1/policies")
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(duplicateRequest)))
         .andExpect(status().isConflict());
@@ -229,13 +229,13 @@ void shouldReturn409WhenCreatingDuplicateTenant() {
 @Test
 void shouldThrowExceptionWhenDuplicateName() {
     // Given
-    String name = "Existing Bank";
-    when(tenantRepository.existsByName(name)).thenReturn(true);
-    Tenant tenant = Tenant.create(new TenantId(), name);
+    String name = "KYC-Standard-v1";
+    when(policyRepository.existsByName(name)).thenReturn(true);
+    Policy policy = Policy.create(new PolicyId(), name, PolicyType.KYC);
 
     // When & Then
-    assertThatThrownBy(() -> tenantDomainService.validateUniqueness(tenant))
-        .isInstanceOf(DuplicateTenantException.class);
+    assertThatThrownBy(() -> policyDomainService.validateUniqueness(policy))
+        .isInstanceOf(DuplicatePolicyException.class);
 }
 ```
 
@@ -302,7 +302,7 @@ NO → Behavioral Change (행동적 변경)
     1. Red: 실패 테스트 작성
     2. Green: 최소 구현
     3. Refactor: 리팩토링
-    4. Commit ("feat: Add duplicate tenant validation")
+    4. Commit ("feat: Add duplicate policy validation")
 ```
 
 ### 예제: Tidy First vs Behavioral Change
@@ -313,17 +313,17 @@ NO → Behavioral Change (행동적 변경)
 // Commit: "feat: Add duplicate check and refactor naming"
 // 구조적 변경 + 행동적 변경 혼합 (BAD)
 
-public class TenantService {
+public class PolicyService {
 
-    // 구조적 변경: 이름 변경 (old: createTenant)
-    public Tenant createNewTenant(CreateTenantCommand command) {
+    // 구조적 변경: 이름 변경 (old: createPolicy)
+    public Policy createNewPolicy(CreatePolicyCommand command) {
         // 행동적 변경: 중복 체크 추가
-        if (tenantRepository.existsByName(command.getName())) {
-            throw new DuplicateTenantException();
+        if (policyRepository.existsByName(command.getName())) {
+            throw new DuplicatePolicyException();
         }
 
-        Tenant tenant = new Tenant(command.getName());
-        return tenantRepository.save(tenant);
+        Policy policy = new Policy(command.getName(), command.getType());
+        return policyRepository.save(policy);
     }
 }
 ```
@@ -333,14 +333,14 @@ public class TenantService {
 **Step 1: 구조적 변경 먼저 (Tidy First)**
 
 ```java
-// Commit 1: "refactor: Rename createTenant to createNewTenant"
+// Commit 1: "refactor: Rename createPolicy to createNewPolicy"
 
-public class TenantService {
+public class PolicyService {
 
     // 이름만 변경 (구조적 변경)
-    public Tenant createNewTenant(CreateTenantCommand command) {
-        Tenant tenant = new Tenant(command.getName());
-        return tenantRepository.save(tenant);
+    public Policy createNewPolicy(CreatePolicyCommand command) {
+        Policy policy = new Policy(command.getName(), command.getType());
+        return policyRepository.save(policy);
     }
 }
 
@@ -351,18 +351,18 @@ public class TenantService {
 **Step 2: 행동적 변경 (TDD)**
 
 ```java
-// Commit 2: "feat: Add duplicate tenant name validation"
+// Commit 2: "feat: Add duplicate policy name validation"
 
-public class TenantService {
+public class PolicyService {
 
-    public Tenant createNewTenant(CreateTenantCommand command) {
+    public Policy createNewPolicy(CreatePolicyCommand command) {
         // 행동적 변경: 중복 체크 로직 추가
-        if (tenantRepository.existsByName(command.getName())) {
-            throw new DuplicateTenantException();
+        if (policyRepository.existsByName(command.getName())) {
+            throw new DuplicatePolicyException();
         }
 
-        Tenant tenant = new Tenant(command.getName());
-        return tenantRepository.save(tenant);
+        Policy policy = new Policy(command.getName(), command.getType());
+        return policyRepository.save(policy);
     }
 }
 
@@ -392,23 +392,23 @@ public class TenantService {
 **예제: Value Object 테스트**
 
 ```java
-class TenantIdTest {
+class PolicyIdTest {
 
     @Test
-    @DisplayName("TenantId는 ULID 형식으로 생성된다")
-    void shouldCreateTenantIdWithULIDFormat() {
+    @DisplayName("PolicyId는 ULID 형식으로 생성된다")
+    void shouldCreatePolicyIdWithULIDFormat() {
         // When
-        TenantId tenantId = new TenantId();
+        PolicyId policyId = new PolicyId();
 
         // Then
-        assertThat(tenantId.getValue()).matches("^[0-9A-HJKMNP-TV-Z]{26}$");
+        assertThat(policyId.getValue()).matches("^[0-9A-HJKMNP-TV-Z]{26}$");
     }
 
     @Test
-    @DisplayName("TenantId는 불변이다")
+    @DisplayName("PolicyId는 불변이다")
     void shouldBeImmutable() {
         // Given
-        TenantId original = new TenantId();
+        PolicyId original = new PolicyId();
 
         // When
         String value = original.getValue();
@@ -418,12 +418,12 @@ class TenantIdTest {
     }
 
     @Test
-    @DisplayName("같은 값의 TenantId는 동등하다")
+    @DisplayName("같은 값의 PolicyId는 동등하다")
     void shouldBeEqualWhenSameValue() {
         // Given
         String value = "01HN0Z8Q0G0Z8Q0G0Z8Q0G0Z8Q";
-        TenantId id1 = new TenantId(value);
-        TenantId id2 = new TenantId(value);
+        PolicyId id1 = new PolicyId(value);
+        PolicyId id2 = new PolicyId(value);
 
         // Then
         assertThat(id1).isEqualTo(id2);
@@ -435,64 +435,65 @@ class TenantIdTest {
 **예제: Aggregate Root 테스트**
 
 ```java
-class TenantTest {
+class PolicyTest {
 
     @Test
-    @DisplayName("Tenant 생성 시 이름은 필수다")
+    @DisplayName("Policy 생성 시 이름은 필수다")
     void shouldRequireNameWhenCreating() {
         // Given
-        TenantId tenantId = new TenantId();
+        PolicyId policyId = new PolicyId();
         String nullName = null;
 
         // When & Then
-        assertThatThrownBy(() -> Tenant.create(tenantId, nullName))
+        assertThatThrownBy(() -> Policy.create(policyId, nullName, PolicyType.KYC))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("이름은 필수입니다");
     }
 
     @Test
-    @DisplayName("Tenant 활성화 시 상태가 ACTIVE로 변경된다")
-    void shouldChangeStatusToActiveWhenActivate() {
+    @DisplayName("Policy 승인 시 상태가 APPROVED로 변경된다")
+    void shouldChangeStatusToApprovedWhenApprove() {
         // Given
-        Tenant tenant = Tenant.create(new TenantId(), "Test Bank");
+        Policy policy = Policy.create(new PolicyId(), "KYC-Standard-v1", PolicyType.KYC);
 
         // When
-        tenant.activate();
+        policy.approve("admin");
 
         // Then
-        assertThat(tenant.getStatus()).isEqualTo(TenantStatus.ACTIVE);
+        assertThat(policy.getStatus()).isEqualTo(PolicyStatus.APPROVED);
     }
 
     @Test
-    @DisplayName("Tenant 정지 시 사유가 필수다")
-    void shouldRequireReasonWhenSuspend() {
+    @DisplayName("Policy 승인 거부 시 사유가 필수다")
+    void shouldRequireReasonWhenReject() {
         // Given
-        Tenant tenant = Tenant.create(new TenantId(), "Test Bank");
+        Policy policy = Policy.create(new PolicyId(), "KYC-Standard-v1", PolicyType.KYC);
         String nullReason = null;
 
         // When & Then
-        assertThatThrownBy(() -> tenant.suspend(nullReason))
+        assertThatThrownBy(() -> policy.reject(nullReason))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("정지 사유는 필수입니다");
+            .hasMessageContaining("거부 사유는 필수입니다");
     }
 
     @Test
-    @DisplayName("Tenant 생성 시 TenantCreatedEvent가 발행된다")
-    void shouldPublishTenantCreatedEventWhenCreated() {
+    @DisplayName("Policy 생성 시 PolicyCreatedEvent가 발행된다")
+    void shouldPublishPolicyCreatedEventWhenCreated() {
         // Given
-        TenantId tenantId = new TenantId();
-        String name = "Test Bank";
+        PolicyId policyId = new PolicyId();
+        String name = "KYC-Standard-v1";
+        PolicyType type = PolicyType.KYC;
 
         // When
-        Tenant tenant = Tenant.create(tenantId, name);
+        Policy policy = Policy.create(policyId, name, type);
 
         // Then
-        List<DomainEvent> events = tenant.getDomainEvents();
+        List<DomainEvent> events = policy.getDomainEvents();
         assertThat(events).hasSize(1);
-        assertThat(events.get(0)).isInstanceOf(TenantCreatedEvent.class);
+        assertThat(events.get(0)).isInstanceOf(PolicyCreatedEvent.class);
 
-        TenantCreatedEvent event = (TenantCreatedEvent) events.get(0);
-        assertThat(event.getTenantId()).isEqualTo(tenantId);
+        PolicyCreatedEvent event = (PolicyCreatedEvent) events.get(0);
+        assertThat(event.getPolicyId()).isEqualTo(policyId);
         assertThat(event.getName()).isEqualTo(name);
     }
 }
@@ -518,52 +519,52 @@ class TenantTest {
 
 ```java
 @ExtendWith(MockitoExtension.class)
-class TenantApplicationServiceTest {
+class PolicyApplicationServiceTest {
 
     @Mock
-    private TenantRepository tenantRepository;
+    private PolicyRepository policyRepository;
 
     @Mock
-    private TenantDomainService tenantDomainService;
+    private PolicyDomainService policyDomainService;
 
     @InjectMocks
-    private TenantApplicationService tenantApplicationService;
+    private PolicyApplicationService policyApplicationService;
 
     @Test
-    @DisplayName("Tenant 생성 성공")
-    void shouldCreateTenantSuccessfully() {
+    @DisplayName("Policy 생성 성공")
+    void shouldCreatePolicySuccessfully() {
         // Given
-        CreateTenantCommand command = new CreateTenantCommand("New Bank");
-        Tenant expectedTenant = Tenant.create(new TenantId(), "New Bank");
+        CreatePolicyCommand command = new CreatePolicyCommand("KYC-Standard-v1", "KYC");
+        Policy expectedPolicy = Policy.create(new PolicyId(), "KYC-Standard-v1", PolicyType.KYC);
 
-        when(tenantRepository.save(any(Tenant.class))).thenReturn(expectedTenant);
+        when(policyRepository.save(any(Policy.class))).thenReturn(expectedPolicy);
 
         // When
-        Tenant result = tenantApplicationService.createTenant(command);
+        Policy result = policyApplicationService.createPolicy(command);
 
         // Then
-        assertThat(result.getName()).isEqualTo("New Bank");
-        assertThat(result.getStatus()).isEqualTo(TenantStatus.ACTIVE);
+        assertThat(result.getName()).isEqualTo("KYC-Standard-v1");
+        assertThat(result.getStatus()).isEqualTo(PolicyStatus.DRAFT);
 
-        verify(tenantDomainService).validateUniqueness(any(Tenant.class));
-        verify(tenantRepository).save(any(Tenant.class));
+        verify(policyDomainService).validateUniqueness(any(Policy.class));
+        verify(policyRepository).save(any(Policy.class));
     }
 
     @Test
-    @DisplayName("중복된 Tenant 생성 시 예외 발생")
-    void shouldThrowExceptionWhenDuplicateTenant() {
+    @DisplayName("중복된 Policy 생성 시 예외 발생")
+    void shouldThrowExceptionWhenDuplicatePolicy() {
         // Given
-        CreateTenantCommand command = new CreateTenantCommand("Existing Bank");
+        CreatePolicyCommand command = new CreatePolicyCommand("KYC-Standard-v1", "KYC");
 
-        doThrow(new DuplicateTenantException("이미 존재하는 테넌트 이름입니다"))
-            .when(tenantDomainService).validateUniqueness(any(Tenant.class));
+        doThrow(new DuplicatePolicyException("이미 존재하는 정책 이름입니다"))
+            .when(policyDomainService).validateUniqueness(any(Policy.class));
 
         // When & Then
-        assertThatThrownBy(() -> tenantApplicationService.createTenant(command))
-            .isInstanceOf(DuplicateTenantException.class)
-            .hasMessageContaining("이미 존재하는 테넌트 이름입니다");
+        assertThatThrownBy(() -> policyApplicationService.createPolicy(command))
+            .isInstanceOf(DuplicatePolicyException.class)
+            .hasMessageContaining("이미 존재하는 정책 이름입니다");
 
-        verify(tenantRepository, never()).save(any(Tenant.class));
+        verify(policyRepository, never()).save(any(Policy.class));
     }
 }
 ```
@@ -573,7 +574,7 @@ class TenantApplicationServiceTest {
 ```java
 @SpringBootTest
 @Testcontainers
-class TenantQueryServiceTest {
+class PolicyQueryServiceTest {
 
     @Container
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16")
@@ -582,39 +583,39 @@ class TenantQueryServiceTest {
         .withPassword("test");
 
     @Autowired
-    private TenantQueryService tenantQueryService;
+    private PolicyQueryService policyQueryService;
 
     @Autowired
-    private TenantRepository tenantRepository;
+    private PolicyRepository policyRepository;
 
     @BeforeEach
     void setUp() {
-        tenantRepository.deleteAll();
+        policyRepository.deleteAll();
     }
 
     @Test
-    @DisplayName("ID로 Tenant 조회 성공")
-    void shouldFindTenantById() {
+    @DisplayName("ID로 Policy 조회 성공")
+    void shouldFindPolicyById() {
         // Given
-        Tenant tenant = Tenant.create(new TenantId(), "Test Bank");
-        Tenant saved = tenantRepository.save(tenant);
+        Policy policy = Policy.create(new PolicyId(), "KYC-Standard-v1", PolicyType.KYC);
+        Policy saved = policyRepository.save(policy);
 
         // When
-        Optional<TenantResponse> result = tenantQueryService.findById(saved.getId());
+        Optional<PolicyResponse> result = policyQueryService.findById(saved.getId());
 
         // Then
         assertThat(result).isPresent();
-        assertThat(result.get().getName()).isEqualTo("Test Bank");
+        assertThat(result.get().getName()).isEqualTo("KYC-Standard-v1");
     }
 
     @Test
     @DisplayName("존재하지 않는 ID 조회 시 빈 Optional 반환")
-    void shouldReturnEmptyWhenTenantNotFound() {
+    void shouldReturnEmptyWhenPolicyNotFound() {
         // Given
-        TenantId nonExistentId = new TenantId();
+        PolicyId nonExistentId = new PolicyId();
 
         // When
-        Optional<TenantResponse> result = tenantQueryService.findById(nonExistentId);
+        Optional<PolicyResponse> result = policyQueryService.findById(nonExistentId);
 
         // Then
         assertThat(result).isEmpty();
@@ -643,55 +644,55 @@ class TenantQueryServiceTest {
 @SpringBootTest
 @Testcontainers
 @Transactional
-class TenantRepositoryImplTest {
+class PolicyRepositoryImplTest {
 
     @Container
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16");
 
     @Autowired
-    private TenantRepository tenantRepository;
+    private PolicyRepository policyRepository;
 
     @Test
-    @DisplayName("Tenant INSERT 성공")
-    void shouldInsertTenant() {
+    @DisplayName("Policy INSERT 성공")
+    void shouldInsertPolicy() {
         // Given
-        Tenant tenant = Tenant.create(new TenantId(), "Test Bank");
+        Policy policy = Policy.create(new PolicyId(), "KYC-Standard-v1", PolicyType.KYC);
 
         // When
-        Tenant saved = tenantRepository.save(tenant);
+        Policy saved = policyRepository.save(policy);
 
         // Then
         assertThat(saved.getId()).isNotNull();
-        assertThat(saved.getName()).isEqualTo("Test Bank");
+        assertThat(saved.getName()).isEqualTo("KYC-Standard-v1");
         assertThat(saved.getCreatedAt()).isNotNull();
     }
 
     @Test
-    @DisplayName("Tenant UPDATE 성공")
-    void shouldUpdateTenant() {
+    @DisplayName("Policy UPDATE 성공")
+    void shouldUpdatePolicy() {
         // Given
-        Tenant tenant = Tenant.create(new TenantId(), "Old Name");
-        Tenant saved = tenantRepository.save(tenant);
+        Policy policy = Policy.create(new PolicyId(), "Old Name", PolicyType.KYC);
+        Policy saved = policyRepository.save(policy);
 
         // When
         saved.changeName("New Name");
-        tenantRepository.save(saved);
+        policyRepository.save(saved);
 
         // Then
-        Tenant updated = tenantRepository.findById(saved.getId()).orElseThrow();
+        Policy updated = policyRepository.findById(saved.getId()).orElseThrow();
         assertThat(updated.getName()).isEqualTo("New Name");
     }
 
     @Test
-    @DisplayName("이메일로 Tenant 존재 여부 확인")
+    @DisplayName("이름으로 Policy 존재 여부 확인")
     void shouldCheckExistenceByName() {
         // Given
-        Tenant tenant = Tenant.create(new TenantId(), "Existing Bank");
-        tenantRepository.save(tenant);
+        Policy policy = Policy.create(new PolicyId(), "KYC-Standard-v1", PolicyType.KYC);
+        policyRepository.save(policy);
 
         // When
-        boolean exists = tenantRepository.existsByName("Existing Bank");
-        boolean notExists = tenantRepository.existsByName("Non-existing Bank");
+        boolean exists = policyRepository.existsByName("KYC-Standard-v1");
+        boolean notExists = policyRepository.existsByName("Non-existing Policy");
 
         // Then
         assertThat(exists).isTrue();
@@ -719,45 +720,45 @@ class TenantRepositoryImplTest {
 **예제: Controller 테스트 (MockMvc)**
 
 ```java
-@WebMvcTest(TenantController.class)
-class TenantControllerTest {
+@WebMvcTest(PolicyController.class)
+class PolicyControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockBean
-    private TenantApplicationService tenantApplicationService;
+    private PolicyApplicationService policyApplicationService;
 
     @Autowired
     private ObjectMapper objectMapper;
 
     @Test
-    @DisplayName("POST /api/v1/tenants - 정상 생성 (201 Created)")
-    void shouldCreateTenantSuccessfully() throws Exception {
+    @DisplayName("POST /api/v1/policies - 정상 생성 (201 Created)")
+    void shouldCreatePolicySuccessfully() throws Exception {
         // Given
-        CreateTenantRequest request = new CreateTenantRequest("New Bank");
-        Tenant tenant = Tenant.create(new TenantId(), "New Bank");
+        CreatePolicyRequest request = new CreatePolicyRequest("KYC-Standard-v1", "KYC");
+        Policy policy = Policy.create(new PolicyId(), "KYC-Standard-v1", PolicyType.KYC);
 
-        when(tenantApplicationService.createTenant(any(CreateTenantCommand.class)))
-            .thenReturn(tenant);
+        when(policyApplicationService.createPolicy(any(CreatePolicyCommand.class)))
+            .thenReturn(policy);
 
         // When & Then
-        mockMvc.perform(post("/api/v1/tenants")
+        mockMvc.perform(post("/api/v1/policies")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.name").value("New Bank"))
-            .andExpect(jsonPath("$.status").value("ACTIVE"));
+            .andExpect(jsonPath("$.name").value("KYC-Standard-v1"))
+            .andExpect(jsonPath("$.status").value("DRAFT"));
     }
 
     @Test
-    @DisplayName("POST /api/v1/tenants - 필수 필드 누락 (400 Bad Request)")
+    @DisplayName("POST /api/v1/policies - 필수 필드 누락 (400 Bad Request)")
     void shouldReturn400WhenRequiredFieldMissing() throws Exception {
         // Given
-        CreateTenantRequest request = new CreateTenantRequest(null); // name 누락
+        CreatePolicyRequest request = new CreatePolicyRequest(null, "KYC"); // name 누락
 
         // When & Then
-        mockMvc.perform(post("/api/v1/tenants")
+        mockMvc.perform(post("/api/v1/policies")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isBadRequest())
@@ -765,20 +766,20 @@ class TenantControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/v1/tenants - 중복 이름 (409 Conflict)")
+    @DisplayName("POST /api/v1/policies - 중복 이름 (409 Conflict)")
     void shouldReturn409WhenDuplicateName() throws Exception {
         // Given
-        CreateTenantRequest request = new CreateTenantRequest("Existing Bank");
+        CreatePolicyRequest request = new CreatePolicyRequest("KYC-Standard-v1", "KYC");
 
-        when(tenantApplicationService.createTenant(any(CreateTenantCommand.class)))
-            .thenThrow(new DuplicateTenantException("이미 존재하는 테넌트 이름입니다"));
+        when(policyApplicationService.createPolicy(any(CreatePolicyCommand.class)))
+            .thenThrow(new DuplicatePolicyException("이미 존재하는 정책 이름입니다"));
 
         // When & Then
-        mockMvc.perform(post("/api/v1/tenants")
+        mockMvc.perform(post("/api/v1/policies")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isConflict())
-            .andExpect(jsonPath("$.message").value("이미 존재하는 테넌트 이름입니다"));
+            .andExpect(jsonPath("$.message").value("이미 존재하는 정책 이름입니다"));
     }
 }
 ```
@@ -821,18 +822,18 @@ class TenantControllerTest {
 
 ```bash
 # 구조적 변경 (Tidy First)
-git commit -m "refactor(tenant): Extract validateUniqueness method
+git commit -m "refactor(policy): Extract validateUniqueness method
 
-- TenantDomainService에서 중복 검증 로직 추출
+- PolicyDomainService에서 중복 검증 로직 추출
 - 테스트는 변경 없음 (구조적 변경만)
 "
 
 # 행동적 변경 (TDD)
-git commit -m "feat(tenant): Add duplicate tenant name validation
+git commit -m "feat(policy): Add duplicate policy name validation
 
-- Tenant 생성 시 이름 중복 검사
-- DuplicateTenantException 추가
-- 테스트: shouldRejectDuplicateTenantName
+- Policy 생성 시 이름 중복 검사
+- DuplicatePolicyException 추가
+- 테스트: shouldRejectDuplicatePolicyName
 "
 
 # 버그 수정
@@ -880,43 +881,43 @@ git commit -m "fix(user): Fix email validation regex
 
 ```java
 // ❌ 중복 코드
-public class TenantService {
-    public void activateTenant(TenantId id) {
-        Tenant tenant = tenantRepository.findById(id)
-            .orElseThrow(() -> new EntityNotFoundException("Tenant not found"));
-        tenant.activate();
-        tenantRepository.save(tenant);
+public class PolicyService {
+    public void approvePolicy(PolicyId id) {
+        Policy policy = policyRepository.findById(id)
+            .orElseThrow(() -> new EntityNotFoundException("Policy not found"));
+        policy.approve();
+        policyRepository.save(policy);
     }
 
-    public void suspendTenant(TenantId id, String reason) {
-        Tenant tenant = tenantRepository.findById(id)
-            .orElseThrow(() -> new EntityNotFoundException("Tenant not found"));
-        tenant.suspend(reason);
-        tenantRepository.save(tenant);
+    public void rejectPolicy(PolicyId id, String reason) {
+        Policy policy = policyRepository.findById(id)
+            .orElseThrow(() -> new EntityNotFoundException("Policy not found"));
+        policy.reject(reason);
+        policyRepository.save(policy);
     }
 }
 
 // ✅ 중복 제거
-public class TenantService {
-    public void activateTenant(TenantId id) {
-        Tenant tenant = findTenantOrThrow(id);
-        tenant.activate();
-        saveTenant(tenant);
+public class PolicyService {
+    public void approvePolicy(PolicyId id) {
+        Policy policy = findPolicyOrThrow(id);
+        policy.approve();
+        savePolicy(policy);
     }
 
-    public void suspendTenant(TenantId id, String reason) {
-        Tenant tenant = findTenantOrThrow(id);
-        tenant.suspend(reason);
-        saveTenant(tenant);
+    public void rejectPolicy(PolicyId id, String reason) {
+        Policy policy = findPolicyOrThrow(id);
+        policy.reject(reason);
+        savePolicy(policy);
     }
 
-    private Tenant findTenantOrThrow(TenantId id) {
-        return tenantRepository.findById(id)
-            .orElseThrow(() -> new EntityNotFoundException("Tenant not found"));
+    private Policy findPolicyOrThrow(PolicyId id) {
+        return policyRepository.findById(id)
+            .orElseThrow(() -> new EntityNotFoundException("Policy not found"));
     }
 
-    private void saveTenant(Tenant tenant) {
-        tenantRepository.save(tenant);
+    private void savePolicy(Policy policy) {
+        policyRepository.save(policy);
     }
 }
 ```
@@ -972,20 +973,20 @@ public class User {
 ```java
 // ❌ 필드 주입 (암묵적 의존성)
 @Service
-public class TenantService {
+public class PolicyService {
     @Autowired
-    private TenantRepository tenantRepository;
+    private PolicyRepository policyRepository;
 
     @Autowired
-    private TenantDomainService tenantDomainService;
+    private PolicyDomainService policyDomainService;
 }
 
 // ✅ 생성자 주입 (명시적 의존성)
 @Service
 @RequiredArgsConstructor
-public class TenantService {
-    private final TenantRepository tenantRepository;
-    private final TenantDomainService tenantDomainService;
+public class PolicyService {
+    private final PolicyRepository policyRepository;
+    private final PolicyDomainService policyDomainService;
 
     // Lombok @RequiredArgsConstructor가 생성자 자동 생성
 }
@@ -1108,21 +1109,21 @@ public class Email {
 
 ```java
 // ❌ 과도한 일반화 (현재 필요 없음)
-public interface TenantValidator {
-    boolean validate(Tenant tenant);
+public interface PolicyValidator {
+    boolean validate(Policy policy);
 }
 
-public class UniqueNameValidator implements TenantValidator {
-    public boolean validate(Tenant tenant) { ... }
+public class UniqueNameValidator implements PolicyValidator {
+    public boolean validate(Policy policy) { ... }
 }
 
-public class StatusValidator implements TenantValidator {
-    public boolean validate(Tenant tenant) { ... }
+public class StatusValidator implements PolicyValidator {
+    public boolean validate(Policy policy) { ... }
 }
 
 // ✅ 단순한 해결책 (현재 필요한 것만)
-public class TenantDomainService {
-    public void validateUniqueness(Tenant tenant) {
+public class PolicyDomainService {
+    public void validateUniqueness(Policy policy) {
         // 현재 필요한 검증만 구현
     }
 }
