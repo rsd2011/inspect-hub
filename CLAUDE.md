@@ -56,102 +56,115 @@ inspect-hub/
 │   ├── policy/, detection/, ...    # Domain modules
 │   └── server/                     # Main application
 └── frontend/                       # Nuxt 4 application (SPA only)
-    ├── app/                        # App layer
-    ├── pages/                      # Pages (routing)
-    ├── widgets/                    # Large blocks
-    ├── features/                   # User features
-    ├── entities/                   # Business entities
-    └── shared/                     # Shared (UI, API, utils)
+    ├── app/                        # Application layer (Nuxt 4 standard)
+    │   ├── assets/                 # Static assets
+    │   ├── components/             # Vue components
+    │   ├── composables/            # Composition API reusables
+    │   ├── layouts/                # Page layouts
+    │   ├── middleware/             # Route middleware
+    │   ├── pages/                  # File-based routing
+    │   ├── plugins/                # Nuxt plugins
+    │   └── utils/                  # Utility functions
+    ├── content/                    # Content files (optional)
+    ├── public/                     # Static public files
+    ├── shared/                     # Shared resources
+    └── server/                     # Server directory (SSR disabled)
 ```
 
 ## Frontend Architecture
 
-**Architecture Pattern:** FSD (Feature-Sliced Design) + Atomic Design
+**Architecture Pattern:** Nuxt 4 표준 구조 + Atomic Design (컴포넌트)
 
-### FSD Layer Structure
+### 디렉토리 구조
 
 ```
 frontend/
-├── app/                    # App layer - Application initialization & setup
-│   ├── config/            # App-level configuration
-│   ├── providers/         # Global providers (plugins)
-│   │   └── primevue.ts
-│   ├── styles/            # Global styles
-│   │   ├── main.css
-│   │   ├── tailwind.css
-│   │   └── _variables.scss
-│   └── layouts/           # Application layouts
-│       └── default.vue
-├── i18n/                   # Internationalization (Nuxt i18n module requirement)
-│   └── locales/           # Locale files
-│       ├── ko.json        # Korean translations
-│       └── en.json        # English translations
-├── pages/                  # Pages layer - Route pages (Nuxt auto-routing)
-│   ├── index/
-│   │   └── ui/
-│   │       └── IndexPage.vue
-│   └── login/
-│       └── ui/
-│           └── LoginPage.vue
-├── widgets/                # Widgets layer - Large page blocks
-│   ├── header/
-│   │   ├── ui/
-│   │   │   └── AppHeader.vue
-│   │   └── model/
-│   ├── sidebar/
-│   │   ├── ui/
-│   │   └── model/
-│   └── footer/
-│       └── ui/
-├── features/               # Features layer - User scenarios & features
-│   ├── auth/
-│   │   ├── ui/            # Login form, logout button, etc.
-│   │   ├── model/         # Pinia store, middleware, composables
-│   │   │   ├── auth.store.ts
-│   │   │   └── auth.middleware.ts
-│   │   └── api/           # API calls
-│   │       └── auth.api.ts
-│   └── detection/
-│       ├── ui/
-│       ├── model/
-│       └── api/
-├── entities/               # Entities layer - Business entities
-│   ├── user/
-│   │   ├── ui/            # User card, avatar, etc.
-│   │   ├── model/         # User store, types
-│   │   └── api/           # User API
-│   └── transaction/
-│       ├── ui/
-│       ├── model/
-│       └── api/
-└── shared/                 # Shared layer - Reusable code
-    ├── ui/                 # Atomic Design components
-    │   ├── atoms/          # Basic UI elements
-    │   │   ├── Button.vue
-    │   │   ├── Input.vue
-    │   │   ├── Label.vue
-    │   │   └── Badge.vue
-    │   ├── molecules/      # Simple composite components
-    │   │   ├── FormField.vue
-    │   │   ├── SearchBox.vue
-    │   │   └── CardHeader.vue
-    │   └── organisms/      # Complex composite components
-    │       ├── DataTable.vue
-    │       ├── LoginForm.vue
-    │       └── Navbar.vue
-    ├── api/                # API base configuration
-    │   ├── client.ts       # HTTP client setup (axios/ofetch)
-    │   └── interceptors.ts # Request/response interceptors
-    ├── lib/                # Utilities & composables
-    │   ├── utils/
-    │   └── composables/
-    ├── config/             # Shared configuration
-    │   └── constants.ts
-    └── types/              # Common TypeScript types
-        └── index.ts
+├── app/                           # Nuxt 4 app directory
+│   ├── assets/                    # Static assets (images, styles)
+│   │   ├── styles/
+│   │   │   ├── main.css
+│   │   │   ├── tailwind.css
+│   │   │   └── variables.scss
+│   │   └── images/
+│   ├── components/                # Vue components (auto-imported)
+│   │   ├── atoms/                 # Basic UI elements
+│   │   │   ├── Button.vue
+│   │   │   ├── Input.vue
+│   │   │   └── Badge.vue
+│   │   ├── molecules/             # Composite components
+│   │   │   ├── FormField.vue
+│   │   │   └── SearchBox.vue
+│   │   ├── organisms/             # Complex components
+│   │   │   ├── DataTable.vue
+│   │   │   ├── AppHeader.vue
+│   │   │   └── AppSidebar.vue
+│   │   └── layout/                # Layout-specific components
+│   │       ├── Navbar.vue
+│   │       └── Footer.vue
+│   ├── composables/               # Composition API reusables
+│   │   ├── useAuth.ts
+│   │   ├── useApi.ts
+│   │   ├── usePermission.ts
+│   │   └── useNotification.ts
+│   ├── layouts/                   # Page layouts
+│   │   ├── default.vue
+│   │   ├── auth.vue
+│   │   └── empty.vue
+│   ├── middleware/                # Route middleware
+│   │   ├── auth.ts
+│   │   ├── permission.ts
+│   │   └── guest.ts
+│   ├── pages/                     # File-based routing
+│   │   ├── index.vue
+│   │   ├── login.vue
+│   │   ├── dashboard.vue
+│   │   └── cases/
+│   │       ├── index.vue
+│   │       └── [id].vue
+│   ├── plugins/                   # Nuxt plugins
+│   │   ├── primevue.ts
+│   │   ├── realgrid.ts
+│   │   └── api.ts
+│   ├── utils/                     # Utility functions
+│   │   ├── format.ts
+│   │   ├── validation.ts
+│   │   └── constants.ts
+│   ├── app.vue                    # Root component
+│   ├── app.config.ts              # App-level config
+│   └── error.vue                  # Error page
+├── content/                       # Nuxt Content (optional)
+│   └── docs/
+├── public/                        # Static files (served as-is)
+│   ├── favicon.ico
+│   └── robots.txt
+├── shared/                        # Shared resources
+│   ├── api/                       # API clients
+│   │   ├── client.ts
+│   │   └── endpoints.ts
+│   ├── stores/                    # Pinia stores
+│   │   ├── auth.ts
+│   │   ├── user.ts
+│   │   └── notification.ts
+│   ├── types/                     # TypeScript types
+│   │   ├── api.ts
+│   │   ├── models.ts
+│   │   └── common.ts
+│   └── config/                    # Shared config
+│       └── constants.ts
+├── server/                        # Server directory (SSR disabled, unused)
+├── i18n/                          # i18n locales
+│   └── locales/
+│       ├── ko.json
+│       └── en.json
+└── nuxt.config.ts                 # Nuxt configuration
 ```
 
-**Note on i18n directory:** The `i18n/locales/` directory structure is required by @nuxtjs/i18n v10 module, which defaults to looking for locale files in this specific path. This is an acceptable exception to the strict FSD pattern for framework compatibility.
+**주요 특징:**
+- ✅ Nuxt 4 공식 권장 구조 준수
+- ✅ 자동 import 활용 (components, composables)
+- ✅ File-based routing (app/pages/)
+- ✅ Atomic Design (components 디렉토리 내에서만)
+- ✅ Pinia stores는 shared/stores/에 배치
 
 ## Frontend Critical Constraints
 
@@ -344,54 +357,16 @@ screens: {
 
 ### Architecture Guidelines
 
-#### 1. FSD Layer Rules
-
-**Dependency Direction:** Lower layers CANNOT import from upper layers
-```
-app → pages → widgets → features → entities → shared
-```
-
-**Import Rules:**
-- ✅ `features/auth` can import from `entities/user` and `shared/ui`
-- ✅ `pages/login` can import from `features/auth` and `widgets/header`
-- ❌ `entities/user` CANNOT import from `features/auth`
-- ❌ `shared/ui` CANNOT import from `entities` or `features`
-
-**Lateral Imports:**
-- Features CANNOT import from other features
-- Entities CANNOT import from other entities
-- Use shared layer for cross-cutting concerns
-
-#### 2. Atomic Design Guidelines
-
-**Atoms:** Pure presentational components
-- No business logic
-- Only receive props and emit events
-- Examples: Button, Input, Label, Icon
-
-**Molecules:** Simple combinations of atoms
-- Minimal business logic
-- Composable units
-- Examples: FormField (Label + Input + Error), SearchBox (Input + Button)
-
-**Organisms:** Complex functional components
-- Can contain business logic
-- Standalone sections
-- Examples: LoginForm, DataTable, Navbar
-
-**Note:** Templates and Pages are handled by FSD's `pages` layer
-
-#### 3. Nuxt Auto-Import Configuration
+#### 1. Nuxt Auto-Import Configuration
 
 **Components Auto-Import:**
 ```typescript
 // nuxt.config.ts
 components: [
-  { path: '~/app/layouts', pathPrefix: false },
-  { path: '~/widgets', pathPrefix: false },
-  { path: '~/shared/ui/atoms', pathPrefix: false },
-  { path: '~/shared/ui/molecules', pathPrefix: false },
-  { path: '~/shared/ui/organisms', pathPrefix: false }
+  { path: '~/app/components/atoms', pathPrefix: false },
+  { path: '~/app/components/molecules', pathPrefix: false },
+  { path: '~/app/components/organisms', pathPrefix: false },
+  { path: '~/app/components/layout', pathPrefix: false }
 ]
 ```
 
@@ -400,83 +375,83 @@ components: [
 // nuxt.config.ts
 imports: {
   dirs: [
-    'shared/lib/composables',
-    'shared/lib/utils',
-    'features/*/model',
-    'entities/*/model'
+    'app/composables',
+    'app/utils',
+    'shared/stores'
   ]
 }
 ```
 
-#### 4. File Naming Conventions
+#### 2. Atomic Design Guidelines (Components Only)
+
+**Atoms (app/components/atoms/):** Pure presentational components
+- No business logic
+- Only receive props and emit events
+- Examples: Button, Input, Label, Icon
+
+**Molecules (app/components/molecules/):** Simple combinations of atoms
+- Minimal business logic
+- Composable units
+- Examples: FormField (Label + Input + Error), SearchBox (Input + Button)
+
+**Organisms (app/components/organisms/):** Complex functional components
+- Can contain business logic
+- Standalone sections
+- Examples: LoginForm, DataTable, AppHeader, AppSidebar
+
+**Note:** Atomic Design은 app/components/ 디렉토리 내에서만 적용됩니다. Pages, Layouts, Composables는 Nuxt 4 표준 구조를 따릅니다.
+
+#### 3. File Naming Conventions
 
 **Components:**
 - PascalCase: `LoginPage.vue`, `AppHeader.vue`, `Button.vue`
-- Page components suffix: `*Page.vue`
-- Widget components prefix: `App*` or descriptive name
+- Page components: `app/pages/*.vue`
+- Layout components: `app/layouts/*.vue`
+- Organisms prefix: `App*` for app-level components (AppHeader, AppSidebar)
 
 **Stores:**
-- kebab-case with suffix: `auth.store.ts`, `user.store.ts`
+- kebab-case with suffix: `auth.ts`, `user.ts` (in `shared/stores/`)
 - Use `defineStore('storeName', () => {})` composition API style
 
 **API files:**
-- kebab-case with suffix: `auth.api.ts`, `transaction.api.ts`
+- kebab-case: `client.ts`, `endpoints.ts` (in `shared/api/`)
 
 **Composables:**
-- camelCase with prefix: `useAuth.ts`, `usePermissions.ts`
+- camelCase with prefix: `useAuth.ts`, `usePermissions.ts` (in `app/composables/`)
 
 **Middleware:**
-- kebab-case with suffix: `auth.middleware.ts`
+- kebab-case: `auth.ts`, `permission.ts` (in `app/middleware/`)
 
-#### 5. Best Practices
+**Utils:**
+- kebab-case: `format.ts`, `validation.ts` (in `app/utils/`)
+
+#### 4. Best Practices
 
 **State Management:**
-- Feature-specific state → `features/*/model/store.ts`
-- Entity-specific state → `entities/*/model/store.ts`
-- Global app state → `app/config/` or shared store
+- Global stores → `shared/stores/`
+- All stores use Pinia
+- Examples: `shared/stores/auth.ts`, `shared/stores/user.ts`, `shared/stores/notification.ts`
 
 **API Calls:**
-- Feature-specific APIs → `features/*/api/`
-- Entity-specific APIs → `entities/*/api/`
-- Shared API client → `shared/api/client.ts`
+- API client configuration → `shared/api/client.ts`
+- Endpoint definitions → `shared/api/endpoints.ts`
+- Use composables to wrap API calls
 
 **Composables:**
-- Feature-specific → `features/*/model/composables/`
-- Shared utilities → `shared/lib/composables/`
+- App-level composables → `app/composables/`
+- Business logic, state access, API integration
+- Examples: `useAuth.ts`, `useApi.ts`, `usePermission.ts`
 
 **Types:**
-- Feature types → `features/*/model/types.ts`
-- Entity types → `entities/*/model/types.ts`
 - Shared types → `shared/types/`
+- API types → `shared/types/api.ts`
+- Model types → `shared/types/models.ts`
 
 **Styling:**
 - Use Tailwind CSS with `tw-` prefix
-- Global styles → `app/styles/`
+- Global styles → `app/assets/styles/`
 - Component-scoped styles → `<style scoped>`
-- PrimeVue theme → `app/providers/primevue.ts`
-
-#### 6. Migration Strategy
-
-When refactoring existing code:
-1. Start with `shared/` layer (most reusable)
-2. Move to `entities/` (business entities)
-3. Then `features/` (user features)
-4. Finally `widgets/` and `pages/`
-
-**Example Migration:**
-```
-Old: components/LoginForm.vue
-New: features/auth/ui/LoginForm.vue
-
-Old: stores/auth.ts
-New: features/auth/model/auth.store.ts
-
-Old: api/auth.ts
-New: features/auth/api/auth.api.ts
-
-Old: components/Button.vue
-New: shared/ui/atoms/Button.vue
-```
+- PrimeVue plugin → `app/plugins/primevue.ts`
 
 ## Package Management (Frontend)
 
@@ -1468,20 +1443,7 @@ interface DataTableMethods {
 
 ## Core Architecture Principles
 
-### ~~1. Multi-Tenancy (Highest Priority)~~
-
-~~**Complete isolation per financial institution (tenant):**~~
-- ~~Tenant-specific policies, rules, detection criteria, thresholds, and snapshots~~
-- ~~Per-tenant admin controls, configurations, and reporting~~
-- ~~Network/data complete separation (VPC/Subnet or Schema-based)~~
-
-~~**All tables must include tenant isolation:**~~
-- ~~Add `tenant_id` column to every table~~
-- ~~Enforce tenant filtering in all queries via MyBatis interceptor or row-level security~~
-- ~~Cache keys must include tenant prefix~~
-- ~~File storage must use tenant-specific paths~~
-
-### 2. Snapshot-Based Versioning
+### 1. Snapshot-Based Versioning
 
 **All policy/standard data uses snapshot structure:**
 - Similar to Spring Batch's `BATCH_JOB_INSTANCE` / `BATCH_JOB_EXECUTION` pattern
@@ -1497,7 +1459,7 @@ interface DataTableMethods {
 - What-if analysis using draft snapshots
 - Audit trail of all version changes
 
-### 3. Audit Requirements (100% Coverage)
+### 2. Audit Requirements (100% Coverage)
 
 **Every action must be logged:**
 - User access logs (login, page views, data access)
@@ -1510,14 +1472,14 @@ interface DataTableMethods {
 - Use AOP interceptors for automatic audit logging
 - Never delete audit logs (retention policy: regulatory requirement, typically 5-10 years)
 
-### 4. Separation of Duties (SoD)
+### 3. Separation of Duties (SoD)
 
 **Maker-Checker principle:**
 - Same user cannot both create and approve (STR/CTR cases, policy changes, etc.)
 - Enforce at application level via Role-Based Access Control (RBAC)
 - Approval lines configured by organization + permission group
 
-### 5. Detection Engine Architecture
+### 4. Detection Engine Architecture
 
 **Core data flow:**
 ```
@@ -1641,7 +1603,7 @@ npm run lint
 4. **Field Naming:** Use snake_case for database columns, camelCase for Java/TypeScript
 5. **ID Strategy:** Use ULID or UUID for global identifiers, avoid sequential integers for security
 6. **MyBatis TypeHandlers:** Create custom handlers for LocalDateTime, JSON columns, encrypted fields
-7. **Cache Strategy:** ~~Redis with tenant-prefixed keys,~~ Redis cache with Caffeine for local L1 cache
+7. **Cache Strategy:** Redis cache with Caffeine for local L1 cache
 8. **API Versioning:** Use `/api/v1/` prefix, prepare for future versions
 9. **Error Handling:** Unified exception handler with i18n error codes
 10. **Logging:** Structured JSON logs with trace IDs for distributed tracing
@@ -1650,14 +1612,13 @@ npm run lint
 ## MVP Scope (Priority)
 
 **Must-Have Features:**
-1. ~~Multi-tenancy management (tenant isolation, admin controls)~~
-2. Policy & criteria management (snapshot-based, KYC/STR/CTR/WLF rules)
-3. Detection engine (STR/CTR/WLF with configurable rules)
-4. Investigation & workflow (case management, approval workflows)
-5. Reporting module (FIU-compliant report generation)
-6. User & access control (RBAC, SoD enforcement, approval lines)
-7. Audit logging (100% coverage)
-8. Basic dashboard (detection metrics, case status)
+1. Policy & criteria management (snapshot-based, KYC/STR/CTR/WLF rules)
+2. Detection engine (STR/CTR/WLF with configurable rules)
+3. Investigation & workflow (case management, approval workflows)
+4. Reporting module (FIU-compliant report generation)
+5. User & access control (RBAC, SoD enforcement, approval lines)
+6. Audit logging (100% coverage)
+7. Basic dashboard (detection metrics, case status)
 
 **Future Enhancements:**
 - Risk simulation module (what-if analysis, backtesting)
