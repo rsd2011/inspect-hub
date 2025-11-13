@@ -5,69 +5,74 @@
 ```
 backend/server/src/main/java/com/inspecthub/server/
 ├── domain/                     # 도메인 레이어
-│   ├── tenant/                # 테넌트 도메인
-│   │   ├── model/
-│   │   │   ├── Tenant.java           # Aggregate Root
-│   │   │   ├── TenantId.java         # Value Object
-│   │   │   └── TenantStatus.java     # Enum
-│   │   ├── repository/
-│   │   │   └── TenantRepository.java # Repository Interface
-│   │   └── service/
-│   │       └── TenantDomainService.java
 │   ├── user/                  # 사용자 도메인
+│   │   ├── model/
+│   │   │   ├── User.java             # Aggregate Root
+│   │   │   ├── UserId.java           # Value Object
+│   │   │   ├── Email.java            # Value Object
+│   │   │   └── Password.java         # Value Object
+│   │   ├── repository/
+│   │   │   └── UserRepository.java   # Repository Interface
+│   │   └── service/
+│   │       └── UserDomainService.java
 │   └── policy/                # 정책 도메인
+│       ├── model/
+│       │   ├── Policy.java           # Aggregate Root
+│       │   ├── PolicyId.java         # Value Object
+│       │   ├── PolicyVersion.java    # Value Object
+│       │   └── PolicyType.java       # Enum
+│       ├── repository/
+│       │   └── PolicyRepository.java
+│       └── service/
+│           └── PolicyDomainService.java
 ├── application/                # 애플리케이션 레이어
-│   ├── tenant/
-│   │   ├── TenantApplicationService.java
+│   ├── user/
+│   │   ├── UserApplicationService.java
 │   │   ├── command/
-│   │   │   ├── CreateTenantCommand.java
-│   │   │   └── UpdateTenantCommand.java
 │   │   └── query/
-│   │       └── TenantQueryService.java
-│   └── user/
+│   │       └── UserQueryService.java
+│   └── policy/
+│       ├── PolicyApplicationService.java
+│       ├── command/
+│       │   ├── CreatePolicySnapshotCommand.java
+│       │   └── ApprovePolicyCommand.java
+│       └── query/
+│           └── PolicyQueryService.java
 ├── infrastructure/             # 인프라 레이어
-│   ├── tenant/
-│   │   └── TenantRepositoryImpl.java
-│   └── user/
+│   ├── user/
+│   │   └── UserRepositoryImpl.java
+│   └── policy/
+│       └── PolicyRepositoryImpl.java
 └── interfaces/                 # 인터페이스 레이어
     ├── api/
-    │   └── tenant/
-    │       └── TenantController.java
+    │   ├── user/
+    │   │   └── UserController.java
+    │   └── policy/
+    │       └── PolicyController.java
     └── dto/
-        └── tenant/
-            ├── CreateTenantRequest.java
-            └── TenantResponse.java
+        ├── user/
+        │   ├── CreateUserRequest.java
+        │   └── UserResponse.java
+        └── policy/
+            ├── CreatePolicyRequest.java
+            └── PolicyResponse.java
 ```
 
 ## 핵심 도메인 모델
 
-### 1. Tenant (테넌트 - Aggregate Root)
-
-**책임:**
-- 회원사/기관 정보 관리
-- 테넌트 상태 관리 (활성/비활성/정지)
-- 테넌트 설정 관리
-
-**주요 비즈니스 규칙:**
-- 테넌트 ID는 변경 불가능
-- 활성 상태일 때만 시스템 사용 가능
-- 테넌트 이름은 필수
-- 테넌트 정지 시 사유 필요
-
-### 2. User (사용자 - Aggregate Root)
+### 1. User (사용자 - Aggregate Root)
 
 **책임:**
 - 사용자 정보 관리
 - 권한 관리
-- 테넌트 소속 관리
+- 인증 및 인가
 
 **주요 비즈니스 규칙:**
-- 사용자는 하나의 테넌트에만 소속
 - 이메일은 유일해야 함
 - 비밀번호는 암호화 저장
 - 권한은 역할 기반 (RBAC)
 
-### 3. Policy (정책 - Aggregate Root)
+### 2. Policy (정책 - Aggregate Root)
 
 **책임:**
 - 정책 버전 관리
@@ -100,28 +105,30 @@ backend/server/src/main/java/com/inspecthub/server/
 
 ## TDD 개발 순서
 
-1. **Tenant Domain Model** (현재 진행)
-   - TenantId Value Object 테스트 & 구현
-   - TenantStatus Enum 테스트 & 구현
-   - Tenant Aggregate 테스트 & 구현
-   - TenantDomainService 테스트 & 구현
+1. **User Domain Model** (현재 진행)
+   - UserId Value Object 테스트 & 구현
+   - Email Value Object 테스트 & 구현
+   - Password Value Object 테스트 & 구현
+   - User Aggregate 테스트 & 구현
+   - UserDomainService 테스트 & 구현
 
-2. **Tenant Infrastructure**
-   - TenantRepository 인터페이스
-   - TenantRepositoryImpl 테스트 & 구현
+2. **User Infrastructure**
+   - UserRepository 인터페이스
+   - UserRepositoryImpl 테스트 & 구현
 
-3. **Tenant Application**
+3. **User Application**
    - Commands/Queries 정의
-   - TenantApplicationService 테스트 & 구현
+   - UserApplicationService 테스트 & 구현
 
-4. **Tenant Interface**
+4. **User Interface**
    - DTOs 정의
-   - TenantController 테스트 & 구현
+   - UserController 테스트 & 구현
 
-5. **User Domain** (다음 단계)
-   - User 도메인 모델
+5. **Policy Domain** (다음 단계)
+   - PolicyId Value Object 테스트 & 구현
+   - PolicyVersion Value Object 테스트 & 구현
+   - PolicyType Enum 테스트 & 구현
+   - Policy Aggregate 테스트 & 구현
+   - PolicyDomainService 테스트 & 구현
    - 관련 레이어 구현
-
-6. **Policy Domain** (향후 진행)
-   - Policy 도메인 모델
    - 스냅샷 버전 관리 구현
