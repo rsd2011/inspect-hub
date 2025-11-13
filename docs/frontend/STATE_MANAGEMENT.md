@@ -1,10 +1,10 @@
 # State Management Guide
 
 > **Inspect-Hub Frontend 상태 관리 가이드**
-> 
-> **Version**: 1.0  
-> **Last Updated**: 2025-01-13  
-> **Target**: Nuxt 3 + Pinia + Composition API
+>
+> **Version**: 1.0
+> **Last Updated**: 2025-01-13
+> **Target**: Nuxt 4 + Pinia + Composition API
 
 ---
 
@@ -1527,7 +1527,7 @@ export const useUserStore = defineStore('user', () => {
 ### 공식 문서
 - [Pinia Documentation](https://pinia.vuejs.org/)
 - [Vue 3 Composition API](https://vuejs.org/guide/extras/composition-api-faq.html)
-- [Nuxt 3 State Management](https://nuxt.com/docs/getting-started/state-management)
+- [Nuxt 4 State Management](https://nuxt.com/docs/getting-started/state-management)
 
 ### 내부 문서
 - [Frontend README](./README.md)

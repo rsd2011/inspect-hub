@@ -1,10 +1,10 @@
 # Frontend Testing Guide
 
 > **Inspect-Hub Frontend 테스트 전략 및 구현 가이드**
-> 
-> **Version**: 1.0  
-> **Last Updated**: 2025-01-13  
-> **Target**: Nuxt 3 + Vue 3 + Vitest + Playwright
+>
+> **Version**: 1.0
+> **Last Updated**: 2025-01-13
+> **Target**: Nuxt 4 + Vue 3 + Vitest + Playwright
 
 ---
 

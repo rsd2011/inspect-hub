@@ -137,7 +137,7 @@ module.exports = {
 ## 기술 스택
 
 ### Core Framework
-- **Nuxt 3**: Vue 3 기반 프레임워크 (SPA 모드)
+- **Nuxt 4**: Vue 3 기반 프레임워크 (SPA 모드)
 - **Vue 3**: Composition API
 - **Vite**: 빌드 도구
 - **TypeScript**: 타입 안정성
@@ -438,7 +438,7 @@ server {
 ## 참고 문서
 
 - [COMPONENTS_ROADMAP.md](./COMPONENTS_ROADMAP.md) - 컴포넌트 구현 로드맵
-- [Nuxt 3 Documentation](https://nuxt.com/docs)
+- [Nuxt 4 Documentation](https://nuxt.com/docs)
 - [PrimeVue Documentation](https://primevue.org/)
 - [Tailwind CSS Documentation](https://tailwindcss.com/)
 - [Pinia Documentation](https://pinia.vuejs.org/)

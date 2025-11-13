@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **[Documentation Center](./docs/index.md)** - Start here for complete navigation
 - **[PRD (Product Requirements)](./docs/prd/index.md)** - 15 documents covering all requirements
-- **[Frontend Guide](./docs/frontend/README.md)** - Nuxt 3, components (675-line roadmap)
+- **[Frontend Guide](./docs/frontend/README.md)** - Nuxt 4, components (675-line roadmap)
 - **[Backend Guide](./docs/backend/AGENTS.md)** - Spring Boot, API development
 - **[API Contract](./docs/api/CONTRACT.md)** - Frontend ↔ Backend communication
 - **[Architecture](./docs/architecture/DDD_DESIGN.md)** - System design, DDD patterns
@@ -31,7 +31,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Spring Batch for batch processing
 
 **Frontend:**
-- Nuxt 3 (Vue 3 Composition API) - **⚠️ SPA MODE ONLY - SSR STRICTLY FORBIDDEN** (`ssr: false`)
+- Nuxt 4 (Vue 3 Composition API) - **⚠️ SPA MODE ONLY - SSR STRICTLY FORBIDDEN** (`ssr: false`)
 - Vite build system
 - UI: PrimeVue + RealGrid (commercial grid) + Tailwind CSS (with prefix `tw-`)
 - State: Pinia
@@ -55,7 +55,7 @@ inspect-hub/
 │   ├── common/                     # Shared entities, DTOs, utilities
 │   ├── policy/, detection/, ...    # Domain modules
 │   └── server/                     # Main application
-└── frontend/                       # Nuxt 3 application (SPA only)
+└── frontend/                       # Nuxt 4 application (SPA only)
     ├── app/                        # App layer
     ├── pages/                      # Pages (routing)
     ├── widgets/                    # Large blocks
