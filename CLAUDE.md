@@ -1560,11 +1560,50 @@ Investigation → Approval Workflow → Reporting → FIU Submission
 
 ### Security Requirements
 
+#### Authentication (3가지 로그인 방식)
+
+**내부 시스템 특성상 다중 인증 방식 지원:**
+
+1. **AD 로그인 (Active Directory)**
+   - 사원ID + 비밀번호 입력
+   - AD 서버 인증 (LDAP/Kerberos)
+   - 성공 시 JWT 토큰 발급
+
+2. **SSO 로그인 (Single Sign-On)**
+   - Backend API 직접 호출 방식
+   - SSO 서버 Redirect 처리
+   - 자동 인증 후 JWT 토큰 발급
+   - **Note:** Frontend는 SPA 모드이므로 SSO Redirect는 Backend에서 처리
+
+3. **일반 로그인 (Fallback - 장애 대비)**
+   - 사원ID + 비밀번호 입력
+   - 자체 DB 인증 (BCrypt 해시)
+   - AD/SSO 서버 장애 시 사용
+
+**Authentication Flow:**
+```
+사용자 로그인 시도
+    ↓
+1. SSO 사용 가능? → YES → SSO 인증 → JWT 발급
+    ↓ NO
+2. AD 서버 사용 가능? → YES → AD 인증 → JWT 발급
+    ↓ NO
+3. 일반 로그인 (DB 인증) → JWT 발급
+```
+
+**Implementation Notes:**
+- AD/SSO 서버 상태 체크 (Health Check) 필요
+- Timeout 설정: AD (3초), SSO (5초)
+- Fallback 자동 전환 로직 구현
+- 로그인 시도 이력 Audit Log 기록 필수
+
+#### Authorization & Data Security
+
 - **Encryption:** TLS in transit, field-level encryption for PII at rest
-- **Authentication:** Spring Security + JWT/OAuth2
 - **Authorization:** RBAC + SoD enforcement
 - **Data masking:** Configurable by role (via `DATA_POLICY` table)
 - **Access control:** Menu permissions managed in `MENU` table with `PERM_GROUP_FEATURE` mapping
+- **Session:** JWT-based stateless authentication
 
 ### Database Design Patterns
 
