@@ -42,7 +42,7 @@
 
 | 원칙 | 설명 | 예제 |
 |------|------|------|
-| **Test First** | 코드 작성 전 테스트 먼저 작성 | `shouldRejectDuplicateTenantName()` 테스트 → `TenantDomainService.validateUniqueness()` 구현 |
+| **Test First** | 코드 작성 전 테스트 먼저 작성 | `shouldRejectDuplicatePolicyName()` 테스트 → `PolicyDomainService.validateUniqueness()` 구현 |
 | **Minimal Implementation** | 테스트를 통과시키는 최소 코드만 작성 | 하드코딩도 OK, 나중에 리팩토링 |
 | **Tidy First** | 구조적 변경(리팩토링)과 행동적 변경(기능 추가) 분리 | Commit 1: `refactor: Extract method`, Commit 2: `feat: Add validation` |
 | **DDD Layers** | Domain → Application → Infrastructure → Interface 순서로 개발 | Domain 테스트 → Application 테스트 → Controller 테스트 |
@@ -79,10 +79,10 @@
 ./gradlew test
 
 # 특정 테스트 클래스 실행
-./gradlew test --tests TenantTest
+./gradlew test --tests PolicyTest
 
 # 특정 테스트 메서드 실행
-./gradlew test --tests TenantTest.shouldCreateTenantWithValidName
+./gradlew test --tests PolicyTest.shouldCreatePolicyWithValidVersion
 
 # 장기 실행 테스트 제외
 ./gradlew test -x longRunningTests
@@ -164,7 +164,7 @@ npm run test:e2e
 #### 테스트 작성 규칙
 
 1. **Given-When-Then 패턴** 사용
-2. **테스트 이름은 행동 중심** (예: `shouldRejectDuplicateTenantName`)
+2. **테스트 이름은 행동 중심** (예: `shouldRejectDuplicatePolicyName`)
 3. **`@DisplayName`** 사용하여 한글 설명 추가
 4. **Mock 최소화** - Domain Layer에서는 실제 객체 사용
 5. **Testcontainers** - 통합 테스트에서 실제 DB 사용
@@ -174,20 +174,20 @@ npm run test:e2e
 
 ```java
 @Test
-@DisplayName("중복된 이름의 Tenant 생성 시 예외 발생")
-void shouldRejectDuplicateTenantName() {
+@DisplayName("중복된 이름의 Policy 생성 시 예외 발생")
+void shouldRejectDuplicatePolicyName() {
     // Given
-    String duplicateName = "Existing Bank";
-    Tenant existingTenant = Tenant.create(new TenantId(), duplicateName);
-    tenantRepository.save(existingTenant);
+    String duplicateName = "KYC-Standard-v1";
+    Policy existingPolicy = Policy.create(new PolicyId(), duplicateName, PolicyType.KYC);
+    policyRepository.save(existingPolicy);
 
     // When & Then
     assertThatThrownBy(() -> {
-        Tenant newTenant = Tenant.create(new TenantId(), duplicateName);
-        tenantDomainService.validateUniqueness(newTenant);
+        Policy newPolicy = Policy.create(new PolicyId(), duplicateName, PolicyType.KYC);
+        policyDomainService.validateUniqueness(newPolicy);
     })
-    .isInstanceOf(DuplicateTenantException.class)
-    .hasMessageContaining("이미 존재하는 테넌트 이름입니다");
+    .isInstanceOf(DuplicatePolicyException.class)
+    .hasMessageContaining("이미 존재하는 정책 이름입니다");
 }
 ```
 
@@ -250,18 +250,18 @@ void shouldRejectDuplicateTenantName() {
 
 ```bash
 # 구조적 변경
-git commit -m "refactor(tenant): Extract validateUniqueness method
+git commit -m "refactor(policy): Extract validateUniqueness method
 
-- TenantDomainService에서 중복 검증 로직 추출
+- PolicyDomainService에서 중복 검증 로직 추출
 - 테스트는 변경 없음 (구조적 변경만)
 "
 
 # 행동적 변경
-git commit -m "feat(tenant): Add duplicate tenant name validation
+git commit -m "feat(policy): Add duplicate policy name validation
 
-- Tenant 생성 시 이름 중복 검사
-- DuplicateTenantException 추가
-- 테스트: shouldRejectDuplicateTenantName
+- Policy 생성 시 이름 중복 검사
+- DuplicatePolicyException 추가
+- 테스트: shouldRejectDuplicatePolicyName
 "
 ```
 
