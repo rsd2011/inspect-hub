@@ -6,7 +6,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Inspect-Hub** is a comprehensive AML (Anti-Money Laundering) integrated compliance monitoring system for financial institutions in Korea. The system detects suspicious transactions (STR), currency transaction reports (CTR), watch-list filtering (WLF), and manages compliance workflows with regulatory compliance for Korean financial law and FATF guidelines.
 
-**Current Status:** Planning/POC Phase - comprehensive PRD exists in `PRD.md` (Korean language, 486 lines), but no code implementation yet.
+**Current Status:** Planning/POC Phase - comprehensive PRD split into 15 documents in `/docs/prd/`, minimal code implementation.
+
+## 📚 Documentation Structure
+
+**All project documentation is centralized in the `/docs` directory:**
+
+- **[Documentation Center](./docs/index.md)** - Start here for complete navigation
+- **[PRD (Product Requirements)](./docs/prd/index.md)** - 15 documents covering all requirements
+- **[Frontend Guide](./docs/frontend/README.md)** - Nuxt 3, components (675-line roadmap)
+- **[Backend Guide](./docs/backend/AGENTS.md)** - Spring Boot, API development
+- **[API Contract](./docs/api/CONTRACT.md)** - Frontend ↔ Backend communication
+- **[Architecture](./docs/architecture/DDD_DESIGN.md)** - System design, DDD patterns
+- **[Development Guide](./docs/development/AGENTS.md)** - Coding rules, testing, builds
 
 ## Tech Stack
 
@@ -31,10 +43,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Project Structure:**
 ```
 inspect-hub/
-├── backend/          # Spring Boot multi-module
-│   ├── common/       # Shared entities, DTOs, utilities
-│   └── server/       # Main application, controllers, services
-└── frontend/         # Nuxt 3 application
+├── docs/                           # 📚 Central documentation
+│   ├── index.md                    # Documentation center (start here)
+│   ├── prd/                        # Product requirements (15 files)
+│   ├── frontend/                   # Frontend guides
+│   ├── backend/                    # Backend guides
+│   ├── api/                        # API contract
+│   ├── architecture/               # System design
+│   └── development/                # Development rules
+├── backend/                        # Spring Boot multi-module
+│   ├── common/                     # Shared entities, DTOs, utilities
+│   ├── policy/, detection/, ...    # Domain modules
+│   └── server/                     # Main application
+└── frontend/                       # Nuxt 3 application (SPA only)
+    ├── app/                        # App layer
+    ├── pages/                      # Pages (routing)
+    ├── widgets/                    # Large blocks
+    ├── features/                   # User features
+    ├── entities/                   # Business entities
+    └── shared/                     # Shared (UI, API, utils)
 ```
 
 ## Frontend Architecture
@@ -1641,10 +1668,35 @@ npm run lint
 
 ## Reference
 
-- **PRD:** `/home/rsd/workspace/inspect-hub/PRD.md` (Korean, 486 lines)
-- **API Contract:** `/home/rsd/workspace/inspect-hub/API-CONTRACT.md` ⭐ **Frontend ↔ Backend API 계약 및 동기화 계획**
-- **Frontend Guide:** `/home/rsd/workspace/inspect-hub/frontend/README.md` (SPA constraints, coding rules, deployment)
-- **Frontend Agents:** `/home/rsd/workspace/inspect-hub/frontend/AGENTS.md` (Mock API, Component Generator, Build Validator)
-- **Backend Agents:** `/home/rsd/workspace/inspect-hub/backend/AGENTS.md` (API Generator, Module Validator)
-- **Components Roadmap:** `/home/rsd/workspace/inspect-hub/frontend/COMPONENTS_ROADMAP.md` (Implementation progress)
-- **Timeline:** MVP Go-Live target: January 20, 2026
+**📚 All documentation is centralized in `/docs` directory. See [docs/index.md](./docs/index.md) for complete navigation.**
+
+### Core Documentation
+
+- **[Documentation Center](./docs/index.md)** - Start here, complete navigation guide
+- **[PRD Index](./docs/prd/index.md)** - Product requirements (15 documents, ~7,000 lines total)
+  - Original `PRD.md` (486 lines) split into structured documents
+- **[API Contract](./docs/api/CONTRACT.md)** ⭐ Frontend ↔ Backend API 계약 및 동기화 계획
+
+### Frontend
+
+- **[Frontend README](./docs/frontend/README.md)** - SPA constraints, coding rules, deployment (449 lines)
+- **[Components Roadmap](./docs/frontend/COMPONENTS_ROADMAP.md)** ⭐ Implementation progress (675 lines)
+  - Atomic Design structure, Phase 2 implementation guide
+- **[Frontend Agents](./docs/frontend/AGENTS.md)** - Mock API, Component Generator, Build Validator
+
+### Backend
+
+- **[Backend Agents](./docs/backend/AGENTS.md)** - API Generator, Module Validator
+- **[ULID Guide](./docs/backend/ULID.md)** - Identifier strategy
+
+### Architecture
+
+- **[DDD Design](./docs/architecture/DDD_DESIGN.md)** - Domain-Driven Design layers, testing strategy
+
+### Development
+
+- **[Development Guide](./docs/development/AGENTS.md)** - Coding style, testing, commit rules
+
+### Timeline
+
+- **MVP Go-Live Target:** January 20, 2026
