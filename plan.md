@@ -168,15 +168,157 @@
 
 ### Security
 
-#### Authentication (3가지 로그인 방식)
-- [ ] AD 로그인 테스트 - 사원ID + 비밀번호 → AD 서버 인증
-- [ ] AD 로그인 실패 테스트 - 잘못된 사원ID 또는 비밀번호
-- [ ] AD 로그인 실패 테스트 - AD 서버 장애 시 예외 처리
-- [ ] SSO 로그인 테스트 - Backend API 호출 → Redirect 처리
-- [ ] SSO 로그인 실패 테스트 - SSO 서버 장애 시 예외 처리
-- [ ] 일반 로그인 테스트 - 사원ID + 비밀번호 → DB 인증 (Fallback)
-- [ ] 일반 로그인 실패 테스트 - 잘못된 사원ID 또는 비밀번호
-- [ ] 로그인 방식 선택 테스트 - AD/SSO 장애 시 자동 Fallback
+#### Authentication - AD Login (Active Directory)
+
+**정상 케이스:**
+- [ ] AD 로그인 성공 - 유효한 사원ID + 비밀번호 → JWT 토큰 발급
+- [ ] AD 로그인 성공 - 사용자 정보 포함 (id, employeeId, fullName, orgId, roles)
+- [ ] AD 로그인 성공 - Access Token + Refresh Token 모두 발급
+- [ ] AD 로그인 성공 - Token 만료시간 정확히 설정 (Access: 1시간, Refresh: 24시간)
+
+**실패 케이스 - 인증 오류:**
+- [ ] AD 로그인 실패 - 존재하지 않는 사원ID
+- [ ] AD 로그인 실패 - 잘못된 비밀번호
+- [ ] AD 로그인 실패 - 빈 사원ID (InvalidCredentialsException)
+- [ ] AD 로그인 실패 - 빈 비밀번호 (InvalidCredentialsException)
+- [ ] AD 로그인 실패 - null 사원ID (InvalidCredentialsException)
+- [ ] AD 로그인 실패 - null 비밀번호 (InvalidCredentialsException)
+- [ ] AD 로그인 실패 - 비활성화된 사용자 (AccountDisabledException)
+- [ ] AD 로그인 실패 - 잠긴 계정 (AccountLockedException)
+- [ ] AD 로그인 실패 - 만료된 계정 (AccountExpiredException)
+- [ ] AD 로그인 실패 - 비밀번호 만료 (CredentialsExpiredException)
+
+**실패 케이스 - 서버 오류:**
+- [ ] AD 로그인 실패 - AD 서버 연결 불가 (Connection Timeout)
+- [ ] AD 로그인 실패 - AD 서버 응답 없음 (Read Timeout 3초)
+- [ ] AD 로그인 실패 - AD 서버 DNS 해석 실패
+- [ ] AD 로그인 실패 - AD 서버 인증서 오류 (TLS/SSL)
+- [ ] AD 로그인 실패 - AD 서버 5xx 에러 응답
+
+**실패 케이스 - 입력 검증:**
+- [ ] AD 로그인 실패 - 사원ID 형식 오류 (영문자 포함 등)
+- [ ] AD 로그인 실패 - 사원ID 길이 초과 (50자 초과)
+- [ ] AD 로그인 실패 - 비밀번호 길이 초과 (100자 초과)
+- [ ] AD 로그인 실패 - SQL Injection 시도 차단
+- [ ] AD 로그인 실패 - XSS 스크립트 입력 차단
+
+**보안 케이스:**
+- [ ] AD 로그인 시도 제한 - 5회 실패 시 계정 잠금 (5분)
+- [ ] AD 로그인 시도 제한 - 10회 실패 시 계정 잠금 (30분)
+- [ ] AD 로그인 Brute Force 방지 - IP별 요청 제한 (분당 10회)
+- [ ] AD 로그인 감사 로그 - 성공 시 로그 기록 (사원ID, IP, 시간)
+- [ ] AD 로그인 감사 로그 - 실패 시 로그 기록 (사원ID, 실패 사유, IP, 시간)
+
+#### Authentication - SSO Login (Single Sign-On)
+
+**정상 케이스:**
+- [ ] SSO 로그인 성공 - Redirect URL 생성 (returnUrl 포함)
+- [ ] SSO 로그인 성공 - Callback 처리 (SSO 토큰 → JWT 발급)
+- [ ] SSO 로그인 성공 - State 파라미터 검증 (CSRF 방지)
+- [ ] SSO 로그인 성공 - Frontend로 Redirect (JWT 포함)
+- [ ] SSO 로그인 성공 - returnUrl 없을 때 기본 경로 (/)
+
+**실패 케이스 - SSO 서버 오류:**
+- [ ] SSO 로그인 실패 - SSO 서버 연결 불가 (Connection Timeout)
+- [ ] SSO 로그인 실패 - SSO 서버 응답 없음 (Read Timeout 5초)
+- [ ] SSO 로그인 실패 - SSO 서버 DNS 해석 실패
+- [ ] SSO 로그인 실패 - SSO 서버 5xx 에러 응답
+- [ ] SSO 로그인 실패 - SSO 서버 인증 거부 (401)
+
+**실패 케이스 - Callback 처리:**
+- [ ] SSO Callback 실패 - 잘못된 SSO 토큰 (InvalidSSOTokenException)
+- [ ] SSO Callback 실패 - 만료된 SSO 토큰
+- [ ] SSO Callback 실패 - 변조된 State 파라미터 (CSRF 공격)
+- [ ] SSO Callback 실패 - State 파라미터 누락
+- [ ] SSO Callback 실패 - SSO 토큰 누락
+
+**입력 검증:**
+- [ ] SSO 로그인 실패 - returnUrl XSS 시도 차단
+- [ ] SSO 로그인 실패 - returnUrl Open Redirect 방지 (허용 도메인만)
+- [ ] SSO 로그인 실패 - returnUrl 길이 초과 (500자)
+
+**보안 케이스:**
+- [ ] SSO 로그인 감사 로그 - Redirect 시도 기록
+- [ ] SSO 로그인 감사 로그 - Callback 처리 성공/실패 기록
+- [ ] SSO State 파라미터 - 1회용 토큰 검증 (재사용 불가)
+- [ ] SSO State 파라미터 - 만료시간 검증 (10분)
+
+#### Authentication - Local Login (Fallback)
+
+**정상 케이스:**
+- [ ] 일반 로그인 성공 - 유효한 사원ID + 비밀번호 → JWT 발급
+- [ ] 일반 로그인 성공 - BCrypt 비밀번호 검증
+- [ ] 일반 로그인 성공 - 사용자 정보 포함 (id, employeeId, fullName, orgId, roles)
+- [ ] 일반 로그인 성공 - Access Token + Refresh Token 발급
+
+**실패 케이스 - 인증 오류:**
+- [ ] 일반 로그인 실패 - 존재하지 않는 사원ID
+- [ ] 일반 로그인 실패 - 잘못된 비밀번호
+- [ ] 일반 로그인 실패 - 빈 사원ID
+- [ ] 일반 로그인 실패 - 빈 비밀번호
+- [ ] 일반 로그인 실패 - null 사원ID
+- [ ] 일반 로그인 실패 - null 비밀번호
+- [ ] 일반 로그인 실패 - 비활성화된 사용자 (status=INACTIVE)
+- [ ] 일반 로그인 실패 - 삭제된 사용자 (status=DELETED)
+
+**입력 검증:**
+- [ ] 일반 로그인 실패 - 사원ID 형식 오류
+- [ ] 일반 로그인 실패 - 사원ID 길이 초과 (50자)
+- [ ] 일반 로그인 실패 - 비밀번호 길이 초과 (100자)
+- [ ] 일반 로그인 실패 - SQL Injection 시도 차단
+- [ ] 일반 로그인 실패 - XSS 스크립트 입력 차단
+
+**보안 케이스:**
+- [ ] 일반 로그인 시도 제한 - 5회 실패 시 계정 잠금 (5분)
+- [ ] 일반 로그인 시도 제한 - 10회 실패 시 계정 잠금 (30분)
+- [ ] 일반 로그인 Brute Force 방지 - IP별 요청 제한 (분당 10회)
+- [ ] 일반 로그인 감사 로그 - 성공 시 로그 기록
+- [ ] 일반 로그인 감사 로그 - 실패 시 로그 기록
+
+#### Authentication - Health Check & Fallback
+
+**Health Check:**
+- [ ] Health Check - 모든 서버 정상 (AD, SSO, Local)
+- [ ] Health Check - AD 서버만 장애
+- [ ] Health Check - SSO 서버만 장애
+- [ ] Health Check - AD, SSO 모두 장애 (Local만 가능)
+- [ ] Health Check - 응답 시간 측정 (ms 단위)
+- [ ] Health Check - 권장 로그인 방식 반환 (recommendedMethod)
+
+**Fallback 로직:**
+- [ ] Fallback - SSO 장애 시 AD로 자동 전환
+- [ ] Fallback - SSO, AD 장애 시 Local로 자동 전환
+- [ ] Fallback - 장애 복구 시 원래 방식으로 복귀 (SSO 우선)
+- [ ] Fallback - 사용자 명시적 선택 시 Fallback 무시
+- [ ] Fallback - Fallback 시도 감사 로그 기록
+
+#### Authentication - Concurrent & Performance
+
+**동시성:**
+- [ ] 동시 로그인 - 같은 사용자 여러 세션 허용
+- [ ] 동시 로그인 - 세션별 독립적인 JWT 발급
+- [ ] 동시 로그인 - 최대 세션 수 제한 (10개)
+- [ ] 동시 로그인 - 초과 시 가장 오래된 세션 자동 만료
+
+**성능:**
+- [ ] 로그인 성능 - AD 인증 3초 이내 완료
+- [ ] 로그인 성능 - SSO 인증 5초 이내 완료
+- [ ] 로그인 성능 - Local 인증 1초 이내 완료
+- [ ] 로그인 성능 - 동시 100건 요청 처리 (TPS 100+)
+
+#### Authentication - Integration
+
+**AD 연동:**
+- [ ] AD 연동 - LDAP 연결 테스트 (ldap://ad.company.com:389)
+- [ ] AD 연동 - 사용자 정보 조회 (displayName, mail, department)
+- [ ] AD 연동 - 그룹 정보 조회 (memberOf)
+- [ ] AD 연동 - 비밀번호 정책 준수 (복잡도, 만료일)
+
+**SSO 연동:**
+- [ ] SSO 연동 - OAuth2 흐름 테스트 (Authorization Code)
+- [ ] SSO 연동 - 사용자 정보 조회 (UserInfo Endpoint)
+- [ ] SSO 연동 - 토큰 갱신 테스트 (Refresh Token)
+- [ ] SSO 연동 - 로그아웃 전파 (SLO - Single Logout)
 
 #### JWT Token Management
 - [ ] JWT 토큰 생성 테스트 - 유효한 클레임 포함
