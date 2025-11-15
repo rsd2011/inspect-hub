@@ -11,10 +11,10 @@ import java.util.stream.Collectors;
 /**
  * 로그인 정책 Aggregate Root
  *
- * 조직별 또는 글로벌 로그인 정책을 관리합니다.
+ * Jenkins 스타일 전역 로그인 정책을 관리합니다.
  * - 활성화된 로그인 방식 (SSO, AD, LOCAL)
  * - 우선순위 (기본: SSO > AD > LOCAL)
- * - 조직별 정책 (orgId != null) 또는 글로벌 정책 (orgId == null)
+ * - 시스템 전체에 단일 정책만 존재
  */
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -29,11 +29,6 @@ public class LoginPolicy {
      * 정책 이름
      */
     private String name;
-
-    /**
-     * 조직 ID (null = 글로벌 정책)
-     */
-    private String orgId;
 
     /**
      * 활성화된 로그인 방식
@@ -92,7 +87,6 @@ public class LoginPolicy {
 
         this.id = builder.id;
         this.name = builder.name;
-        this.orgId = builder.orgId;
         this.enabledMethods = new LinkedHashSet<>(builder.enabledMethods);
 
         // 우선순위 설정
@@ -129,7 +123,6 @@ public class LoginPolicy {
     public static class LoginPolicyBuilder {
         private String id;
         private String name;
-        private String orgId;
         private Set<LoginMethod> enabledMethods = new LinkedHashSet<>();
         private List<LoginMethod> priority;
         private boolean active = true;
@@ -145,11 +138,6 @@ public class LoginPolicy {
 
         public LoginPolicyBuilder name(String name) {
             this.name = name;
-            return this;
-        }
-
-        public LoginPolicyBuilder orgId(String orgId) {
-            this.orgId = orgId;
             return this;
         }
 
@@ -191,13 +179,6 @@ public class LoginPolicy {
         public LoginPolicy build() {
             return new LoginPolicy(this);
         }
-    }
-
-    /**
-     * 글로벌 정책 여부 확인
-     */
-    public boolean isGlobalPolicy() {
-        return orgId == null;
     }
 
     /**

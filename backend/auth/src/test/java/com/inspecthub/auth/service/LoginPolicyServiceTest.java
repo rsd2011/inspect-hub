@@ -21,10 +21,11 @@ import static org.mockito.Mockito.verify;
 /**
  * LoginPolicyService Tests
  *
+ * Jenkins 스타일 전역 정책 (조직별 정책 없음)
  * BDD 스타일(Given-When-Then)로 작성
  */
 @ExtendWith(MockitoExtension.class)
-@DisplayName("LoginPolicyService - 로그인 정책 조회")
+@DisplayName("LoginPolicyService - 로그인 정책 조회 (전역 정책)")
 class LoginPolicyServiceTest {
 
     @Mock
@@ -33,123 +34,68 @@ class LoginPolicyServiceTest {
     @InjectMocks
     private LoginPolicyService loginPolicyService;
 
-    private LoginPolicy orgPolicy;
-    private LoginPolicy globalPolicy;
+    private LoginPolicy systemPolicy;
 
     @BeforeEach
     void setUp() {
-        // Given: 조직별 정책 준비
-        orgPolicy = LoginPolicy.builder()
-            .id("01JCXYZ1234567890ABCDEF001")
-            .name("조직별 정책")
-            .orgId("01JCORG1234567890ABCDEF123")
-            .enabledMethods(Set.of(LoginMethod.SSO, LoginMethod.LOCAL))
-            .build();
-
-        // Given: 글로벌 정책 준비
-        globalPolicy = LoginPolicy.builder()
+        // Given: 시스템 전역 정책 준비
+        systemPolicy = LoginPolicy.builder()
             .id("01JCXYZ1234567890ABCDEF002")
-            .name("글로벌 정책")
-            .orgId(null)  // 글로벌
+            .name("시스템 로그인 정책")
             .enabledMethods(Set.of(LoginMethod.SSO, LoginMethod.AD, LoginMethod.LOCAL))
             .build();
     }
 
     @Test
-    @DisplayName("조직ID로 조직별 정책을 조회할 수 있다")
-    void shouldGetPolicyByOrgId() {
-        // Given (준비)
-        String orgId = "01JCORG1234567890ABCDEF123";
-        given(loginPolicyRepository.findByOrgId(orgId))
-            .willReturn(Optional.of(orgPolicy));
-
-        // When (실행)
-        LoginPolicy result = loginPolicyService.getPolicyByOrg(orgId);
-
-        // Then (검증)
-        assertThat(result).isNotNull();
-        assertThat(result.getOrgId()).isEqualTo(orgId);
-        assertThat(result.getName()).isEqualTo("조직별 정책");
-        assertThat(result.isGlobalPolicy()).isFalse();
-
-        verify(loginPolicyRepository).findByOrgId(orgId);
-    }
-
-    @Test
-    @DisplayName("orgId가 null이면 글로벌 정책을 조회한다")
-    void shouldGetGlobalPolicyWhenOrgIdIsNull() {
+    @DisplayName("시스템 전역 정책을 조회할 수 있다")
+    void shouldGetGlobalPolicy() {
         // Given (준비)
         given(loginPolicyRepository.findGlobalPolicy())
-            .willReturn(Optional.of(globalPolicy));
+            .willReturn(Optional.of(systemPolicy));
 
         // When (실행)
-        LoginPolicy result = loginPolicyService.getPolicyByOrg(null);
+        LoginPolicy result = loginPolicyService.getGlobalPolicy();
 
         // Then (검증)
         assertThat(result).isNotNull();
-        assertThat(result.getOrgId()).isNull();
-        assertThat(result.getName()).isEqualTo("글로벌 정책");
-        assertThat(result.isGlobalPolicy()).isTrue();
+        assertThat(result.getName()).isEqualTo("시스템 로그인 정책");
+        assertThat(result.getEnabledMethods())
+            .containsExactlyInAnyOrder(LoginMethod.SSO, LoginMethod.AD, LoginMethod.LOCAL);
 
         verify(loginPolicyRepository).findGlobalPolicy();
     }
 
     @Test
-    @DisplayName("조직 정책이 없으면 글로벌 정책을 반환한다 (Fallback)")
-    void shouldFallbackToGlobalPolicyWhenOrgPolicyNotFound() {
+    @DisplayName("사용 가능한 로그인 방식 리스트를 반환한다")
+    void shouldGetAvailableMethods() {
         // Given (준비)
-        String orgId = "01JCORG1234567890ABCDEF999";  // 정책 없는 조직
-        given(loginPolicyRepository.findByOrgId(orgId))
-            .willReturn(Optional.empty());  // 조직 정책 없음
         given(loginPolicyRepository.findGlobalPolicy())
-            .willReturn(Optional.of(globalPolicy));  // 글로벌 정책으로 Fallback
+            .willReturn(Optional.of(systemPolicy));
 
         // When (실행)
-        LoginPolicy result = loginPolicyService.getPolicyByOrg(orgId);
+        Set<LoginMethod> result = loginPolicyService.getAvailableMethods();
 
         // Then (검증)
         assertThat(result).isNotNull();
-        assertThat(result.isGlobalPolicy()).isTrue();
-        assertThat(result.getName()).isEqualTo("글로벌 정책");
+        assertThat(result).containsExactlyInAnyOrder(LoginMethod.SSO, LoginMethod.AD, LoginMethod.LOCAL);
 
-        verify(loginPolicyRepository).findByOrgId(orgId);
         verify(loginPolicyRepository).findGlobalPolicy();
     }
 
     @Test
-    @DisplayName("조직의 사용 가능한 로그인 방식 리스트를 반환한다")
-    void shouldGetAvailableMethodsByOrgId() {
+    @DisplayName("최우선 로그인 방식을 반환한다")
+    void shouldGetPrimaryMethod() {
         // Given (준비)
-        String orgId = "01JCORG1234567890ABCDEF123";
-        given(loginPolicyRepository.findByOrgId(orgId))
-            .willReturn(Optional.of(orgPolicy));
+        given(loginPolicyRepository.findGlobalPolicy())
+            .willReturn(Optional.of(systemPolicy));
 
         // When (실행)
-        Set<LoginMethod> result = loginPolicyService.getAvailableMethods(orgId);
-
-        // Then (검증)
-        assertThat(result).isNotNull();
-        assertThat(result).containsExactlyInAnyOrder(LoginMethod.SSO, LoginMethod.LOCAL);
-        assertThat(result).doesNotContain(LoginMethod.AD);
-
-        verify(loginPolicyRepository).findByOrgId(orgId);
-    }
-
-    @Test
-    @DisplayName("조직의 최우선 로그인 방식을 반환한다")
-    void shouldGetPrimaryMethodByOrgId() {
-        // Given (준비)
-        String orgId = "01JCORG1234567890ABCDEF123";
-        given(loginPolicyRepository.findByOrgId(orgId))
-            .willReturn(Optional.of(orgPolicy));
-
-        // When (실행)
-        LoginMethod result = loginPolicyService.getPrimaryMethod(orgId);
+        LoginMethod result = loginPolicyService.getPrimaryMethod();
 
         // Then (검증)
         assertThat(result).isNotNull();
         assertThat(result).isEqualTo(LoginMethod.SSO);  // 우선순위: SSO > AD > LOCAL
 
-        verify(loginPolicyRepository).findByOrgId(orgId);
+        verify(loginPolicyRepository).findGlobalPolicy();
     }
 }

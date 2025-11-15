@@ -11,9 +11,10 @@ import static org.assertj.core.api.Assertions.*;
 /**
  * LoginPolicy 도메인 모델 테스트
  *
+ * Jenkins 스타일 전역 정책 (조직별 정책 없음)
  * BDD 스타일(Given-When-Then)로 작성
  */
-@DisplayName("LoginPolicy 도메인 모델")
+@DisplayName("LoginPolicy 도메인 모델 - 전역 정책")
 class LoginPolicyTest {
 
     @Test
@@ -22,7 +23,6 @@ class LoginPolicyTest {
         // Given (준비)
         String id = "01JCXYZ1234567890ABCDEF123";  // ULID
         String name = "기본 로그인 정책";
-        String orgId = "01JCORG1234567890ABCDEF123";
         Set<LoginMethod> enabledMethods = Set.of(
             LoginMethod.SSO,
             LoginMethod.AD,
@@ -33,7 +33,6 @@ class LoginPolicyTest {
         LoginPolicy policy = LoginPolicy.builder()
             .id(id)
             .name(name)
-            .orgId(orgId)
             .enabledMethods(enabledMethods)
             .build();
 
@@ -41,35 +40,8 @@ class LoginPolicyTest {
         assertThat(policy).isNotNull();
         assertThat(policy.getId()).isEqualTo(id);
         assertThat(policy.getName()).isEqualTo(name);
-        assertThat(policy.getOrgId()).isEqualTo(orgId);
         assertThat(policy.getEnabledMethods())
             .containsExactlyInAnyOrder(LoginMethod.SSO, LoginMethod.AD, LoginMethod.LOCAL);
-    }
-
-    @Test
-    @DisplayName("글로벌 정책은 orgId가 null이다")
-    void shouldCreateGlobalPolicyWithNullOrgId() {
-        // Given (준비)
-        String id = "01JCXYZ1234567890ABCDEF124";
-        String name = "글로벌 로그인 정책";
-        String orgId = null;  // 글로벌 정책
-        Set<LoginMethod> enabledMethods = Set.of(
-            LoginMethod.SSO,
-            LoginMethod.AD,
-            LoginMethod.LOCAL
-        );
-
-        // When (실행)
-        LoginPolicy policy = LoginPolicy.builder()
-            .id(id)
-            .name(name)
-            .orgId(orgId)
-            .enabledMethods(enabledMethods)
-            .build();
-
-        // Then (검증)
-        assertThat(policy.getOrgId()).isNull();
-        assertThat(policy.isGlobalPolicy()).isTrue();
     }
 
     @Test
@@ -78,7 +50,6 @@ class LoginPolicyTest {
         // Given (준비)
         String id = "01JCXYZ1234567890ABCDEF125";
         String name = null;
-        String orgId = "01JCORG1234567890ABCDEF123";
         Set<LoginMethod> enabledMethods = Set.of(LoginMethod.SSO);
 
         // When & Then (실행 및 검증)
@@ -86,8 +57,7 @@ class LoginPolicyTest {
             LoginPolicy.builder()
                 .id(id)
                 .name(name)
-                .orgId(orgId)
-                .enabledMethods(enabledMethods)
+                    .enabledMethods(enabledMethods)
                 .build()
         )
         .isInstanceOf(IllegalArgumentException.class)
@@ -100,7 +70,6 @@ class LoginPolicyTest {
         // Given (준비)
         String id = "01JCXYZ1234567890ABCDEF126";
         String name = "테스트 정책";
-        String orgId = "01JCORG1234567890ABCDEF123";
         Set<LoginMethod> enabledMethods = Set.of();  // 빈 Set
 
         // When & Then (실행 및 검증)
@@ -108,8 +77,7 @@ class LoginPolicyTest {
             LoginPolicy.builder()
                 .id(id)
                 .name(name)
-                .orgId(orgId)
-                .enabledMethods(enabledMethods)
+                    .enabledMethods(enabledMethods)
                 .build()
         )
         .isInstanceOf(IllegalArgumentException.class)
@@ -122,7 +90,6 @@ class LoginPolicyTest {
         // Given (준비)
         String id = "01JCXYZ1234567890ABCDEF127";
         String name = "테스트 정책";
-        String orgId = "01JCORG1234567890ABCDEF123";
         Set<LoginMethod> enabledMethods = null;
 
         // When & Then (실행 및 검증)
@@ -130,8 +97,7 @@ class LoginPolicyTest {
             LoginPolicy.builder()
                 .id(id)
                 .name(name)
-                .orgId(orgId)
-                .enabledMethods(enabledMethods)
+                    .enabledMethods(enabledMethods)
                 .build()
         )
         .isInstanceOf(IllegalArgumentException.class)
@@ -144,7 +110,6 @@ class LoginPolicyTest {
         // Given (준비)
         String id = "01JCXYZ1234567890ABCDEF128";
         String name = "기본 우선순위 정책";
-        String orgId = "01JCORG1234567890ABCDEF123";
         Set<LoginMethod> enabledMethods = Set.of(
             LoginMethod.SSO,
             LoginMethod.AD,
@@ -155,7 +120,6 @@ class LoginPolicyTest {
         LoginPolicy policy = LoginPolicy.builder()
             .id(id)
             .name(name)
-            .orgId(orgId)
             .enabledMethods(enabledMethods)
             .build();
 
@@ -171,7 +135,6 @@ class LoginPolicyTest {
         LoginPolicy policy = LoginPolicy.builder()
             .id("01JCXYZ1234567890ABCDEF129")
             .name("SSO만 활성화")
-            .orgId("01JCORG1234567890ABCDEF123")
             .enabledMethods(Set.of(LoginMethod.SSO))
             .build();
 
@@ -188,7 +151,6 @@ class LoginPolicyTest {
         LoginPolicy policy = LoginPolicy.builder()
             .id("01JCXYZ1234567890ABCDEF130")
             .name("SSO 우선 정책")
-            .orgId("01JCORG1234567890ABCDEF123")
             .enabledMethods(Set.of(LoginMethod.SSO, LoginMethod.LOCAL))
             .build();
 
@@ -206,7 +168,6 @@ class LoginPolicyTest {
         LoginPolicy policy = LoginPolicy.builder()
             .id("01JCXYZ1234567890ABCDEF131")
             .name("테스트 정책")
-            .orgId("01JCORG1234567890ABCDEF123")
             .enabledMethods(Set.of(LoginMethod.SSO, LoginMethod.AD, LoginMethod.LOCAL))
             .build();
 
@@ -226,7 +187,6 @@ class LoginPolicyTest {
         LoginPolicy policy = LoginPolicy.builder()
             .id("01JCXYZ1234567890ABCDEF132")
             .name("SSO만 활성화")
-            .orgId("01JCORG1234567890ABCDEF123")
             .enabledMethods(Set.of(LoginMethod.SSO))
             .build();
 
@@ -243,7 +203,6 @@ class LoginPolicyTest {
         LoginPolicy policy = LoginPolicy.builder()
             .id("01JCXYZ1234567890ABCDEF133")
             .name("SSO만 활성화")
-            .orgId("01JCORG1234567890ABCDEF123")
             .enabledMethods(Set.of(LoginMethod.SSO))
             .build();
 
@@ -263,7 +222,6 @@ class LoginPolicyTest {
         LoginPolicy policy = LoginPolicy.builder()
             .id("01JCXYZ1234567890ABCDEF134")
             .name("우선순위 테스트")
-            .orgId("01JCORG1234567890ABCDEF123")
             .enabledMethods(Set.of(LoginMethod.SSO, LoginMethod.AD, LoginMethod.LOCAL))
             .build();
 
@@ -289,7 +247,6 @@ class LoginPolicyTest {
         LoginPolicy policy = LoginPolicy.builder()
             .id("01JCXYZ1234567890ABCDEF135")
             .name("우선순위 검증 테스트")
-            .orgId("01JCORG1234567890ABCDEF123")
             .enabledMethods(Set.of(LoginMethod.SSO, LoginMethod.LOCAL))
             .build();
 
@@ -312,7 +269,6 @@ class LoginPolicyTest {
         LoginPolicy policy = LoginPolicy.builder()
             .id("01JCXYZ1234567890ABCDEF136")
             .name("우선순위 빈 값 테스트")
-            .orgId("01JCORG1234567890ABCDEF123")
             .enabledMethods(Set.of(LoginMethod.SSO))
             .build();
 
