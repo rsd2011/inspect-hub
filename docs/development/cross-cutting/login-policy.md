@@ -21,9 +21,9 @@
 - [x] isMethodEnabled(method) - 특정 방식 활성화 여부 확인
 - [ ] getEnabledMethods() - 활성화된 방식 리스트 반환
 - [x] getPrimaryMethod() - 최우선 로그인 방식 반환 (priority 기준)
-- [ ] disableMethod(method) - 특정 방식 비활성화
-- [ ] enableMethod(method) - 특정 방식 활성화
-- [ ] updatePriority(newPriority) - 우선순위 변경
+- [x] disableMethod(method) - 특정 방식 비활성화
+- [x] enableMethod(method) - 특정 방식 활성화
+- [x] updatePriority(newPriority) - 우선순위 변경
 
 #### Login Policy - Application Service (응용 서비스)
 

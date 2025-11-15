@@ -3,6 +3,7 @@ package com.inspecthub.auth.domain;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.*;
@@ -196,5 +197,130 @@ class LoginPolicyTest {
 
         // Then (검증)
         assertThat(primaryMethod).isEqualTo(LoginMethod.SSO);
+    }
+
+    @Test
+    @DisplayName("특정 로그인 방식을 비활성화할 수 있다")
+    void shouldDisableMethod() {
+        // Given (준비)
+        LoginPolicy policy = LoginPolicy.builder()
+            .id("01JCXYZ1234567890ABCDEF131")
+            .name("테스트 정책")
+            .orgId("01JCORG1234567890ABCDEF123")
+            .enabledMethods(Set.of(LoginMethod.SSO, LoginMethod.AD, LoginMethod.LOCAL))
+            .build();
+
+        // When (실행)
+        policy.disableMethod(LoginMethod.AD);
+
+        // Then (검증)
+        assertThat(policy.isMethodEnabled(LoginMethod.SSO)).isTrue();
+        assertThat(policy.isMethodEnabled(LoginMethod.AD)).isFalse();
+        assertThat(policy.isMethodEnabled(LoginMethod.LOCAL)).isTrue();
+    }
+
+    @Test
+    @DisplayName("마지막 남은 로그인 방식은 비활성화할 수 없다")
+    void shouldNotDisableLastMethod() {
+        // Given (준비)
+        LoginPolicy policy = LoginPolicy.builder()
+            .id("01JCXYZ1234567890ABCDEF132")
+            .name("SSO만 활성화")
+            .orgId("01JCORG1234567890ABCDEF123")
+            .enabledMethods(Set.of(LoginMethod.SSO))
+            .build();
+
+        // When & Then (실행 및 검증)
+        assertThatThrownBy(() -> policy.disableMethod(LoginMethod.SSO))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("최소 1개");
+    }
+
+    @Test
+    @DisplayName("특정 로그인 방식을 활성화할 수 있다")
+    void shouldEnableMethod() {
+        // Given (준비)
+        LoginPolicy policy = LoginPolicy.builder()
+            .id("01JCXYZ1234567890ABCDEF133")
+            .name("SSO만 활성화")
+            .orgId("01JCORG1234567890ABCDEF123")
+            .enabledMethods(Set.of(LoginMethod.SSO))
+            .build();
+
+        // When (실행)
+        policy.enableMethod(LoginMethod.AD);
+
+        // Then (검증)
+        assertThat(policy.isMethodEnabled(LoginMethod.SSO)).isTrue();
+        assertThat(policy.isMethodEnabled(LoginMethod.AD)).isTrue();
+        assertThat(policy.isMethodEnabled(LoginMethod.LOCAL)).isFalse();
+    }
+
+    @Test
+    @DisplayName("우선순위를 변경할 수 있다")
+    void shouldUpdatePriority() {
+        // Given (준비)
+        LoginPolicy policy = LoginPolicy.builder()
+            .id("01JCXYZ1234567890ABCDEF134")
+            .name("우선순위 테스트")
+            .orgId("01JCORG1234567890ABCDEF123")
+            .enabledMethods(Set.of(LoginMethod.SSO, LoginMethod.AD, LoginMethod.LOCAL))
+            .build();
+
+        List<LoginMethod> newPriority = List.of(
+            LoginMethod.LOCAL,
+            LoginMethod.AD,
+            LoginMethod.SSO
+        );
+
+        // When (실행)
+        policy.updatePriority(newPriority);
+
+        // Then (검증)
+        assertThat(policy.getPriority())
+            .containsExactly(LoginMethod.LOCAL, LoginMethod.AD, LoginMethod.SSO);
+        assertThat(policy.getPrimaryMethod()).isEqualTo(LoginMethod.LOCAL);
+    }
+
+    @Test
+    @DisplayName("우선순위에 비활성화된 방식이 포함되면 예외가 발생한다")
+    void shouldThrowExceptionWhenPriorityContainsDisabledMethod() {
+        // Given (준비)
+        LoginPolicy policy = LoginPolicy.builder()
+            .id("01JCXYZ1234567890ABCDEF135")
+            .name("우선순위 검증 테스트")
+            .orgId("01JCORG1234567890ABCDEF123")
+            .enabledMethods(Set.of(LoginMethod.SSO, LoginMethod.LOCAL))
+            .build();
+
+        List<LoginMethod> invalidPriority = List.of(
+            LoginMethod.SSO,
+            LoginMethod.AD,  // AD는 비활성화되어 있음
+            LoginMethod.LOCAL
+        );
+
+        // When & Then (실행 및 검증)
+        assertThatThrownBy(() -> policy.updatePriority(invalidPriority))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("비활성화된");
+    }
+
+    @Test
+    @DisplayName("빈 우선순위로 변경할 수 없다")
+    void shouldNotUpdateWithEmptyPriority() {
+        // Given (준비)
+        LoginPolicy policy = LoginPolicy.builder()
+            .id("01JCXYZ1234567890ABCDEF136")
+            .name("우선순위 빈 값 테스트")
+            .orgId("01JCORG1234567890ABCDEF123")
+            .enabledMethods(Set.of(LoginMethod.SSO))
+            .build();
+
+        List<LoginMethod> emptyPriority = List.of();
+
+        // When & Then (실행 및 검증)
+        assertThatThrownBy(() -> policy.updatePriority(emptyPriority))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("우선순위");
     }
 }
