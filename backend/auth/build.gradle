@@ -22,9 +22,18 @@ dependencies {
 
     // MyBatis
     implementation libs.mybatis.spring.boot.starter
+    
+    // PostgreSQL Driver (for PGobject in TypeHandlers)
+    implementation libs.postgresql
 
     // JWT
     implementation libs.bundles.jjwt
+
+    // Swagger/OpenAPI
+    implementation libs.springdoc.openapi
+
+    // ULID
+    implementation libs.ulid.creator
 
     // Lombok
     compileOnly libs.lombok
@@ -34,6 +43,11 @@ dependencies {
     testImplementation libs.bundles.test.basic
     testImplementation libs.spring.security.test
     testImplementation libs.mybatis.spring.boot.starter.test
+    testImplementation libs.testcontainers
+    testImplementation libs.testcontainers.postgresql
+    testImplementation libs.testcontainers.junit.jupiter
+    testRuntimeOnly libs.h2
+    testRuntimeOnly libs.postgresql
 }
 
 description = 'Auth Module - Authentication and Authorization (JWT, Spring Security)'
