@@ -19,7 +19,7 @@
 
 **비즈니스 로직:**
 - [x] isMethodEnabled(method) - 특정 방식 활성화 여부 확인
-- [ ] getEnabledMethods() - 활성화된 방식 리스트 반환
+- [x] getEnabledMethods() - 활성화된 방식 리스트 반환
 - [x] getPrimaryMethod() - 최우선 로그인 방식 반환 (priority 기준)
 - [x] disableMethod(method) - 특정 방식 비활성화
 - [x] enableMethod(method) - 특정 방식 활성화
@@ -28,9 +28,9 @@
 #### Login Policy - Application Service (응용 서비스)
 
 **정책 조회:**
-- [ ] LoginPolicyService.getPolicyByOrg(orgId) - 조직별 정책 조회
-- [ ] LoginPolicyService.getPolicyByOrg(null) - 글로벌 정책 조회 (기본값)
-- [ ] LoginPolicyService.getPolicyByOrg(orgId) - 조직 정책 없으면 글로벌 반환 (Fallback)
+- [x] LoginPolicyService.getPolicyByOrg(orgId) - 조직별 정책 조회
+- [x] LoginPolicyService.getPolicyByOrg(null) - 글로벌 정책 조회 (기본값)
+- [x] LoginPolicyService.getPolicyByOrg(orgId) - 조직 정책 없으면 글로벌 반환 (Fallback)
 - [ ] LoginPolicyService.getAvailableMethods(orgId) - 사용 가능한 로그인 방식 리스트
 - [ ] LoginPolicyService.getPrimaryMethod(orgId) - 최우선 로그인 방식
 
