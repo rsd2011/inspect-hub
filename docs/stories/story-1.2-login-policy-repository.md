@@ -151,7 +151,7 @@ backend/auth/src/test/java/com/inspecthub/auth/
 
 ### Change Log
 
-<!-- Git commit will be added after commit -->
+- `cc27fbc` - feat(auth): Implement LoginPolicy Repository with MyBatis (2025-01-15)
 
 ---
 
