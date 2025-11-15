@@ -268,9 +268,11 @@
 **로그인 프로세스 통합:**
 - [ ] AuthenticationService - 조직별 정책 조회 후 로그인 방식 결정
 - [ ] AuthenticationService - 비활성화된 방식 사용 시 예외 (MethodNotAllowedException)
-- [ ] AuthenticationService - 우선순위 기반 자동 Fallback (SSO 실패 → AD → LOCAL)
+- [ ] AuthenticationService - 우선순위 기반 자동 Fallback (기본: SSO → AD → LOCAL)
+- [ ] AuthenticationService - 비인증 사용자 → 최우선 방식(SSO)으로 리다이렉트
 - [ ] AuthenticationService - 명시적 방식 지정 시 정책 검증 (사용자가 AD 선택 시)
-- [ ] AuthenticationService - 정책 없으면 글로벌 정책 사용
+- [ ] AuthenticationService - 정책 없으면 글로벌 정책 사용 (기본: SSO > AD > LOCAL)
+- [ ] AuthenticationService - 모든 로그인 방식 사용 가정 (우선순위만 다름)
 
 **Health Check 통합:**
 - [ ] AuthHealthService - 정책 기반 사용 가능 방식만 체크
@@ -278,10 +280,12 @@
 - [ ] AuthHealthService - 권장 방식 반환 시 정책 우선순위 반영
 
 **Frontend 통합:**
-- [ ] Login Page - 조직별 사용 가능 로그인 방식만 표시
-- [ ] Login Page - 비활성화된 방식 UI에서 제거
-- [ ] Login Page - 우선순위 순서대로 탭 표시
-- [ ] Login Page - 기본 선택 탭 = 최우선 방식
+- [ ] Login Page - 모든 로그인 방식 표시 (SSO, AD, LOCAL 탭)
+- [ ] Login Page - 우선순위 순서대로 탭 배치 (SSO > AD > LOCAL)
+- [ ] Login Page - 기본 선택 탭 = SSO (최우선 방식)
+- [ ] Login Page - 비인증 접근 시 자동 리다이렉트 (returnUrl 파라미터 포함)
+- [ ] Login Page - SSO 실패 시 자동 AD 탭으로 전환
+- [ ] Login Page - AD 실패 시 자동 LOCAL 탭으로 전환
 
 #### Login Policy - API Endpoints (API 엔드포인트)
 
@@ -328,9 +332,10 @@
 
 **시스템 기본 정책:**
 - [ ] 시스템 초기화 시 글로벌 정책 자동 생성
-- [ ] 글로벌 정책 기본값: enabledMethods = [SSO, AD, LOCAL]
-- [ ] 글로벌 정책 기본 우선순위: [SSO, AD, LOCAL]
+- [ ] 글로벌 정책 기본값: enabledMethods = [SSO, AD, LOCAL] (모든 방식 사용)
+- [ ] 글로벌 정책 기본 우선순위: [SSO, AD, LOCAL] (SSO 최우선)
 - [ ] 글로벌 정책 name: "기본 로그인 정책"
+- [ ] 비인증 사용자 자동 리다이렉트: /login?returnUrl={originalUrl}&method=SSO
 
 **조직 생성 시:**
 - [ ] 새 조직 생성 시 별도 정책 생성 안 함 (글로벌 사용)
@@ -392,34 +397,71 @@
 
 #### Login Policy - Testing Scenarios (테스트 시나리오)
 
-**시나리오 1: SSO만 활성화**
-- [ ] enabledMethods = [SSO]
-- [ ] SSO 로그인 성공
-- [ ] AD 로그인 시도 → MethodNotAllowedException
-- [ ] LOCAL 로그인 시도 → MethodNotAllowedException
+**시나리오 1: 기본 로그인 흐름 (모든 방식 활성화)**
+- [ ] enabledMethods = [SSO, AD, LOCAL] (기본값)
+- [ ] priority = [SSO, AD, LOCAL]
+- [ ] 비인증 사용자 접근 → /login?method=SSO로 리다이렉트
+- [ ] SSO 로그인 성공 → 원래 페이지로 이동
+- [ ] SSO 실패 → 자동 AD 탭으로 전환
+- [ ] AD 실패 → 자동 LOCAL 탭으로 전환
+- [ ] LOCAL 실패 → 에러 메시지 표시 (Fallback 종료)
 
-**시나리오 2: SSO + AD 활성화 (LOCAL 비활성화)**
-- [ ] enabledMethods = [SSO, AD]
-- [ ] SSO 장애 시 자동 AD로 Fallback
-- [ ] LOCAL 로그인 시도 → MethodNotAllowedException
+**시나리오 2: 사용자 명시적 방식 선택**
+- [ ] 사용자가 AD 탭 직접 선택
+- [ ] AD 로그인 시도
+- [ ] AD 실패 시 → 자동 Fallback 없음 (에러 메시지만 표시)
+- [ ] 사용자가 다른 탭으로 수동 전환 가능
 
-**시나리오 3: 모든 방식 활성화**
-- [ ] enabledMethods = [SSO, AD, LOCAL]
-- [ ] SSO 장애 → AD Fallback → AD 장애 → LOCAL Fallback
-- [ ] 모든 방식 로그인 허용
+**시나리오 3: 세션 만료 후 재로그인**
+- [ ] 세션 만료 감지 (JWT 만료)
+- [ ] 자동 로그아웃 처리
+- [ ] 최우선 방식(SSO)으로 리다이렉트
+- [ ] returnUrl에 만료 전 페이지 URL 포함
 
-**시나리오 4: 조직별 다른 정책**
-- [ ] 조직 A: SSO만 활성화
-- [ ] 조직 B: AD + LOCAL 활성화
-- [ ] 조직 C: 정책 없음 → 글로벌 정책 사용
-- [ ] 조직별 로그인 페이지에 다른 방식 표시
+**시나리오 4: API 인증 실패**
+- [ ] 비인증 API 호출 → 401 Unauthorized
+- [ ] 프론트엔드에서 로그인 페이지로 리다이렉트
+- [ ] returnUrl 파라미터로 원래 페이지 정보 전달
 
-**시나리오 5: 정책 변경 중 로그인**
+**시나리오 5: Health Check 및 공개 API**
+- [ ] GET /actuator/health → 인증 없이 200 OK
+- [ ] POST /api/v1/auth/request-reset → 인증 없이 200 OK
+- [ ] GET /api/v1/users → 인증 필요, 401 Unauthorized (비인증 시)
+
+**시나리오 6: 정책 변경 중 로그인**
 - [ ] 정책 변경 중에도 기존 세션 유지
 - [ ] 캐시 무효화 후 새로운 로그인부터 적용
 - [ ] 정책 변경 감사 로그 기록
 
 ### Security
+
+**⚠️ 전체 시스템 인증 정책:**
+- [ ] 모든 기능 로그인 필수 - 사내 업무시스템으로 공개 API 없음
+- [ ] 비인증 사용자 접근 시 로그인 페이지로 자동 리다이렉트
+- [ ] 로그인 리다이렉트 우선순위 - SSO > AD > LOCAL (모든 로그인 방식 사용 가정)
+- [ ] 세션 만료 시 자동 로그아웃 후 최우선 로그인 방식으로 리다이렉트
+- [ ] 공개 API 예외 - 비밀번호 리셋 요청/검증 API만 인증 불필요
+- [ ] Health Check 엔드포인트 - 인증 불필요 (모니터링 목적)
+
+**로그인 흐름 (Login Flow):**
+- [ ] 비인증 사용자 → 정책 조회 → 최우선 방식으로 리다이렉트 (기본: SSO)
+- [ ] SSO 페이지 접속 → SSO 인증 실패 시 자동 AD로 Fallback
+- [ ] AD 페이지 접속 → AD 인증 실패 시 자동 LOCAL로 Fallback
+- [ ] LOCAL 로그인 실패 시 → 에러 메시지 표시 (더 이상 Fallback 없음)
+- [ ] 사용자 명시적 선택 → 선택한 방식으로만 로그인 (Fallback 무시)
+- [ ] 로그인 성공 → 원래 접근하려던 페이지로 리다이렉트 (returnUrl 파라미터)
+
+**인증 필수 API:**
+- [ ] 모든 /api/v1/** 엔드포인트 - JWT Access Token 필수
+- [ ] 인증 실패 시 401 Unauthorized + WWW-Authenticate 헤더
+- [ ] 권한 부족 시 403 Forbidden + 필요 권한 정보 포함
+
+**인증 불필요 API (예외):**
+- [ ] POST /api/v1/auth/request-reset - 비밀번호 리셋 요청 (이메일 기반)
+- [ ] GET /api/v1/auth/validate-reset-token - 리셋 토큰 검증
+- [ ] POST /api/v1/auth/reset-password - 비밀번호 리셋 실행
+- [ ] GET /actuator/health - Spring Boot Health Check
+- [ ] GET /actuator/info - 애플리케이션 정보
 
 #### Authentication - AD Login (Active Directory)
 
@@ -697,7 +739,75 @@
 
 #### Password Reset Policies (비밀번호 초기화 정책)
 
-**관리자 비밀번호 리셋:**
+**리셋 방식 (Reset Methods):**
+- [ ] 사용자 셀프 리셋 - 이메일 기반 토큰 리셋 (LOCAL 계정만 해당)
+- [ ] 관리자 리셋 - 관리자가 임시 비밀번호 발급 (모든 계정 유형)
+- [ ] 리셋 적용 범위 - LOCAL 계정만 비밀번호 리셋 가능 (AD, SSO는 각 시스템에서 처리)
+
+**사용자 셀프 리셋 - 토큰 생성 (Email-Based Reset Token):**
+- [ ] 리셋 요청 - 사용자 이메일 주소 입력 (사내 메일 주소)
+- [ ] 이메일 검증 - User.email 존재 여부 확인
+- [ ] 이메일 검증 - 계정 상태 확인 (ACTIVE 또는 LOCKED_* 상태만 리셋 가능)
+- [ ] 이메일 검증 - 계정 유형 확인 (LOCAL 계정만 리셋 가능, AD/SSO는 거부)
+- [ ] 토큰 생성 - SecureRandom 64자 (영문 대소문자 + 숫자)
+- [ ] 토큰 해시 - SHA-256 해시 후 PASSWORD_RESET_TOKEN 테이블 저장
+- [ ] 토큰 저장 - userId, tokenHash, expiresAt (1시간), createdAt, used (false)
+- [ ] 토큰 만료 - 1시간 후 자동 만료
+- [ ] 이메일 발송 - 리셋 링크 포함 (https://app.example.com/reset-password?token=xxx)
+- [ ] 이메일 발송 - 유효 기간 명시 (1시간)
+- [ ] 이메일 발송 - 요청하지 않았을 경우 무시하라는 안내 포함
+- [ ] 이메일 발송 실패 - 사용자에게 에러 메시지 표시 (이메일 발송 실패)
+- [ ] 존재하지 않는 이메일 - 보안상 동일한 성공 메시지 반환 (이메일 유무 노출 방지)
+
+**사용자 셀프 리셋 - 토큰 검증 (Token Validation):**
+- [ ] 토큰 검증 - 토큰 존재 여부 확인 (PASSWORD_RESET_TOKEN 테이블 조회)
+- [ ] 토큰 검증 - 토큰 해시 일치 확인 (SHA-256 해시 비교)
+- [ ] 토큰 검증 - 토큰 만료 확인 (expiresAt < now → ExpiredResetTokenException)
+- [ ] 토큰 검증 - 토큰 사용 여부 확인 (used = true → UsedResetTokenException)
+- [ ] 토큰 검증 - 사용자 계정 상태 확인 (DELETED, SUSPENDED → InvalidResetTokenException)
+- [ ] 토큰 검증 성공 - 비밀번호 변경 페이지로 이동
+- [ ] 토큰 검증 실패 - 에러 페이지 표시 (토큰 무효/만료/이미 사용됨)
+
+**사용자 셀프 리셋 - 비밀번호 변경 (Password Reset Execution):**
+- [ ] 비밀번호 변경 - 유효한 토큰으로만 변경 가능
+- [ ] 비밀번호 변경 - 새 비밀번호 입력 및 확인
+- [ ] 비밀번호 변경 - 비밀번호 복잡도 검증 (복잡도 정책 활성화 시)
+- [ ] 비밀번호 변경 - 비밀번호 히스토리 검증 (히스토리 정책 활성화 시)
+- [ ] 비밀번호 변경 - BCrypt로 해시 후 User.password 업데이트
+- [ ] 비밀번호 변경 - User.passwordChangedAt 타임스탬프 업데이트
+- [ ] 비밀번호 변경 - User.passwordExpiresAt = now + expirationDays 설정 (만료 정책 활성화 시)
+- [ ] 비밀번호 변경 - User.failedLoginAttempts = 0 리셋
+- [ ] 비밀번호 변경 - 계정 잠금 상태면 해제 (LOCKED_* → ACTIVE)
+- [ ] 비밀번호 변경 - PASSWORD_HISTORY 테이블에 이전 비밀번호 저장 (히스토리 정책 활성화 시)
+- [ ] 비밀번호 변경 - 토큰 사용 처리 (PASSWORD_RESET_TOKEN.used = true, usedAt = now)
+- [ ] 비밀번호 변경 - 모든 Refresh Token 무효화 (보안 강화)
+- [ ] 비밀번호 변경 - 감사 로그 기록 (action: PASSWORD_RESET, userId)
+- [ ] 비밀번호 변경 성공 - 로그인 페이지로 리다이렉트
+
+**사용자 셀프 리셋 - Rate Limiting:**
+- [ ] 이메일별 Rate Limit - 동일 이메일 1분당 1회 리셋 요청 제한
+- [ ] 이메일별 Rate Limit - 동일 이메일 1시간당 3회 리셋 요청 제한
+- [ ] 이메일별 Rate Limit - 동일 이메일 24시간당 5회 리셋 요청 제한
+- [ ] IP별 Rate Limit - 동일 IP 1분당 3회 리셋 요청 제한
+- [ ] IP별 Rate Limit - 동일 IP 1시간당 10회 리셋 요청 제한
+- [ ] Rate Limit 저장 - Redis 카운터 사용 (키: "reset_limit:email:{email}", "reset_limit:ip:{ip}")
+- [ ] Rate Limit 초과 - 429 Too Many Requests 반환
+- [ ] Rate Limit 초과 - 재시도 가능 시간 헤더 포함 (Retry-After)
+
+**사용자 셀프 리셋 API:**
+- [ ] POST /api/v1/auth/request-reset - 비밀번호 리셋 요청
+- [ ] Request DTO - email (사내 메일 주소)
+- [ ] Response DTO - success, message ("이메일을 확인하세요")
+- [ ] 인증 불필요 - 공개 API (누구나 호출 가능)
+- [ ] GET /api/v1/auth/validate-reset-token?token=xxx - 토큰 검증
+- [ ] Response DTO - valid (true/false), userId (토큰 유효 시만), errorCode
+- [ ] 인증 불필요 - 공개 API
+- [ ] POST /api/v1/auth/reset-password - 비밀번호 변경
+- [ ] Request DTO - token, newPassword, confirmPassword
+- [ ] Response DTO - success, message
+- [ ] 인증 불필요 - 공개 API (토큰으로 인증)
+
+**관리자 비밀번호 리셋 (Admin Reset):**
 - [ ] 관리자 리셋 - 관리자 권한 확인 (ROLE_ADMIN 또는 ROLE_USER_MANAGER)
 - [ ] 관리자 리셋 - 대상 사용자 선택 (userId 또는 employeeId 기준)
 - [ ] 관리자 리셋 - 임시 비밀번호 생성 (SecureRandom, 12자)
@@ -727,7 +837,7 @@
 - [ ] 임시 비밀번호 보안 - DB에 평문 저장 금지 (BCrypt 해시만 저장)
 - [ ] 임시 비밀번호 보안 - 로그에 평문 기록 금지
 
-**리셋 후 최초 로그인:**
+**리셋 후 최초 로그인 (관리자 리셋 후):**
 - [ ] 최초 로그인 - mustChangePassword = true 확인
 - [ ] 최초 로그인 - 임시 비밀번호로 로그인 성공
 - [ ] 최초 로그인 - 로그인 후 즉시 비밀번호 변경 페이지로 리다이렉트
@@ -735,29 +845,43 @@
 - [ ] 최초 로그인 - 비밀번호 변경 완료 후 mustChangePassword = false 설정
 - [ ] 최초 로그인 - 비밀번호 변경 후 정상 시스템 접근 가능
 
+**PASSWORD_RESET_TOKEN 테이블:**
+- [ ] 테이블 구조 - id (ULID), userId (FK), tokenHash (SHA-256), expiresAt, createdAt, used, usedAt
+- [ ] 인덱스 - userId, tokenHash (조회 성능)
+- [ ] 정리 작업 - 만료된 토큰 정기 삭제 (배치 작업, 7일 이상 경과)
+- [ ] 사용 제한 - 1회 사용 후 즉시 used = true 설정
+
 **리셋 테스트 시나리오:**
-- [ ] 시나리오 1: 관리자 임시 비밀번호 발급 → 사용자 최초 로그인 → 강제 변경 → 정상 접근
-- [ ] 시나리오 2: 잠긴 계정 리셋 → 계정 잠금 해제 → 임시 비밀번호 로그인 성공
-- [ ] 시나리오 3: Self-reset 시도 → 403 Forbidden (관리자가 자신 리셋 불가)
-- [ ] 시나리오 4: 권한 없는 사용자 리셋 시도 → 403 Forbidden
-- [ ] 시나리오 5: Rate Limit 초과 (동일 관리자 1분 내 6회 리셋) → 429 Too Many Requests
+- [ ] 시나리오 1: 사용자 이메일로 리셋 요청 → 이메일 수신 → 토큰 검증 → 새 비밀번호 설정 → 로그인 성공
+- [ ] 시나리오 2: 만료된 토큰으로 리셋 시도 → ExpiredResetTokenException
+- [ ] 시나리오 3: 이미 사용된 토큰으로 재시도 → UsedResetTokenException
+- [ ] 시나리오 4: 존재하지 않는 이메일로 요청 → 동일한 성공 메시지 반환 (보안)
+- [ ] 시나리오 5: Rate Limit 초과 (동일 이메일 1분 내 2회 요청) → 429 Too Many Requests
+- [ ] 시나리오 6: 관리자 임시 비밀번호 발급 → 사용자 최초 로그인 → 강제 변경 → 정상 접근
+- [ ] 시나리오 7: 잠긴 계정 리셋 (이메일/관리자) → 계정 잠금 해제 → 로그인 성공
+- [ ] 시나리오 8: Self-reset 시도 (관리자 리셋) → 403 Forbidden (관리자가 자신 리셋 불가)
+- [ ] 시나리오 9: 권한 없는 사용자 관리자 리셋 시도 → 403 Forbidden
+- [ ] 시나리오 10: AD 계정으로 이메일 리셋 요청 → 거부 (LOCAL 계정만 가능)
 
 #### Authentication - Health Check & Fallback
 
 **Health Check:**
-- [ ] Health Check - 모든 서버 정상 (AD, SSO, Local)
-- [ ] Health Check - AD 서버만 장애
+- [ ] Health Check - 모든 서버 정상 (SSO, AD, Local)
 - [ ] Health Check - SSO 서버만 장애
-- [ ] Health Check - AD, SSO 모두 장애 (Local만 가능)
+- [ ] Health Check - AD 서버만 장애
+- [ ] Health Check - SSO, AD 모두 장애 (Local만 가능)
 - [ ] Health Check - 응답 시간 측정 (ms 단위)
-- [ ] Health Check - 권장 로그인 방식 반환 (recommendedMethod)
+- [ ] Health Check - 권장 로그인 방식 반환 (기본: SSO, 장애 시 다음 우선순위)
+- [ ] Health Check - 인증 불필요 (GET /actuator/health)
 
-**Fallback 로직:**
+**Fallback 로직 (모든 로그인 방식 사용 가정):**
+- [ ] Fallback - 기본 우선순위: SSO > AD > LOCAL
 - [ ] Fallback - SSO 장애 시 AD로 자동 전환
-- [ ] Fallback - SSO, AD 장애 시 Local로 자동 전환
-- [ ] Fallback - 장애 복구 시 원래 방식으로 복귀 (SSO 우선)
-- [ ] Fallback - 사용자 명시적 선택 시 Fallback 무시
+- [ ] Fallback - SSO, AD 장애 시 LOCAL로 자동 전환
+- [ ] Fallback - 장애 복구 시 원래 우선순위로 복귀 (SSO 최우선)
+- [ ] Fallback - 사용자 명시적 선택 시 Fallback 무시 (선택한 방식만 시도)
 - [ ] Fallback - Fallback 시도 감사 로그 기록
+- [ ] Fallback - 비인증 사용자는 항상 SSO로 먼저 리다이렉트
 
 #### Authentication - Concurrent & Performance
 
