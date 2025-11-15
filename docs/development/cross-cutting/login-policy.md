@@ -31,8 +31,8 @@
 - [x] LoginPolicyService.getPolicyByOrg(orgId) - 조직별 정책 조회
 - [x] LoginPolicyService.getPolicyByOrg(null) - 글로벌 정책 조회 (기본값)
 - [x] LoginPolicyService.getPolicyByOrg(orgId) - 조직 정책 없으면 글로벌 반환 (Fallback)
-- [ ] LoginPolicyService.getAvailableMethods(orgId) - 사용 가능한 로그인 방식 리스트
-- [ ] LoginPolicyService.getPrimaryMethod(orgId) - 최우선 로그인 방식
+- [x] LoginPolicyService.getAvailableMethods(orgId) - 사용 가능한 로그인 방식 리스트
+- [x] LoginPolicyService.getPrimaryMethod(orgId) - 최우선 로그인 방식
 
 **정책 생성:**
 - [ ] LoginPolicyService.createPolicy(request) - 새 정책 생성

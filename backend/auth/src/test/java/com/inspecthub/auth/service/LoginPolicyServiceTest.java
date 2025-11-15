@@ -115,4 +115,41 @@ class LoginPolicyServiceTest {
         verify(loginPolicyRepository).findByOrgId(orgId);
         verify(loginPolicyRepository).findGlobalPolicy();
     }
+
+    @Test
+    @DisplayName("조직의 사용 가능한 로그인 방식 리스트를 반환한다")
+    void shouldGetAvailableMethodsByOrgId() {
+        // Given (준비)
+        String orgId = "01JCORG1234567890ABCDEF123";
+        given(loginPolicyRepository.findByOrgId(orgId))
+            .willReturn(Optional.of(orgPolicy));
+
+        // When (실행)
+        Set<LoginMethod> result = loginPolicyService.getAvailableMethods(orgId);
+
+        // Then (검증)
+        assertThat(result).isNotNull();
+        assertThat(result).containsExactlyInAnyOrder(LoginMethod.SSO, LoginMethod.LOCAL);
+        assertThat(result).doesNotContain(LoginMethod.AD);
+
+        verify(loginPolicyRepository).findByOrgId(orgId);
+    }
+
+    @Test
+    @DisplayName("조직의 최우선 로그인 방식을 반환한다")
+    void shouldGetPrimaryMethodByOrgId() {
+        // Given (준비)
+        String orgId = "01JCORG1234567890ABCDEF123";
+        given(loginPolicyRepository.findByOrgId(orgId))
+            .willReturn(Optional.of(orgPolicy));
+
+        // When (실행)
+        LoginMethod result = loginPolicyService.getPrimaryMethod(orgId);
+
+        // Then (검증)
+        assertThat(result).isNotNull();
+        assertThat(result).isEqualTo(LoginMethod.SSO);  // 우선순위: SSO > AD > LOCAL
+
+        verify(loginPolicyRepository).findByOrgId(orgId);
+    }
 }
