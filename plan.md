@@ -572,19 +572,29 @@
 
 #### Account Security Policies (계정 보안 정책)
 
+**⚠️ 정책 격리 원칙 (Policy Isolation by Login Method):**
+- [ ] **모든 보안/잠금 정책은 LOCAL 로그인 전용** - AD, SSO는 각 시스템에서 정책 관리
+- [ ] AD 로그인 사용자 - AD 도메인 정책으로 관리 (비밀번호, 계정 잠금 등)
+- [ ] SSO 로그인 사용자 - SSO 시스템 정책으로 관리 (인증, 세션 등)
+- [ ] LOCAL 로그인 사용자 - 내부 SecurityPolicy로 완전 제어
+- [ ] 정책 적용 시 loginMethod 검증 - LOCAL이 아니면 정책 스킵
+- [ ] User.loginMethod 필드 - LOCAL | AD | SSO (필수 저장)
+
 **정책 관리 (Policy Management):**
-- [ ] SecurityPolicy 엔티티 - id, policyType, enabled, config (JSON), orgId, active
+- [ ] SecurityPolicy 엔티티 - id, policyType, enabled, config (JSON), orgId, active, applicableLoginMethods
+- [ ] SecurityPolicy.applicableLoginMethods - 기본값: [LOCAL] (AD, SSO 제외)
 - [ ] SecurityPolicyType enum - INACTIVE_LOCKOUT, FAILED_ATTEMPTS_LOCKOUT, IP_BLACKLIST, IP_WHITELIST, IP_RATE_LIMIT
 - [ ] 정책 활성화/비활성화 - enabled 플래그로 관리
 - [ ] 조직별 정책 설정 - orgId 기준 (null = 글로벌 정책)
 - [ ] 정책 우선순위 - 조직 정책 > 글로벌 정책
 - [ ] 정책 설정 조회 - getPolicyConfig(policyType, orgId)
-- [ ] 정책 활성 여부 확인 - isPolicyEnabled(policyType, orgId)
+- [ ] 정책 활성 여부 확인 - isPolicyEnabled(policyType, orgId) && isApplicableToLoginMethod(loginMethod)
 - [ ] 정책 생성/수정 - 관리자 권한 필요 (ROLE_ADMIN)
-- [ ] 정책 적용 범위 - LOCAL 로그인 방식에만 적용 (AD, SSO는 제외)
+- [ ] 정책 적용 범위 검증 - applicableLoginMethods 확인 후 적용
 - [ ] 정책 감사 로그 - 정책 생성/수정/삭제 시 감사 로그 기록
 
-**비활성 계정 잠금 정책 (선택적 적용):**
+**비활성 계정 잠금 정책 (LOCAL 전용, 선택적 적용):**
+- [ ] **적용 대상: LOCAL 로그인 사용자만** - AD/SSO 사용자 제외
 - [ ] 비활성 계정 감지 - 최근 로그인 N일 경과 시 자동 잠금 (기본값: 365일)
 - [ ] 비활성 기간 설정 - config.inactiveDays 필드 (30/90/180/365일)
 - [ ] 비활성 계정 잠금 - 계정 상태 ACTIVE → LOCKED_INACTIVE로 변경
@@ -596,9 +606,11 @@
 - [ ] 정책 비활성화 시 - 기존 잠금된 계정 자동 해제하지 않음 (관리자 수동 처리)
 - [ ] 배치 작업 - 매일 자정 실행, 비활성 계정 검사 및 잠금
 
-**실패 로그인 횟수 잠금 정책 (선택적 적용):**
+**실패 로그인 횟수 잠금 정책 (LOCAL 전용, 선택적 적용):**
+- [ ] **적용 대상: LOCAL 로그인 사용자만** - AD/SSO 사용자 제외
 - [ ] 정책 설정 - config.thresholds 배열: [{attempts: 5, lockMinutes: 5}, {attempts: 10, lockMinutes: 30}, {attempts: 15, lockMinutes: null}]
 - [ ] 임계값 커스터마이징 - 조직별 실패 횟수 및 잠금 시간 설정 가능
+- [ ] AD/SSO 로그인 실패 - 실패 카운트하지 않음 (각 시스템에서 관리)
 - [ ] 로그인 실패 카운트 - 실패 시 failedLoginAttempts 증가
 - [ ] 로그인 실패 카운트 - 성공 시 failedLoginAttempts 리셋 (0으로)
 - [ ] 로그인 실패 카운트 - lastFailedLoginAt 타임스탬프 업데이트
@@ -631,40 +643,54 @@
 - [ ] 비활성화된 계정 로그인 시도 - AccountDisabledException 예외 발생
 - [ ] 만료된 계정 로그인 시도 - AccountExpiredException 예외 발생
 
-**IP 블랙리스트 정책 (선택적 적용):**
+**IP 블랙리스트 정책 (LOCAL 전용, 선택적 적용):**
+- [ ] **적용 대상: LOCAL 로그인 IP만** - AD/SSO는 각 시스템에서 관리
 - [ ] 정책 설정 - config.failureThreshold (기본값: 30), config.blockHours (기본값: 24)
-- [ ] IP 블랙리스트 등록 - 동일 IP에서 N회 이상 실패 시 등록
-- [ ] IP 블랙리스트 저장 - IP_BLACKLIST 테이블 (ip, blockedAt, expiresAt, reason)
-- [ ] IP 블랙리스트 차단 - 블랙리스트 IP 로그인 시도 즉시 403 응답
+- [ ] IP 블랙리스트 등록 - 동일 IP에서 LOCAL 로그인 N회 이상 실패 시 등록
+- [ ] IP 블랙리스트 저장 - IP_BLACKLIST 테이블 (ip, blockedAt, expiresAt, reason, loginMethod)
+- [ ] IP 블랙리스트 차단 - 블랙리스트 IP의 LOCAL 로그인 시도 즉시 403 응답
 - [ ] IP 블랙리스트 해제 - expiresAt 시간 경과 후 자동 해제
 - [ ] IP 블랙리스트 해제 - 관리자 수동 해제 가능
 - [ ] IP 블랙리스트 감사 로그 - 등록/해제 시 감사 로그 기록
 - [ ] Redis 캐싱 - 블랙리스트 IP 캐싱으로 성능 최적화
+- [ ] AD/SSO 로그인 - IP 블랙리스트 검사하지 않음
 
-**IP 화이트리스트 정책 (선택적 적용):**
+**IP 화이트리스트 정책 (LOCAL 전용, 선택적 적용):**
+- [ ] **적용 대상: LOCAL 로그인 IP만** - AD/SSO는 각 시스템에서 관리
 - [ ] 정책 설정 - config.allowedIpRanges 배열 (CIDR 표기법)
-- [ ] IP 화이트리스트 저장 - IP_WHITELIST 테이블 (ipRange, description, orgId)
-- [ ] IP 화이트리스트 검증 - CIDR 범위 내 IP 확인
+- [ ] IP 화이트리스트 저장 - IP_WHITELIST 테이블 (ipRange, description, orgId, loginMethod)
+- [ ] IP 화이트리스트 검증 - CIDR 범위 내 IP 확인 (LOCAL 로그인만)
 - [ ] IP 화이트리스트 제외 - 화이트리스트 IP는 실패 잠금 정책 제외
 - [ ] IP 화이트리스트 제외 - 화이트리스트 IP는 블랙리스트 등록 제외
 - [ ] IP 화이트리스트 관리 - 관리자만 추가/수정/삭제 가능
+- [ ] AD/SSO 로그인 - IP 화이트리스트 검사하지 않음
 
-**IP Rate Limiting 정책 (선택적 적용):**
+**IP Rate Limiting 정책 (LOCAL 전용, 선택적 적용):**
+- [ ] **적용 대상: LOCAL 로그인 IP만** - AD/SSO는 각 시스템에서 관리
 - [ ] 정책 설정 - config.maxRequestsPerMinute (기본값: 10)
-- [ ] Rate Limit 카운터 - Redis 기반 카운터 (키: "rate_limit:ip:{ip}")
+- [ ] Rate Limit 카운터 - Redis 기반 카운터 (키: "rate_limit:local:ip:{ip}")
 - [ ] Rate Limit TTL - 1분 자동 만료
-- [ ] Rate Limit 초과 - 429 Too Many Requests 응답
+- [ ] Rate Limit 초과 - 429 Too Many Requests 응답 (LOCAL 로그인만)
 - [ ] Rate Limit 헤더 - X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset 헤더 포함
 - [ ] Rate Limit 감사 로그 - 초과 시 감사 로그 기록
+- [ ] AD/SSO 로그인 - Rate Limiting 적용하지 않음
 
 #### Password Management Policies (비밀번호 관리 정책)
+
+**⚠️ 비밀번호 정책 격리:**
+- [ ] **모든 비밀번호 정책은 LOCAL 로그인 전용** - AD/SSO는 각 시스템에서 관리
+- [ ] AD 로그인 사용자 - AD 도메인 비밀번호 정책 적용 (복잡도, 만료, 히스토리)
+- [ ] SSO 로그인 사용자 - SSO 시스템 비밀번호 정책 적용
+- [ ] LOCAL 로그인 사용자 - 내부 PasswordPolicy로 완전 제어
+- [ ] 비밀번호 변경 API - LOCAL 사용자만 호출 가능 (AD/SSO는 403 Forbidden)
 
 **비밀번호 정책 유형:**
 - [ ] PasswordPolicyType enum - EXPIRATION, COMPLEXITY, HISTORY
 - [ ] 정책별 독립 활성화 - 각 정책 개별적으로 enabled/disabled 설정 가능
-- [ ] LOCAL 로그인 전용 - 비밀번호 정책은 LOCAL 로그인에만 적용
+- [ ] applicableLoginMethods - 기본값: [LOCAL] (AD, SSO 제외)
 
-**비밀번호 만료 정책 (선택적 적용):**
+**비밀번호 만료 정책 (LOCAL 전용, 선택적 적용):**
+- [ ] **적용 대상: LOCAL 로그인 사용자만** - AD/SSO 사용자 제외
 - [ ] 정책 설정 - config.expirationDays (기본값: 90, 옵션: 30/60/90/180/365)
 - [ ] 비밀번호 만료 - 비밀번호 생성/변경 후 N일 경과 시 만료
 - [ ] 비밀번호 만료 - passwordExpiresAt 필드로 관리
@@ -675,7 +701,8 @@
 - [ ] 비밀번호 만료 경고 - 로그인 응답에 daysUntilExpiration 필드 포함
 - [ ] 정책 비활성화 시 - passwordExpiresAt은 유지하지만 검증 스킵
 
-**비밀번호 복잡도 정책 (선택적 적용):**
+**비밀번호 복잡도 정책 (LOCAL 전용, 선택적 적용):**
+- [ ] **적용 대상: LOCAL 로그인 사용자만** - AD/SSO 사용자 제외
 - [ ] 정책 설정 - config: {minLength, maxLength, requireUppercase, requireLowercase, requireDigit, requireSpecial}
 - [ ] 비밀번호 복잡도 - 최소 길이 (기본값: 8, 조정 가능)
 - [ ] 비밀번호 복잡도 - 최대 길이 (기본값: 100)
@@ -692,7 +719,8 @@
 - [ ] 비밀번호 복잡도 검증 - 검증 실패 시 구체적인 오류 메시지 반환
 - [ ] 정책 비활성화 시 - 복잡도 검증 스킵
 
-**비밀번호 히스토리 정책 (선택적 적용):**
+**비밀번호 히스토리 정책 (LOCAL 전용, 선택적 적용):**
+- [ ] **적용 대상: LOCAL 로그인 사용자만** - AD/SSO 사용자 제외
 - [ ] 정책 설정 - config.historyCount (기본값: 5, 옵션: 3/5/10)
 - [ ] 비밀번호 히스토리 - 최근 N개 비밀번호 재사용 금지
 - [ ] 비밀번호 히스토리 - PASSWORD_HISTORY 테이블에 BCrypt 해시 저장
@@ -704,18 +732,22 @@
 - [ ] 비밀번호 히스토리 - 파티셔닝 전략 (userId 기준)
 - [ ] 정책 비활성화 시 - 히스토리 저장은 계속하지만 검증 스킵
 
-**강제 비밀번호 변경:**
+**강제 비밀번호 변경 (LOCAL 전용):**
+- [ ] **적용 대상: LOCAL 로그인 사용자만** - AD/SSO 사용자 제외
 - [ ] 강제 변경 - 최초 로그인 시 비밀번호 변경 필수
 - [ ] 강제 변경 - mustChangePassword = true 플래그
 - [ ] 강제 변경 - 관리자가 비밀번호 리셋 시 mustChangePassword = true 설정
 - [ ] 강제 변경 - 비밀번호 만료 후 로그인 시 강제 변경
-- [ ] 강제 변경 - 보안 정책 변경 시 전체 사용자 강제 변경 (관리자 트리거)
+- [ ] 강제 변경 - 보안 정책 변경 시 전체 LOCAL 사용자 강제 변경 (관리자 트리거)
 - [ ] 강제 변경 - 데이터 유출 의심 시 특정 사용자 강제 변경
 - [ ] 강제 변경 완료 전 - API 접근 차단 (비밀번호 변경 API 제외)
 - [ ] 강제 변경 완료 전 - 로그인 성공하지만 즉시 변경 페이지로 리다이렉트
 - [ ] 강제 변경 완료 후 - mustChangePassword = false 설정
+- [ ] AD/SSO 사용자 - mustChangePassword 검사하지 않음
 
-**비밀번호 변경 프로세스:**
+**비밀번호 변경 프로세스 (LOCAL 전용):**
+- [ ] **적용 대상: LOCAL 로그인 사용자만** - AD/SSO는 403 Forbidden
+- [ ] 비밀번호 변경 API - loginMethod 검증, LOCAL이 아니면 거부
 - [ ] 비밀번호 변경 - 현재 비밀번호 검증 필수
 - [ ] 비밀번호 변경 - 활성화된 정책에 따라 검증 (복잡도, 히스토리, 만료)
 - [ ] 비밀번호 변경 - 새 비밀번호 현재 비밀번호와 동일 금지
@@ -730,25 +762,34 @@
 - [ ] 비밀번호 변경 실패 - 복잡도 미달 시 PasswordComplexityException (정책 활성화 시)
 - [ ] 비밀번호 변경 실패 - 재사용 감지 시 PasswordReusedException (정책 활성화 시)
 
-**비밀번호 변경 API:**
+**비밀번호 변경 API (LOCAL 전용):**
 - [ ] POST /api/v1/auth/change-password - 비밀번호 변경
 - [ ] Request DTO - currentPassword, newPassword, newPasswordConfirm
 - [ ] Response DTO - success, message, passwordExpiresAt
 - [ ] 인증 필수 - JWT Access Token 필요
+- [ ] loginMethod 검증 - LOCAL 사용자만 허용, AD/SSO는 403 Forbidden
 - [ ] Rate Limiting - 동일 사용자 1분당 3회 제한
 
 #### Password Reset Policies (비밀번호 초기화 정책)
 
-**리셋 방식 (Reset Methods):**
-- [ ] 사용자 셀프 리셋 - 이메일 기반 토큰 리셋 (LOCAL 계정만 해당)
-- [ ] 관리자 리셋 - 관리자가 임시 비밀번호 발급 (모든 계정 유형)
-- [ ] 리셋 적용 범위 - LOCAL 계정만 비밀번호 리셋 가능 (AD, SSO는 각 시스템에서 처리)
+**⚠️ 비밀번호 리셋 정책 격리:**
+- [ ] **모든 비밀번호 리셋은 LOCAL 로그인 전용** - AD/SSO는 각 시스템에서 처리
+- [ ] AD 로그인 사용자 - AD 관리 콘솔에서 비밀번호 리셋
+- [ ] SSO 로그인 사용자 - SSO 시스템에서 비밀번호 리셋
+- [ ] LOCAL 로그인 사용자 - 이메일 기반 셀프 리셋 또는 관리자 리셋
 
-**사용자 셀프 리셋 - 토큰 생성 (Email-Based Reset Token):**
+**리셋 방식 (Reset Methods - LOCAL 전용):**
+- [ ] 사용자 셀프 리셋 - 이메일 기반 토큰 리셋 (LOCAL 계정만)
+- [ ] 관리자 리셋 - 관리자가 임시 비밀번호 발급 (LOCAL 계정만)
+- [ ] 리셋 거부 - AD/SSO 계정 리셋 요청 시 403 Forbidden
+
+**사용자 셀프 리셋 - 토큰 생성 (LOCAL 전용):**
+- [ ] **적용 대상: LOCAL 로그인 사용자만** - AD/SSO 거부
 - [ ] 리셋 요청 - 사용자 이메일 주소 입력 (사내 메일 주소)
 - [ ] 이메일 검증 - User.email 존재 여부 확인
 - [ ] 이메일 검증 - 계정 상태 확인 (ACTIVE 또는 LOCKED_* 상태만 리셋 가능)
-- [ ] 이메일 검증 - 계정 유형 확인 (LOCAL 계정만 리셋 가능, AD/SSO는 거부)
+- [ ] 이메일 검증 - loginMethod 확인 (LOCAL만 가능, AD/SSO는 거부)
+- [ ] AD/SSO 계정 리셋 요청 - "AD/SSO 계정은 각 시스템에서 비밀번호를 관리합니다" 메시지 반환
 - [ ] 토큰 생성 - SecureRandom 64자 (영문 대소문자 + 숫자)
 - [ ] 토큰 해시 - SHA-256 해시 후 PASSWORD_RESET_TOKEN 테이블 저장
 - [ ] 토큰 저장 - userId, tokenHash, expiresAt (1시간), createdAt, used (false)
@@ -784,7 +825,9 @@
 - [ ] 비밀번호 변경 - 감사 로그 기록 (action: PASSWORD_RESET, userId)
 - [ ] 비밀번호 변경 성공 - 로그인 페이지로 리다이렉트
 
-**사용자 셀프 리셋 - Rate Limiting:**
+**사용자 셀프 리셋 - Rate Limiting (LOCAL 전용):**
+- [ ] **적용 대상: LOCAL 로그인 사용자만** - AD/SSO 사용자 제외
+- [ ] AD/SSO 계정 이메일로 요청 - Rate Limit 카운트하지 않음 (거부됨)
 - [ ] 이메일별 Rate Limit - 동일 이메일 1분당 1회 리셋 요청 제한
 - [ ] 이메일별 Rate Limit - 동일 이메일 1시간당 3회 리셋 요청 제한
 - [ ] 이메일별 Rate Limit - 동일 이메일 24시간당 5회 리셋 요청 제한
@@ -795,6 +838,8 @@
 - [ ] Rate Limit 초과 - 재시도 가능 시간 헤더 포함 (Retry-After)
 
 **사용자 셀프 리셋 API:**
+- [ ] **적용 대상: LOCAL 로그인 사용자만** - AD/SSO 거부
+- [ ] loginMethod 검증 - LOCAL 계정만 토큰 생성, AD/SSO는 거부 메시지
 - [ ] POST /api/v1/auth/request-reset - 비밀번호 리셋 요청
 - [ ] Request DTO - email (사내 메일 주소)
 - [ ] Response DTO - success, message ("이메일을 확인하세요")
@@ -807,7 +852,9 @@
 - [ ] Response DTO - success, message
 - [ ] 인증 불필요 - 공개 API (토큰으로 인증)
 
-**관리자 비밀번호 리셋 (Admin Reset):**
+**관리자 비밀번호 리셋 (Admin Reset - LOCAL 전용):**
+- [ ] **적용 대상: LOCAL 로그인 사용자만** - AD/SSO 사용자 제외
+- [ ] AD/SSO 계정 리셋 시도 - 403 Forbidden (각 시스템에서 관리)
 - [ ] 관리자 리셋 - 관리자 권한 확인 (ROLE_ADMIN 또는 ROLE_USER_MANAGER)
 - [ ] 관리자 리셋 - 대상 사용자 선택 (userId 또는 employeeId 기준)
 - [ ] 관리자 리셋 - 임시 비밀번호 생성 (SecureRandom, 12자)
@@ -824,6 +871,8 @@
 - [ ] 관리자 리셋 - Self-reset 금지 (관리자 자신 리셋 불가)
 
 **관리자 리셋 API:**
+- [ ] POST /api/v1/admin/users/{userId}/reset-password - 비밀번호 리셋 (LOCAL 전용)
+- [ ] loginMethod 검증 - LOCAL 사용자만 허용, AD/SSO는 403 Forbidden
 - [ ] POST /api/v1/admin/users/{userId}/reset-password - 비밀번호 리셋
 - [ ] Request DTO - (없음, userId는 path parameter)
 - [ ] Response DTO - success, temporaryPassword (평문, 1회만 표시)
@@ -837,7 +886,9 @@
 - [ ] 임시 비밀번호 보안 - DB에 평문 저장 금지 (BCrypt 해시만 저장)
 - [ ] 임시 비밀번호 보안 - 로그에 평문 기록 금지
 
-**리셋 후 최초 로그인 (관리자 리셋 후):**
+**리셋 후 최초 로그인 (관리자 리셋 후 - LOCAL 전용):**
+- [ ] **적용 대상: LOCAL 로그인 사용자만** - AD/SSO 사용자 제외
+- [ ] AD/SSO 사용자 - mustChangePassword 검사하지 않음 (각 시스템에서 관리)
 - [ ] 최초 로그인 - mustChangePassword = true 확인
 - [ ] 최초 로그인 - 임시 비밀번호로 로그인 성공
 - [ ] 최초 로그인 - 로그인 후 즉시 비밀번호 변경 페이지로 리다이렉트
@@ -851,7 +902,8 @@
 - [ ] 정리 작업 - 만료된 토큰 정기 삭제 (배치 작업, 7일 이상 경과)
 - [ ] 사용 제한 - 1회 사용 후 즉시 used = true 설정
 
-**리셋 테스트 시나리오:**
+**리셋 테스트 시나리오 (LOCAL 전용):**
+- [ ] **모든 리셋 시나리오는 LOCAL 계정 기준** - AD/SSO는 별도 시스템에서 관리
 - [ ] 시나리오 1: 사용자 이메일로 리셋 요청 → 이메일 수신 → 토큰 검증 → 새 비밀번호 설정 → 로그인 성공
 - [ ] 시나리오 2: 만료된 토큰으로 리셋 시도 → ExpiredResetTokenException
 - [ ] 시나리오 3: 이미 사용된 토큰으로 재시도 → UsedResetTokenException
@@ -862,6 +914,9 @@
 - [ ] 시나리오 8: Self-reset 시도 (관리자 리셋) → 403 Forbidden (관리자가 자신 리셋 불가)
 - [ ] 시나리오 9: 권한 없는 사용자 관리자 리셋 시도 → 403 Forbidden
 - [ ] 시나리오 10: AD 계정으로 이메일 리셋 요청 → 거부 (LOCAL 계정만 가능)
+- [ ] 시나리오 11: SSO 계정으로 이메일 리셋 요청 → 거부 (LOCAL 계정만 가능)
+- [ ] 시나리오 12: 관리자가 AD 사용자에게 임시 비밀번호 발급 시도 → 403 Forbidden
+- [ ] 시나리오 13: 관리자가 SSO 사용자에게 임시 비밀번호 발급 시도 → 403 Forbidden
 
 #### Authentication - Health Check & Fallback
 
