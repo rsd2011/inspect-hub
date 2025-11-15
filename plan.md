@@ -570,6 +570,181 @@
 - [ ] 일반 로그인 감사 로그 - 성공 시 로그 기록
 - [ ] 일반 로그인 감사 로그 - 실패 시 로그 기록
 
+#### System Configuration Architecture (시스템 설정 아키텍처)
+
+**⚠️ 전역 설정 원칙 (Global Configuration Principle):**
+- [ ] **모든 설정은 시스템 전역(Global)으로 관리** - 조직/테넌트별 분리 없음
+- [ ] 전체 시스템에 동일한 정책 적용 - 일관성 보장
+- [ ] 이중 소스 지원 - DB 설정 + Properties 파일 Fallback
+- [ ] 우선순위 - DB 설정 우선, DB 값이 NULL/빈값이면 Properties Fallback
+- [ ] 관리자 UI 제공 - Jenkins 스타일 System Configuration 화면
+
+**설정 소스 (Configuration Sources):**
+- [ ] Primary Source - SYSTEM_CONFIG 테이블 (DB)
+- [ ] Fallback Source - application.properties / application.yml
+- [ ] Properties 로드 - 서버 부팅 시에만 로드 (Hot Reload 없음)
+- [ ] DB 변경 - 관리자 UI에서 실시간 변경, 즉시 적용
+- [ ] 캐시 전략 - Redis 캐싱으로 성능 최적화, 변경 시 캐시 무효화
+
+**SYSTEM_CONFIG 테이블 구조:**
+- [ ] 테이블 설계 - 키-값 저장소 패턴 (Key-Value Store)
+- [ ] config_key (VARCHAR(100), PK) - 설정 키 (예: 'auth.login.local.enabled')
+- [ ] config_value (TEXT) - 설정 값 (문자열 또는 JSON)
+- [ ] value_type (VARCHAR(20)) - 값 타입 (BOOLEAN, INT, STRING, JSON, LIST)
+- [ ] description (VARCHAR(500)) - 설정 설명 (UI 표시용)
+- [ ] category (VARCHAR(50)) - 설정 카테고리 (LOGIN, PASSWORD, SESSION, IP, etc.)
+- [ ] editable (BOOLEAN) - UI에서 수정 가능 여부 (일부 설정은 읽기 전용)
+- [ ] updated_at (TIMESTAMP) - 마지막 수정 시간
+- [ ] updated_by (VARCHAR(50)) - 수정한 관리자 ID
+- [ ] version (INT) - 낙관적 락 (Optimistic Lock)
+
+**설정 키 네이밍 규칙 (Config Key Convention):**
+- [ ] 계층 구조 - 점(.) 구분자 사용 (예: auth.login.local.enabled)
+- [ ] 일관성 - Properties 파일과 동일한 키 사용
+- [ ] 로그인 방식 - auth.login.{method}.enabled (method: local, ad, sso)
+- [ ] 로그인 우선순위 - auth.login.priority (예: "SSO,AD,LOCAL")
+- [ ] 비밀번호 정책 - auth.password.{policy}.enabled, auth.password.{policy}.config
+- [ ] 세션 정책 - auth.session.{policy}.enabled, auth.session.{policy}.config
+- [ ] IP 정책 - auth.ip.{policy}.enabled, auth.ip.{policy}.config
+
+**설정 우선순위 로직 (Configuration Priority Logic):**
+- [ ] 1순위 - SYSTEM_CONFIG 테이블 조회
+- [ ] DB 값 존재 확인 - config_key 조회
+- [ ] DB 값 NULL/빈값 체크 - NULL 또는 빈 문자열이면 Fallback
+- [ ] 2순위 - Properties 파일 조회 (@Value 또는 @ConfigurationProperties)
+- [ ] 최종 값 반환 - DB 또는 Properties 중 유효한 값
+- [ ] 캐싱 - Redis에 최종 값 캐싱 (키: "config:{config_key}", TTL: 5분)
+- [ ] 캐시 무효화 - SYSTEM_CONFIG 수정 시 해당 키 캐시 삭제
+
+**설정 조회 서비스 (ConfigurationService):**
+- [ ] getConfig(key) - 설정 값 조회 (우선순위 로직 적용)
+- [ ] getConfigAsBoolean(key) - Boolean 타입으로 변환
+- [ ] getConfigAsInt(key) - Integer 타입으로 변환
+- [ ] getConfigAsList(key) - 콤마 구분 문자열을 List로 변환
+- [ ] getConfigAsJson(key) - JSON 문자열을 Object로 파싱
+- [ ] updateConfig(key, value, adminId) - DB 설정 수정
+- [ ] deleteConfig(key) - DB 설정 삭제 (Properties Fallback으로 전환)
+- [ ] getAllConfigs(category) - 카테고리별 설정 목록 조회
+- [ ] reloadCache() - 캐시 전체 무효화 및 재로드
+
+**Properties 파일 예시 (application.properties):**
+```properties
+# 로그인 방식 설정
+auth.login.local.enabled=true
+auth.login.ad.enabled=true
+auth.login.sso.enabled=false
+auth.login.priority=SSO,AD,LOCAL
+
+# 비밀번호 정책
+auth.password.expiration.enabled=true
+auth.password.expiration.days=90
+auth.password.complexity.enabled=true
+auth.password.complexity.minLength=8
+auth.password.complexity.requireUppercase=true
+auth.password.complexity.requireLowercase=true
+auth.password.complexity.requireDigit=true
+auth.password.complexity.requireSpecial=true
+auth.password.history.enabled=true
+auth.password.history.count=5
+
+# 계정 잠금 정책
+auth.account.inactive.enabled=true
+auth.account.inactive.days=365
+auth.account.failedAttempts.enabled=true
+auth.account.failedAttempts.thresholds=[{"attempts":5,"lockMinutes":5},{"attempts":10,"lockMinutes":30},{"attempts":15,"lockMinutes":null}]
+
+# IP 정책
+auth.ip.blacklist.enabled=true
+auth.ip.blacklist.failureThreshold=30
+auth.ip.blacklist.blockHours=24
+auth.ip.whitelist.enabled=false
+auth.ip.rateLimit.enabled=true
+auth.ip.rateLimit.maxRequestsPerMinute=10
+
+# 세션 정책
+auth.session.accessToken.expirationSeconds=3600
+auth.session.refreshToken.expirationSeconds=86400
+auth.session.maxConcurrentSessions=10
+```
+
+**SYSTEM_CONFIG 테이블 예시 데이터:**
+```sql
+INSERT INTO SYSTEM_CONFIG (config_key, config_value, value_type, description, category, editable)
+VALUES
+-- 로그인 방식
+('auth.login.local.enabled', 'true', 'BOOLEAN', 'LOCAL 로그인 활성화 여부', 'LOGIN', true),
+('auth.login.ad.enabled', 'true', 'BOOLEAN', 'AD 로그인 활성화 여부', 'LOGIN', true),
+('auth.login.sso.enabled', 'false', 'BOOLEAN', 'SSO 로그인 활성화 여부', 'LOGIN', true),
+('auth.login.priority', 'SSO,AD,LOCAL', 'LIST', '로그인 우선순위', 'LOGIN', true),
+
+-- 비밀번호 만료 정책
+('auth.password.expiration.enabled', 'true', 'BOOLEAN', '비밀번호 만료 정책 활성화', 'PASSWORD', true),
+('auth.password.expiration.days', '90', 'INT', '비밀번호 만료 일수', 'PASSWORD', true),
+
+-- 비밀번호 복잡도 정책
+('auth.password.complexity.enabled', 'true', 'BOOLEAN', '비밀번호 복잡도 정책 활성화', 'PASSWORD', true),
+('auth.password.complexity.config', '{"minLength":8,"requireUppercase":true,"requireLowercase":true,"requireDigit":true,"requireSpecial":true}', 'JSON', '비밀번호 복잡도 설정', 'PASSWORD', true),
+
+-- IP 블랙리스트 정책
+('auth.ip.blacklist.enabled', 'true', 'BOOLEAN', 'IP 블랙리스트 정책 활성화', 'IP', true),
+('auth.ip.blacklist.config', '{"failureThreshold":30,"blockHours":24}', 'JSON', 'IP 블랙리스트 설정', 'IP', true);
+```
+
+**마이그레이션 전략 (기존 SecurityPolicy → SYSTEM_CONFIG):**
+- [ ] 기존 테이블 - SecurityPolicy (orgId 기반 다중 정책)
+- [ ] 마이그레이션 대상 - orgId = NULL인 글로벌 정책만 추출
+- [ ] 변환 로직 - SecurityPolicy.policyType + config → SYSTEM_CONFIG.config_key + config_value
+- [ ] 예시 변환:
+  - SecurityPolicy(policyType=PASSWORD_EXPIRATION, config={days:90}) 
+  → SYSTEM_CONFIG('auth.password.expiration.days', '90')
+- [ ] 조직별 정책 처리 - 삭제 또는 아카이브 (더 이상 사용 안 함)
+- [ ] 마이그레이션 스크립트 - SQL 스크립트 작성 (V2__migrate_to_global_config.sql)
+- [ ] 롤백 계획 - 마이그레이션 전 백업 필수
+
+**System Configuration UI 요구사항:**
+- [ ] UI 위치 - 관리자 메뉴 > System Settings (시스템 설정)
+- [ ] 접근 권한 - ROLE_ADMIN 필수
+- [ ] UI 레이아웃 - Jenkins 스타일 (카테고리별 섹션 분리)
+- [ ] 카테고리 탭 - LOGIN, PASSWORD, SESSION, IP, ACCOUNT, ADVANCED
+- [ ] 설정 항목 표시 - 이름, 설명, 현재 값, 기본값(Properties), 수정 버튼
+- [ ] 값 편집 - 타입별 입력 컴포넌트 (Boolean=Toggle, Int=Number Input, String=Text Input, JSON=JSON Editor)
+- [ ] 즉시 적용 - 저장 버튼 클릭 시 즉시 DB 저장 및 캐시 무효화
+- [ ] 변경 이력 - 설정 변경 이력 조회 (누가, 언제, 무엇을 변경)
+- [ ] 리셋 기능 - 개별 설정 또는 전체 설정 초기화 (Properties 기본값으로)
+- [ ] 검증 - 잘못된 값 입력 시 에러 메시지 표시 (예: days는 양수만)
+- [ ] 미리보기 - 변경 전후 비교 (Optional)
+- [ ] Export/Import - 설정 전체를 JSON 파일로 내보내기/가져오기 (Optional)
+
+**System Configuration API:**
+- [ ] GET /api/v1/admin/system-config - 전체 설정 조회 (카테고리별)
+- [ ] GET /api/v1/admin/system-config/{key} - 개별 설정 조회
+- [ ] PUT /api/v1/admin/system-config/{key} - 개별 설정 수정
+- [ ] DELETE /api/v1/admin/system-config/{key} - 개별 설정 삭제 (Properties로 Fallback)
+- [ ] POST /api/v1/admin/system-config/reset - 전체 설정 초기화
+- [ ] POST /api/v1/admin/system-config/reload-cache - 캐시 재로드
+- [ ] GET /api/v1/admin/system-config/history - 변경 이력 조회
+- [ ] 인증 필수 - JWT Access Token + ROLE_ADMIN 권한
+- [ ] Rate Limiting - 동일 관리자 1분당 30회 제한
+
+**설정 변경 감사 로그 (Config Change Audit):**
+- [ ] 테이블 - CONFIG_CHANGE_HISTORY
+- [ ] 필드 - id, config_key, old_value, new_value, changed_by, changed_at, change_reason
+- [ ] 로그 기록 - 모든 설정 변경 시 자동 기록
+- [ ] 조회 기능 - 관리자가 변경 이력 조회 가능
+- [ ] 보존 기간 - 최소 1년 이상 보관
+
+**테스트 시나리오:**
+- [ ] 시나리오 1: Properties만 있을 때 - Properties 값 사용
+- [ ] 시나리오 2: DB 설정 추가 - DB 값으로 Override
+- [ ] 시나리오 3: DB 값 NULL - Properties Fallback
+- [ ] 시나리오 4: DB 설정 삭제 - Properties로 복귀
+- [ ] 시나리오 5: UI에서 설정 변경 - 즉시 적용 확인
+- [ ] 시나리오 6: 잘못된 값 입력 - 검증 에러 발생
+- [ ] 시나리오 7: 캐시 동작 확인 - Redis 캐싱 및 무효화
+- [ ] 시나리오 8: 마이그레이션 - 기존 SecurityPolicy → SYSTEM_CONFIG 변환
+- [ ] 시나리오 9: 권한 검증 - ROLE_ADMIN 없는 사용자 접근 거부
+- [ ] 시나리오 10: 변경 이력 조회 - 누가 언제 무엇을 변경했는지 확인
+
 #### Account Security Policies (계정 보안 정책)
 
 **⚠️ 정책 격리 원칙 (Policy Isolation by Login Method):**
@@ -581,22 +756,30 @@
 - [ ] User.loginMethod 필드 - LOCAL | AD | SSO (필수 저장)
 
 **정책 관리 (Policy Management):**
-- [ ] SecurityPolicy 엔티티 - id, policyType, enabled, config (JSON), orgId, active, applicableLoginMethods
-- [ ] SecurityPolicy.applicableLoginMethods - 기본값: [LOCAL] (AD, SSO 제외)
-- [ ] SecurityPolicyType enum - INACTIVE_LOCKOUT, FAILED_ATTEMPTS_LOCKOUT, IP_BLACKLIST, IP_WHITELIST, IP_RATE_LIMIT
-- [ ] 정책 활성화/비활성화 - enabled 플래그로 관리
-- [ ] 조직별 정책 설정 - orgId 기준 (null = 글로벌 정책)
-- [ ] 정책 우선순위 - 조직 정책 > 글로벌 정책
-- [ ] 정책 설정 조회 - getPolicyConfig(policyType, orgId)
-- [ ] 정책 활성 여부 확인 - isPolicyEnabled(policyType, orgId) && isApplicableToLoginMethod(loginMethod)
-- [ ] 정책 생성/수정 - 관리자 권한 필요 (ROLE_ADMIN)
-- [ ] 정책 적용 범위 검증 - applicableLoginMethods 확인 후 적용
-- [ ] 정책 감사 로그 - 정책 생성/수정/삭제 시 감사 로그 기록
+- [ ] **전역 설정 기반** - SYSTEM_CONFIG 테이블 사용 (조직별 분리 없음)
+- [ ] 정책 키 형식 - auth.{domain}.{policy}.enabled, auth.{domain}.{policy}.config
+- [ ] 정책 활성화/비활성화 - {policy}.enabled 플래그로 관리
+- [ ] 정책 설정 조회 - ConfigurationService.getConfig(key)
+- [ ] 정책 활성 여부 확인 - getConfigAsBoolean("auth.{policy}.enabled") && isApplicableToLoginMethod(loginMethod)
+- [ ] 정책 생성/수정 - System Configuration UI 또는 API 사용
+- [ ] 정책 적용 범위 검증 - applicableLoginMethods 확인 후 적용 (LOCAL만)
+- [ ] 정책 감사 로그 - CONFIG_CHANGE_HISTORY 테이블에 변경 이력 기록
+- [ ] DB 우선 + Properties Fallback - DB 값 없으면 application.properties 사용
+- [ ] 관리자 권한 필요 - ROLE_ADMIN만 설정 변경 가능
+
+**정책 카테고리:**
+- [ ] LOGIN - 로그인 방식 활성화, 우선순위
+- [ ] PASSWORD - 비밀번호 만료, 복잡도, 히스토리
+- [ ] ACCOUNT - 계정 잠금 (비활성, 실패 횟수)
+- [ ] IP - IP 블랙리스트, 화이트리스트, Rate Limiting
+- [ ] SESSION - JWT 만료시간, 동시 세션 수
 
 **비활성 계정 잠금 정책 (LOCAL 전용, 선택적 적용):**
 - [ ] **적용 대상: LOCAL 로그인 사용자만** - AD/SSO 사용자 제외
-- [ ] 비활성 계정 감지 - 최근 로그인 N일 경과 시 자동 잠금 (기본값: 365일)
-- [ ] 비활성 기간 설정 - config.inactiveDays 필드 (30/90/180/365일)
+- [ ] 설정 키 - auth.account.inactive.enabled (BOOLEAN)
+- [ ] 설정 키 - auth.account.inactive.days (INT, 기본값: 365)
+- [ ] 비활성 계정 감지 - 최근 로그인 N일 경과 시 자동 잠금
+- [ ] 비활성 기간 설정 - ConfigurationService에서 조회 (30/90/180/365일)
 - [ ] 비활성 계정 잠금 - 계정 상태 ACTIVE → LOCKED_INACTIVE로 변경
 - [ ] 비활성 계정 잠금 - lockedReason = "INACTIVE_{N}_DAYS" 기록
 - [ ] 비활성 계정 잠금 - lockedAt 타임스탬프 기록
@@ -608,8 +791,10 @@
 
 **실패 로그인 횟수 잠금 정책 (LOCAL 전용, 선택적 적용):**
 - [ ] **적용 대상: LOCAL 로그인 사용자만** - AD/SSO 사용자 제외
-- [ ] 정책 설정 - config.thresholds 배열: [{attempts: 5, lockMinutes: 5}, {attempts: 10, lockMinutes: 30}, {attempts: 15, lockMinutes: null}]
-- [ ] 임계값 커스터마이징 - 조직별 실패 횟수 및 잠금 시간 설정 가능
+- [ ] 설정 키 - auth.account.failedAttempts.enabled (BOOLEAN)
+- [ ] 설정 키 - auth.account.failedAttempts.thresholds (JSON)
+- [ ] 정책 설정 - JSON 배열: [{"attempts":5,"lockMinutes":5},{"attempts":10,"lockMinutes":30},{"attempts":15,"lockMinutes":null}]
+- [ ] 임계값 커스터마이징 - System Configuration UI에서 JSON 편집으로 설정 가능
 - [ ] AD/SSO 로그인 실패 - 실패 카운트하지 않음 (각 시스템에서 관리)
 - [ ] 로그인 실패 카운트 - 실패 시 failedLoginAttempts 증가
 - [ ] 로그인 실패 카운트 - 성공 시 failedLoginAttempts 리셋 (0으로)
@@ -645,7 +830,10 @@
 
 **IP 블랙리스트 정책 (LOCAL 전용, 선택적 적용):**
 - [ ] **적용 대상: LOCAL 로그인 IP만** - AD/SSO는 각 시스템에서 관리
-- [ ] 정책 설정 - config.failureThreshold (기본값: 30), config.blockHours (기본값: 24)
+- [ ] 설정 키 - auth.ip.blacklist.enabled (BOOLEAN)
+- [ ] 설정 키 - auth.ip.blacklist.failureThreshold (INT, 기본값: 30)
+- [ ] 설정 키 - auth.ip.blacklist.blockHours (INT, 기본값: 24)
+- [ ] 정책 설정 - ConfigurationService에서 조회
 - [ ] IP 블랙리스트 등록 - 동일 IP에서 LOCAL 로그인 N회 이상 실패 시 등록
 - [ ] IP 블랙리스트 저장 - IP_BLACKLIST 테이블 (ip, blockedAt, expiresAt, reason, loginMethod)
 - [ ] IP 블랙리스트 차단 - 블랙리스트 IP의 LOCAL 로그인 시도 즉시 403 응답
@@ -657,7 +845,9 @@
 
 **IP 화이트리스트 정책 (LOCAL 전용, 선택적 적용):**
 - [ ] **적용 대상: LOCAL 로그인 IP만** - AD/SSO는 각 시스템에서 관리
-- [ ] 정책 설정 - config.allowedIpRanges 배열 (CIDR 표기법)
+- [ ] 설정 키 - auth.ip.whitelist.enabled (BOOLEAN)
+- [ ] 설정 키 - auth.ip.whitelist.allowedIpRanges (LIST, CIDR 표기법)
+- [ ] 정책 설정 - 콤마 구분 문자열 (예: "192.168.1.0/24,10.0.0.0/8")
 - [ ] IP 화이트리스트 저장 - IP_WHITELIST 테이블 (ipRange, description, orgId, loginMethod)
 - [ ] IP 화이트리스트 검증 - CIDR 범위 내 IP 확인 (LOCAL 로그인만)
 - [ ] IP 화이트리스트 제외 - 화이트리스트 IP는 실패 잠금 정책 제외
@@ -667,7 +857,9 @@
 
 **IP Rate Limiting 정책 (LOCAL 전용, 선택적 적용):**
 - [ ] **적용 대상: LOCAL 로그인 IP만** - AD/SSO는 각 시스템에서 관리
-- [ ] 정책 설정 - config.maxRequestsPerMinute (기본값: 10)
+- [ ] 설정 키 - auth.ip.rateLimit.enabled (BOOLEAN)
+- [ ] 설정 키 - auth.ip.rateLimit.maxRequestsPerMinute (INT, 기본값: 10)
+- [ ] 정책 설정 - ConfigurationService에서 조회
 - [ ] Rate Limit 카운터 - Redis 기반 카운터 (키: "rate_limit:local:ip:{ip}")
 - [ ] Rate Limit TTL - 1분 자동 만료
 - [ ] Rate Limit 초과 - 429 Too Many Requests 응답 (LOCAL 로그인만)
@@ -685,13 +877,16 @@
 - [ ] 비밀번호 변경 API - LOCAL 사용자만 호출 가능 (AD/SSO는 403 Forbidden)
 
 **비밀번호 정책 유형:**
-- [ ] PasswordPolicyType enum - EXPIRATION, COMPLEXITY, HISTORY
-- [ ] 정책별 독립 활성화 - 각 정책 개별적으로 enabled/disabled 설정 가능
-- [ ] applicableLoginMethods - 기본값: [LOCAL] (AD, SSO 제외)
+- [ ] **SYSTEM_CONFIG 기반 관리** - DB + Properties 이중 소스 지원
+- [ ] 정책별 독립 활성화 - 각 정책 개별적으로 enabled 설정 가능
+- [ ] applicableLoginMethods - LOCAL만 적용 (AD, SSO 제외)
+- [ ] 설정 키 - auth.password.{policyType}.enabled, auth.password.{policyType}.config
 
 **비밀번호 만료 정책 (LOCAL 전용, 선택적 적용):**
 - [ ] **적용 대상: LOCAL 로그인 사용자만** - AD/SSO 사용자 제외
-- [ ] 정책 설정 - config.expirationDays (기본값: 90, 옵션: 30/60/90/180/365)
+- [ ] 설정 키 - auth.password.expiration.enabled (BOOLEAN)
+- [ ] 설정 키 - auth.password.expiration.days (INT, 기본값: 90, 옵션: 30/60/90/180/365)
+- [ ] 정책 설정 - ConfigurationService에서 조회
 - [ ] 비밀번호 만료 - 비밀번호 생성/변경 후 N일 경과 시 만료
 - [ ] 비밀번호 만료 - passwordExpiresAt 필드로 관리
 - [ ] 비밀번호 만료 - 만료 후 로그인 시 PasswordExpiredException 예외
@@ -703,7 +898,14 @@
 
 **비밀번호 복잡도 정책 (LOCAL 전용, 선택적 적용):**
 - [ ] **적용 대상: LOCAL 로그인 사용자만** - AD/SSO 사용자 제외
-- [ ] 정책 설정 - config: {minLength, maxLength, requireUppercase, requireLowercase, requireDigit, requireSpecial}
+- [ ] 설정 키 - auth.password.complexity.enabled (BOOLEAN)
+- [ ] 설정 키 - auth.password.complexity.minLength (INT, 기본값: 8)
+- [ ] 설정 키 - auth.password.complexity.maxLength (INT, 기본값: 100)
+- [ ] 설정 키 - auth.password.complexity.requireUppercase (BOOLEAN, 기본값: true)
+- [ ] 설정 키 - auth.password.complexity.requireLowercase (BOOLEAN, 기본값: true)
+- [ ] 설정 키 - auth.password.complexity.requireDigit (BOOLEAN, 기본값: true)
+- [ ] 설정 키 - auth.password.complexity.requireSpecial (BOOLEAN, 기본값: true)
+- [ ] 정책 설정 - ConfigurationService에서 개별 조회 또는 JSON으로 묶어서 관리
 - [ ] 비밀번호 복잡도 - 최소 길이 (기본값: 8, 조정 가능)
 - [ ] 비밀번호 복잡도 - 최대 길이 (기본값: 100)
 - [ ] 비밀번호 복잡도 - 영문 대문자 포함 여부 (기본값: true)
@@ -721,7 +923,9 @@
 
 **비밀번호 히스토리 정책 (LOCAL 전용, 선택적 적용):**
 - [ ] **적용 대상: LOCAL 로그인 사용자만** - AD/SSO 사용자 제외
-- [ ] 정책 설정 - config.historyCount (기본값: 5, 옵션: 3/5/10)
+- [ ] 설정 키 - auth.password.history.enabled (BOOLEAN)
+- [ ] 설정 키 - auth.password.history.count (INT, 기본값: 5, 옵션: 3/5/10)
+- [ ] 정책 설정 - ConfigurationService에서 조회
 - [ ] 비밀번호 히스토리 - 최근 N개 비밀번호 재사용 금지
 - [ ] 비밀번호 히스토리 - PASSWORD_HISTORY 테이블에 BCrypt 해시 저장
 - [ ] 비밀번호 히스토리 - userId, passwordHash, createdAt 필드
