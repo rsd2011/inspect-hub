@@ -3,6 +3,9 @@ package com.inspecthub.admin.loginpolicy.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inspecthub.admin.loginpolicy.domain.LoginMethod;
 import com.inspecthub.admin.loginpolicy.domain.LoginPolicy;
+import com.inspecthub.admin.loginpolicy.exception.EmptyMethodsException;
+import com.inspecthub.admin.loginpolicy.exception.LastMethodDisableException;
+import com.inspecthub.admin.loginpolicy.exception.PolicyNotFoundException;
 import com.inspecthub.admin.loginpolicy.repository.LoginPolicyRepository;
 import com.inspecthub.common.service.AuditLogService;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -241,4 +245,48 @@ class LoginPolicyServiceTest {
 
     // NOTE: 캐시 동작 테스트는 Integration Test에서 수행
     // (Unit Test에서는 Mock 환경이므로 Spring Cache가 실제로 동작하지 않음)
+
+    // ==================== 예외 처리 테스트 ====================
+
+    @Test
+    @DisplayName("정책이 존재하지 않으면 PolicyNotFoundException을 던진다")
+    void shouldThrowPolicyNotFoundExceptionWhenPolicyDoesNotExist() {
+        // Given (준비) - Repository가 빈 Optional 반환
+        given(loginPolicyRepository.findGlobalPolicy())
+            .willReturn(Optional.empty());
+
+        // When & Then (실행 & 검증)
+        assertThatThrownBy(() -> loginPolicyService.getGlobalPolicy())
+            .isInstanceOf(PolicyNotFoundException.class)
+            .hasMessageContaining("로그인 정책을 찾을 수 없습니다");
+    }
+
+    @Test
+    @DisplayName("활성화된 방식이 비어있으면 EmptyMethodsException을 던진다")
+    void shouldThrowEmptyMethodsExceptionWhenMethodsAreEmpty() {
+        // Given (준비) - 빈 Set
+        Set<LoginMethod> emptyMethods = Set.of();
+
+        // When & Then (실행 & 검증)
+        assertThatThrownBy(() -> loginPolicyService.updateEnabledMethods(emptyMethods))
+            .isInstanceOf(EmptyMethodsException.class)
+            .hasMessageContaining("최소 1개의 로그인 방식을 활성화해야 합니다");
+    }
+
+    // NOTE: LastMethodDisableException은 toggleMethod() 구현 시 사용
+    // updateEnabledMethods()에서는 빈 Set인 경우 EmptyMethodsException을 던짐
+
+    @Test
+    @DisplayName("정책 전체 업데이트 시 빈 방식이면 EmptyMethodsException을 던진다")
+    void shouldThrowEmptyMethodsExceptionInUpdateGlobalPolicy() {
+        // Given (준비)
+        String name = "Test Policy";
+        Set<LoginMethod> emptyMethods = Set.of();
+        List<LoginMethod> priority = Arrays.asList();
+
+        // When & Then (실행 & 검증)
+        assertThatThrownBy(() -> loginPolicyService.updateGlobalPolicy(name, emptyMethods, priority))
+            .isInstanceOf(EmptyMethodsException.class)
+            .hasMessageContaining("최소 1개의 로그인 방식을 활성화해야 합니다");
+    }
 }

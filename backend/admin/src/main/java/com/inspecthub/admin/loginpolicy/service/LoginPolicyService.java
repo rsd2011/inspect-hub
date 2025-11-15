@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inspecthub.admin.loginpolicy.domain.LoginMethod;
 import com.inspecthub.admin.loginpolicy.domain.LoginPolicy;
+import com.inspecthub.admin.loginpolicy.exception.EmptyMethodsException;
+import com.inspecthub.admin.loginpolicy.exception.PolicyNotFoundException;
 import com.inspecthub.admin.loginpolicy.repository.LoginPolicyRepository;
 import com.inspecthub.common.service.AuditLogService;
 import lombok.RequiredArgsConstructor;
@@ -44,7 +46,7 @@ public class LoginPolicyService {
     public LoginPolicy getGlobalPolicy() {
         log.debug("조회: 시스템 전역 로그인 정책 (DB)");
         return loginPolicyRepository.findGlobalPolicy()
-            .orElseThrow(() -> new IllegalStateException("시스템 로그인 정책이 존재하지 않습니다"));
+            .orElseThrow(() -> new PolicyNotFoundException("로그인 정책을 찾을 수 없습니다"));
     }
 
     /**
@@ -89,6 +91,11 @@ public class LoginPolicyService {
         log.debug("업데이트: 시스템 전역 로그인 정책 - name={}, methods={}, priority={}",
             name, enabledMethods, priority);
 
+        // Validation: 최소 1개의 로그인 방식 필요
+        if (enabledMethods == null || enabledMethods.isEmpty()) {
+            throw new EmptyMethodsException();
+        }
+
         LoginPolicy current = getGlobalPolicy();
         String beforeJson = toJson(current);
 
@@ -132,6 +139,11 @@ public class LoginPolicyService {
     @CacheEvict(value = "system:login-policy", allEntries = true)
     public LoginPolicy updateEnabledMethods(Set<LoginMethod> enabledMethods) {
         log.debug("업데이트: 활성화된 로그인 방식 - methods={}", enabledMethods);
+
+        // Validation: 최소 1개의 로그인 방식 필요
+        if (enabledMethods == null || enabledMethods.isEmpty()) {
+            throw new EmptyMethodsException();
+        }
 
         LoginPolicy current = getGlobalPolicy();
         String beforeJson = toJson(current);
