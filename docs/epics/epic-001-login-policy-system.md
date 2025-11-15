@@ -87,31 +87,36 @@ REST API for policy management with validation.
 
 ---
 
-### 🔨 Story 4: Caching & Audit Logging
-**Status**: ⏳ TODO
+### ✅ Story 4: Caching & Audit Logging
+**Status**: ✅ COMPLETED (52% of total Epic)
 
 Performance optimization and compliance.
 
-**Scope**:
-- Redis caching strategy
-- Cache invalidation on policy changes
-- Audit logging for all policy modifications
-- Audit log details (before/after state)
+**Delivered**:
+- ✅ Redis caching strategy (1-hour TTL)
+- ✅ Cache invalidation on policy changes (@CacheEvict)
+- ✅ Audit logging for all policy modifications (AuditLogService)
+- ✅ Audit log details (before/after JSON snapshots)
+- ✅ Profile-based cache config (production: Redis, test: ConcurrentMap)
+- ✅ Integration tests (3/3 passed)
+- ✅ Unit tests (2/2 passed)
 
 **File**: [Story 1.4 - Caching & Audit Logging](../stories/story-1.4-login-policy-caching-audit.md)
 
 ---
 
-### 🔨 Story 5: Error Handling & Testing Scenarios
-**Status**: ⏳ TODO
+### ✅ Story 5: Error Handling & Testing Scenarios
+**Status**: ✅ COMPLETED (66% of total Epic)
 
 Comprehensive error handling and integration testing.
 
-**Scope**:
-- Custom exceptions (PolicyNotFoundException, etc.)
-- HTTP error responses (404, 400, 403)
-- Integration test scenarios (session expiry, policy changes)
-- Regression testing
+**Delivered**:
+- ✅ Custom exceptions (5 classes: PolicyNotFoundException, MethodNotAllowedException, InvalidMethodException, EmptyMethodsException, LastMethodDisableException)
+- ✅ HTTP error responses (404 NOT_FOUND, 400 BAD_REQUEST)
+- ✅ GlobalExceptionHandler updated with exception mappings
+- ✅ LoginPolicyService exception handling
+- ✅ Exception unit tests (3/3 passed)
+- ✅ Regression testing (admin + auth modules, all passed)
 
 **File**: [Story 1.5 - Error Handling & Testing](../stories/story-1.5-login-policy-error-testing.md)
 

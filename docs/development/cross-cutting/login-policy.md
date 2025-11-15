@@ -36,15 +36,15 @@
 #### Login Policy - Application Service (응용 서비스)
 
 **정책 조회:**
-- [ ] LoginPolicyService.getGlobalPolicy() - 시스템 전역 정책 조회
-- [ ] LoginPolicyService.getAvailableMethods() - 사용 가능한 로그인 방식 리스트
-- [ ] LoginPolicyService.getPrimaryMethod() - 최우선 로그인 방식
+- [x] LoginPolicyService.getGlobalPolicy() - 시스템 전역 정책 조회
+- [x] LoginPolicyService.getAvailableMethods() - 사용 가능한 로그인 방식 리스트
+- [x] LoginPolicyService.getPrimaryMethod() - 최우선 로그인 방식
 
 **정책 수정:**
-- [ ] LoginPolicyService.updateGlobalPolicy(request) - 전역 정책 수정
-- [ ] LoginPolicyService.updateEnabledMethods(methods) - 활성화 방식 변경
-- [ ] LoginPolicyService.updatePriority(priority) - 우선순위 변경
-- [ ] LoginPolicyService.toggleMethod(method) - 특정 방식 활성화/비활성화
+- [x] LoginPolicyService.updateGlobalPolicy(request) - 전역 정책 수정
+- [x] LoginPolicyService.updateEnabledMethods(methods) - 활성화 방식 변경
+- [x] LoginPolicyService.updatePriority(priority) - 우선순위 변경
+- [ ] LoginPolicyService.toggleMethod(method) - 특정 방식 활성화/비활성화 (미구현 - 선택사항)
 
 ---
 
@@ -76,11 +76,11 @@
 #### Login Policy - Repository & Queries (저장소 및 쿼리)
 
 **저장:**
-- [ ] LoginPolicyRepository.save(policy) - 정책 저장
-- [ ] LoginPolicyRepository.save(policy) - UPDATE 성공 (INSERT는 시스템 초기화 시에만)
+- [x] LoginPolicyRepository.save(policy) - 정책 저장
+- [x] LoginPolicyRepository.save(policy) - UPDATE 성공 (INSERT는 시스템 초기화 시에만)
 
 **조회:**
-- [ ] LoginPolicyRepository.findGlobalPolicy() - 시스템 전역 정책 조회
+- [x] LoginPolicyRepository.findGlobalPolicy() - 시스템 전역 정책 조회
 
 **Note:** 시스템에 단일 정책만 존재하므로 findById(), findAll(), delete() 불필요
 
@@ -112,33 +112,33 @@
 #### Login Policy - API Endpoints (API 엔드포인트)
 
 **조회 API:**
-- [ ] GET /api/v1/system/login-policy - 시스템 로그인 정책 조회 (Public)
-- [ ] GET /api/v1/system/login-policy/available-methods - 사용 가능한 방식 (Public)
+- [x] GET /api/v1/system/login-policy - 시스템 로그인 정책 조회 (Public)
+- [x] GET /api/v1/system/login-policy/available-methods - 사용 가능한 방식 (Public)
 
 **수정 API (관리자 전용):**
-- [ ] PUT /api/v1/system/login-policy - 시스템 정책 수정 (관리자)
-- [ ] PATCH /api/v1/system/login-policy/methods - 활성화 방식 변경
-- [ ] PATCH /api/v1/system/login-policy/priority - 우선순위 변경
-- [ ] PATCH /api/v1/system/login-policy/toggle/{method} - 방식 활성화/비활성화
+- [x] PUT /api/v1/system/login-policy - 시스템 정책 수정 (관리자)
+- [x] PATCH /api/v1/system/login-policy/methods - 활성화 방식 변경
+- [x] PATCH /api/v1/system/login-policy/priority - 우선순위 변경
+- [ ] PATCH /api/v1/system/login-policy/toggle/{method} - 방식 활성화/비활성화 (미구현 - 선택사항)
 
 ---
 
 #### Login Policy - Validation Rules (검증 규칙)
 
 **필수 검증:**
-- [ ] 최소 1개 로그인 방식 활성화 필수
-- [ ] enabledMethods가 빈 리스트면 예외 (BadRequestException)
-- [ ] 마지막 남은 방식 비활성화 시도 시 예외
+- [x] 최소 1개 로그인 방식 활성화 필수
+- [x] enabledMethods가 빈 리스트면 예외 (EmptyMethodsException)
+- [ ] 마지막 남은 방식 비활성화 시도 시 예외 (toggleMethod 미구현)
 
 **우선순위 검증:**
-- [ ] priority 리스트는 enabledMethods와 일치해야 함
-- [ ] priority에 없는 방식은 자동으로 끝에 추가
-- [ ] priority에 중복 방식 있으면 예외
+- [x] priority 리스트는 enabledMethods와 일치해야 함 (자동 조정)
+- [x] priority에 없는 방식은 자동으로 끝에 추가
+- [ ] priority에 중복 방식 있으면 예외 (도메인 레벨에서 Set 사용으로 자동 처리)
 
 **보안 검증:**
-- [ ] LOCAL 방식만 활성화 시 경고 로그 (보안상 위험)
-- [ ] SSO 비활성화 시 관리자 알림
-- [ ] 정책 변경 시 감사 로그 기록
+- [ ] LOCAL 방식만 활성화 시 경고 로그 (보안상 위험) - 선택사항
+- [ ] SSO 비활성화 시 관리자 알림 - 선택사항
+- [x] 정책 변경 시 감사 로그 기록
 
 ---
 
@@ -192,16 +192,16 @@
 #### Login Policy - Error Handling (오류 처리)
 
 **예외 타입:**
-- [ ] PolicyNotFoundException - 정책을 찾을 수 없음 (시스템 오류)
-- [ ] MethodNotAllowedException - 비활성화된 방식 사용 시도
-- [ ] InvalidMethodException - 잘못된 로그인 방식
-- [ ] EmptyMethodsException - 활성화된 방식이 없음
-- [ ] LastMethodDisableException - 마지막 방식 비활성화 시도
+- [x] PolicyNotFoundException - 정책을 찾을 수 없음 (시스템 오류)
+- [x] MethodNotAllowedException - 비활성화된 방식 사용 시도
+- [x] InvalidMethodException - 잘못된 로그인 방식
+- [x] EmptyMethodsException - 활성화된 방식이 없음
+- [x] LastMethodDisableException - 마지막 방식 비활성화 시도
 
 **HTTP 응답:**
-- [ ] 404 Not Found - 정책 없음 (시스템 오류)
-- [ ] 400 Bad Request - 유효하지 않은 요청
-- [ ] 403 Forbidden - 권한 없음 (관리자 전용)
+- [x] 404 Not Found - 정책 없음 (시스템 오류)
+- [x] 400 Bad Request - 유효하지 않은 요청
+- [x] 403 Forbidden - 권한 없음 (관리자 전용, @PreAuthorize)
 
 ---
 
