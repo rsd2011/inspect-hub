@@ -665,6 +665,26 @@ auth.ip.rateLimit.maxRequestsPerMinute=10
 auth.session.accessToken.expirationSeconds=3600
 auth.session.refreshToken.expirationSeconds=86400
 auth.session.maxConcurrentSessions=10
+
+# 민감 정보 (환경 변수 필수)
+auth.session.jwtSecret=${JWT_SECRET_KEY}
+auth.ad.ldap.bindPassword=${AD_BIND_PASSWORD}
+auth.sso.oauth2.clientSecret=${SSO_CLIENT_SECRET}
+
+# AD (Active Directory) 연동 설정
+auth.ad.ldap.url=ldap://ad.company.com:389
+auth.ad.ldap.baseDn=dc=company,dc=com
+auth.ad.ldap.bindDn=cn=admin,dc=company,dc=com
+auth.ad.ldap.userDnPattern=uid={0},ou=people
+auth.ad.ldap.searchFilter=(uid={0})
+
+# SSO (Single Sign-On) 연동 설정
+auth.sso.provider=azure
+auth.sso.oauth2.clientId=your-client-id
+auth.sso.oauth2.authorizationUri=https://login.microsoftonline.com/tenant-id/oauth2/v2.0/authorize
+auth.sso.oauth2.tokenUri=https://login.microsoftonline.com/tenant-id/oauth2/v2.0/token
+auth.sso.oauth2.userInfoUri=https://graph.microsoft.com/v1.0/me
+auth.sso.oauth2.redirectUri=https://app.example.com/login/oauth2/callback
 ```
 
 **SYSTEM_CONFIG 테이블 예시 데이터:**
@@ -973,6 +993,178 @@ VALUES
 - [ ] 인증 필수 - JWT Access Token 필요
 - [ ] loginMethod 검증 - LOCAL 사용자만 허용, AD/SSO는 403 Forbidden
 - [ ] Rate Limiting - 동일 사용자 1분당 3회 제한
+
+#### Session Management Policies (세션 관리 정책)
+
+**⚠️ 세션 정책 적용 범위:**
+- [ ] **모든 로그인 방식에 적용** - LOCAL, AD, SSO 모두 동일한 세션 정책 사용
+- [ ] JWT 기반 통합 세션 관리 - 로그인 방식과 무관하게 동일한 토큰 구조
+- [ ] 세션 만료, 갱신, 무효화 - 로그인 방식 구분 없이 통합 관리
+
+**세션 정책 개요:**
+- [ ] **전역 설정 기반** - SYSTEM_CONFIG 테이블 사용
+- [ ] DB + Properties 이중 소스 지원
+- [ ] JWT 기반 세션 관리 (Stateless)
+- [ ] Refresh Token Rotation 지원
+- [ ] 동시 세션 제어
+
+**JWT Access Token 정책:**
+- [ ] 설정 키 - auth.session.accessToken.expirationSeconds (INT, 기본값: 3600)
+- [ ] 만료시간 - 1시간 (3600초), 조정 가능 범위: 300~86400초
+- [ ] 토큰 갱신 - Refresh Token으로만 갱신 가능
+- [ ] 토큰 무효화 - Redis 블랙리스트 (로그아웃, 비밀번호 변경 시)
+- [ ] 클레임 포함 - userId, employeeId, roles, orgId, loginMethod, iat, exp, iss
+- [ ] 서명 알고리즘 - HS256 (HMAC-SHA256)
+- [ ] 비밀키 관리 - auth.session.jwtSecret (STRING, **환경 변수 필수**: ${JWT_SECRET_KEY}, 최소 256비트)
+- [ ] 비밀키 길이 - 최소 256비트 (32자 이상)
+- [ ] 비밀키 로테이션 - 정기적 변경 권장 (분기별)
+
+**JWT Refresh Token 정책:**
+- [ ] 설정 키 - auth.session.refreshToken.expirationSeconds (INT, 기본값: 86400)
+- [ ] 만료시간 - 24시간 (86400초), 조정 가능 범위: 3600~604800초
+- [ ] 토큰 Rotation - 갱신 시 새 Refresh Token 발급 및 기존 토큰 무효화
+- [ ] 1회용 토큰 - 동일 Refresh Token 재사용 금지
+- [ ] Family 탐지 - 탈취 감지 시 전체 토큰 무효화
+- [ ] 저장 위치 - Pinia Store (메모리), SessionStorage (복원용)
+- [ ] 전송 방식 - POST body (Authorization 헤더 아님)
+
+**동시 세션 정책:**
+- [ ] 설정 키 - auth.session.maxConcurrentSessions (INT, 기본값: 10)
+- [ ] 동시 로그인 허용 - 같은 사용자 여러 세션 가능
+- [ ] 최대 세션 수 - 초과 시 가장 오래된 세션 자동 만료
+- [ ] 세션 추적 - Redis Set (키: "user_sessions:{userId}")
+- [ ] 세션 정보 - sessionId, deviceInfo, ipAddress, lastAccessedAt
+- [ ] 세션 만료 - Refresh Token 만료 시 자동 삭제
+- [ ] 강제 로그아웃 - 관리자가 특정 세션 강제 종료 가능
+
+**세션 타임아웃 정책:**
+- [ ] 설정 키 - auth.session.idleTimeoutMinutes (INT, 기본값: 30)
+- [ ] Idle Timeout - 마지막 활동 후 N분 경과 시 자동 로그아웃
+- [ ] Activity 갱신 - 모든 API 요청 시 lastAccessedAt 업데이트
+- [ ] 타임아웃 경고 - 만료 5분, 1분 전 UI 경고 표시
+- [ ] 연장 옵션 - 사용자가 "연장" 버튼 클릭 시 세션 갱신
+
+**세션 보안 정책:**
+- [ ] 설정 키 - auth.session.enforceSingleDevice (BOOLEAN, 기본값: false)
+- [ ] Single Device 모드 - 활성화 시 동일 사용자 1개 디바이스만 허용
+- [ ] Device Fingerprinting - User-Agent, IP, Screen Resolution 해시
+- [ ] IP 변경 감지 - 세션 중 IP 변경 시 재인증 요구 (옵션)
+- [ ] 설정 키 - auth.session.requireReauthOnIpChange (BOOLEAN, 기본값: false)
+- [ ] HTTPS 강제 - TLS 1.2+ 필수
+- [ ] Secure Cookie - HttpOnly, Secure, SameSite=Strict (Refresh Token용, 옵션)
+
+**세션 저장소:**
+- [ ] Primary - Redis (분산 세션 관리)
+- [ ] Fallback - In-Memory (개발 환경)
+- [ ] TTL 설정 - Refresh Token 만료시간과 동일
+- [ ] 클러스터 지원 - Redis Cluster 또는 Sentinel 구성
+
+**세션 모니터링:**
+- [ ] 활성 세션 조회 - 관리자가 전체 활성 세션 조회 가능
+- [ ] 사용자별 세션 조회 - 특정 사용자의 모든 세션 조회
+- [ ] 이상 세션 탐지 - 동일 사용자 다른 국가 동시 로그인 감지
+- [ ] 세션 통계 - 평균 세션 시간, 동시 접속자 수, 피크 시간대
+
+**세션 테스트 시나리오:**
+- [ ] 시나리오 1: Access Token 만료 → Refresh Token으로 갱신 성공
+- [ ] 시나리오 2: Refresh Token 만료 → 재로그인 필요
+- [ ] 시나리오 3: Refresh Token 재사용 → TokenReusedException
+- [ ] 시나리오 4: 동시 세션 초과 → 가장 오래된 세션 자동 만료
+- [ ] 시나리오 5: Idle Timeout 경과 → 자동 로그아웃
+- [ ] 시나리오 6: 비밀번호 변경 → 모든 세션 무효화
+- [ ] 시나리오 7: 관리자 강제 로그아웃 → 특정 세션 즉시 종료
+- [ ] 시나리오 8: IP 변경 감지 (설정 활성화) → 재인증 요구
+- [ ] 시나리오 9: Single Device 모드 → 다른 디바이스 로그인 시 기존 세션 종료
+- [ ] 시나리오 10: Refresh Token Family 탈취 → 전체 토큰 무효화
+
+#### External Authentication Configuration (외부 인증 연동 설정)
+
+**AD (Active Directory) 연동 설정:**
+- [ ] **Properties 전용 설정** - 민감 정보로 DB 저장 금지
+- [ ] 설정 활성화 - auth.login.ad.enabled (BOOLEAN, DB 또는 Properties)
+- [ ] LDAP URL - auth.ad.ldap.url (STRING, 예: ldap://ad.company.com:389)
+- [ ] LDAP Base DN - auth.ad.ldap.baseDn (STRING, 예: dc=company,dc=com)
+- [ ] LDAP User DN Pattern - auth.ad.ldap.userDnPattern (STRING, 예: uid={0},ou=people)
+- [ ] LDAP Bind DN - auth.ad.ldap.bindDn (STRING, 관리자 계정)
+- [ ] LDAP Bind Password - auth.ad.ldap.bindPassword (STRING, **환경 변수 필수**: ${AD_BIND_PASSWORD})
+- [ ] LDAP Search Filter - auth.ad.ldap.searchFilter (STRING, 예: (uid={0}))
+- [ ] LDAP Attributes - auth.ad.ldap.attributes (LIST, 예: displayName,mail,department,memberOf)
+- [ ] Connection Timeout - auth.ad.ldap.connectionTimeout (INT, 기본값: 5000ms)
+- [ ] Read Timeout - auth.ad.ldap.readTimeout (INT, 기본값: 10000ms)
+- [ ] Connection Pool - auth.ad.ldap.pooled (BOOLEAN, 기본값: true)
+- [ ] Pool Size - auth.ad.ldap.poolSize (INT, 기본값: 10)
+- [ ] SSL/TLS - auth.ad.ldap.useSsl (BOOLEAN, 기본값: true)
+- [ ] Certificate Validation - auth.ad.ldap.validateCertificate (BOOLEAN, 기본값: true)
+
+**AD 사용자 동기화:**
+- [ ] 자동 동기화 - auth.ad.sync.enabled (BOOLEAN, 기본값: true)
+- [ ] 동기화 주기 - auth.ad.sync.cronExpression (STRING, 예: 0 0 2 * * ?)
+- [ ] 사용자 생성 - AD 로그인 성공 시 자동 User 레코드 생성
+- [ ] 사용자 업데이트 - 로그인 시 displayName, email, department 등 최신화
+- [ ] 그룹 매핑 - AD 그룹 → 애플리케이션 Role 매핑
+- [ ] 매핑 설정 - auth.ad.groupMapping (JSON, 예: {"CN=Admins":"ROLE_ADMIN"})
+- [ ] 비활성 처리 - AD에서 삭제된 사용자 자동 INACTIVE 처리
+
+**AD Health Check:**
+- [ ] Connection 테스트 - 주기적 LDAP 연결 확인
+- [ ] Health Check 주기 - auth.ad.healthCheck.intervalSeconds (INT, 기본값: 60)
+- [ ] Fallback - AD 장애 시 LOCAL 로그인으로 자동 전환
+- [ ] 알림 - AD 장애 감지 시 관리자 알림 (선택적)
+
+**SSO (Single Sign-On) 연동 설정:**
+- [ ] **Properties 전용 설정** - OAuth2 Client 정보는 민감 정보
+- [ ] 설정 활성화 - auth.login.sso.enabled (BOOLEAN, DB 또는 Properties)
+- [ ] OAuth2 Provider - auth.sso.provider (STRING, 예: google, azure, okta, custom)
+- [ ] Client ID - auth.sso.oauth2.clientId (STRING)
+- [ ] Client Secret - auth.sso.oauth2.clientSecret (STRING, **환경 변수 필수**: ${SSO_CLIENT_SECRET})
+- [ ] Authorization URI - auth.sso.oauth2.authorizationUri (STRING)
+- [ ] Token URI - auth.sso.oauth2.tokenUri (STRING)
+- [ ] User Info URI - auth.sso.oauth2.userInfoUri (STRING)
+- [ ] Redirect URI - auth.sso.oauth2.redirectUri (STRING, 예: https://app.example.com/login/oauth2/callback)
+- [ ] Scope - auth.sso.oauth2.scope (LIST, 예: openid,profile,email)
+- [ ] JWKS URI - auth.sso.oauth2.jwksUri (STRING, JWT 서명 검증용)
+- [ ] Issuer - auth.sso.oauth2.issuer (STRING, JWT 발급자 검증용)
+
+**SSO 사용자 매핑:**
+- [ ] Username Attribute - auth.sso.userMapping.usernameAttribute (STRING, 기본값: email)
+- [ ] Email Attribute - auth.sso.userMapping.emailAttribute (STRING, 기본값: email)
+- [ ] Name Attribute - auth.sso.userMapping.nameAttribute (STRING, 기본값: name)
+- [ ] Role Attribute - auth.sso.userMapping.roleAttribute (STRING, 예: groups)
+- [ ] Role Mapping - auth.sso.roleMapping (JSON, SSO 그룹 → 애플리케이션 Role)
+- [ ] 자동 생성 - auth.sso.autoCreateUser (BOOLEAN, 기본값: true)
+- [ ] 사용자 업데이트 - 로그인 시 SSO 정보로 최신화
+
+**SSO Logout (SLO - Single Logout):**
+- [ ] SLO 지원 - auth.sso.slo.enabled (BOOLEAN, 기본값: true)
+- [ ] Logout URI - auth.sso.slo.logoutUri (STRING)
+- [ ] Post Logout Redirect - auth.sso.slo.postLogoutRedirectUri (STRING)
+- [ ] 세션 전파 - 애플리케이션 로그아웃 시 SSO 로그아웃도 호출
+
+**SSO Health Check:**
+- [ ] Token 검증 테스트 - 주기적 OAuth2 Token 발급 테스트
+- [ ] Health Check 주기 - auth.sso.healthCheck.intervalSeconds (INT, 기본값: 300)
+- [ ] Fallback - SSO 장애 시 AD 또는 LOCAL로 자동 전환
+- [ ] 알림 - SSO 장애 감지 시 관리자 알림
+
+**연동 설정 보안 (환경 변수 방식):**
+- [ ] **환경 변수 사용** - 모든 민감 정보는 환경 변수로 관리
+- [ ] 필수 환경 변수:
+  - [ ] AD_BIND_PASSWORD - AD LDAP Bind 비밀번호
+  - [ ] SSO_CLIENT_SECRET - OAuth2 Client Secret
+  - [ ] JWT_SECRET_KEY - JWT 서명 비밀키 (최소 256비트/32자)
+- [ ] Properties 파일 형식 - auth.ad.ldap.bindPassword=${AD_BIND_PASSWORD}
+- [ ] 환경 변수 검증 - 서버 부팅 시 필수 환경 변수 존재 여부 확인
+- [ ] 환경 변수 미설정 시 - 명확한 에러 메시지와 함께 부팅 실패
+- [ ] 로깅 금지 - 환경 변수 값은 절대 로그에 기록하지 않음
+- [ ] UI 마스킹 - System Configuration UI에서 환경 변수 값은 ********** 표시
+- [ ] 변경 감사 로그 - 연동 설정 활성화/비활성화 변경만 기록 (비밀번호 제외)
+
+**연동 테스트 도구:**
+- [ ] AD Connection Test - System Configuration UI에서 LDAP 연결 테스트
+- [ ] AD User Search Test - 특정 사용자 검색 테스트
+- [ ] SSO Authorization Test - OAuth2 Authorization Code Flow 테스트
+- [ ] SSO Token Validation - JWT 서명 및 클레임 검증 테스트
+- [ ] 테스트 결과 표시 - 성공/실패, 에러 메시지, 소요 시간
 
 #### Password Reset Policies (비밀번호 초기화 정책)
 
@@ -1645,3 +1837,1423 @@ open backend/server/build/reports/jacoco/test/html/index.html
 ## 🔄 마지막 업데이트
 
 - **2025-01-13**: 초기 테스트 계획 작성 (TDD + DDD)
+
+---
+
+## 🔧 Backend Implementation Guide
+
+### 환경 변수 설정 (Environment Variables)
+
+**필수 환경 변수:**
+```bash
+# JWT 서명 비밀키 (최소 256비트 = 32자)
+export JWT_SECRET_KEY="your-secret-key-min-32-characters-long-here-change-this"
+
+# AD (Active Directory) LDAP Bind 비밀번호
+export AD_BIND_PASSWORD="your-ad-admin-password"
+
+# SSO OAuth2 Client Secret
+export SSO_CLIENT_SECRET="your-oauth2-client-secret"
+```
+
+**환경 변수 검증 (부팅 시):**
+```java
+@Component
+@RequiredArgsConstructor
+public class EnvironmentValidator implements ApplicationRunner {
+    
+    private final Environment environment;
+    
+    private static final List<String> REQUIRED_ENV_VARS = List.of(
+        "JWT_SECRET_KEY",
+        "AD_BIND_PASSWORD",  // AD 활성화 시 필수
+        "SSO_CLIENT_SECRET"  // SSO 활성화 시 필수
+    );
+    
+    @Override
+    public void run(ApplicationArguments args) {
+        List<String> missingVars = new ArrayList<>();
+        
+        for (String varName : REQUIRED_ENV_VARS) {
+            String value = environment.getProperty(varName);
+            if (value == null || value.isBlank()) {
+                missingVars.add(varName);
+            }
+        }
+        
+        if (!missingVars.isEmpty()) {
+            String errorMsg = String.format(
+                "Missing required environment variables: %s. " +
+                "Please set them before starting the application.",
+                String.join(", ", missingVars)
+            );
+            throw new IllegalStateException(errorMsg);
+        }
+        
+        // JWT 키 길이 검증 (최소 256비트 = 32자)
+        String jwtSecret = environment.getProperty("JWT_SECRET_KEY");
+        if (jwtSecret != null && jwtSecret.length() < 32) {
+            throw new IllegalStateException(
+                "JWT_SECRET_KEY must be at least 32 characters (256 bits)"
+            );
+        }
+    }
+}
+```
+
+**Docker Compose 예시:**
+```yaml
+version: '3.8'
+services:
+  backend:
+    image: inspect-hub-backend:latest
+    environment:
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - AD_BIND_PASSWORD=${AD_BIND_PASSWORD}
+      - SSO_CLIENT_SECRET=${SSO_CLIENT_SECRET}
+    env_file:
+      - .env.production  # 또는 .env.local
+```
+
+**.env.example (버전 관리 가능):**
+```bash
+# JWT Secret (CHANGE THIS IN PRODUCTION!)
+JWT_SECRET_KEY=change-this-to-random-32-char-string
+
+# AD Credentials
+AD_BIND_PASSWORD=your-ad-password-here
+
+# SSO Credentials  
+SSO_CLIENT_SECRET=your-sso-client-secret-here
+```
+
+**.env.production (Git 제외, 실제 값):**
+```bash
+JWT_SECRET_KEY=a1b2c3d4...실제32자이상비밀키
+AD_BIND_PASSWORD=실제AD비밀번호
+SSO_CLIENT_SECRET=실제SSO시크릿
+```
+
+**.gitignore 추가:**
+```
+.env
+.env.local
+.env.production
+.env.*.local
+```
+
+**Kubernetes Secret 예시:**
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: inspect-hub-secrets
+type: Opaque
+stringData:
+  JWT_SECRET_KEY: "your-actual-secret-key-here"
+  AD_BIND_PASSWORD: "your-ad-password"
+  SSO_CLIENT_SECRET: "your-sso-secret"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inspect-hub-backend
+spec:
+  template:
+    spec:
+      containers:
+      - name: backend
+        envFrom:
+        - secretRef:
+            name: inspect-hub-secrets
+```
+
+### ConfigurationService 상세 설계
+
+**인터페이스:**
+```java
+public interface ConfigurationService {
+    // 기본 조회 (우선순위 로직 적용)
+    String getConfig(String key);
+    String getConfig(String key, String defaultValue);
+    
+    // 타입 변환 조회
+    Boolean getConfigAsBoolean(String key);
+    Boolean getConfigAsBoolean(String key, Boolean defaultValue);
+    Integer getConfigAsInt(String key);
+    Integer getConfigAsInt(String key, Integer defaultValue);
+    List<String> getConfigAsList(String key);
+    <T> T getConfigAsJson(String key, Class<T> type);
+    
+    // 설정 수정 (DB만 가능, Properties는 읽기 전용)
+    void updateConfig(String key, String value, String adminId);
+    void updateConfig(String key, String value, String adminId, String changeReason);
+    void deleteConfig(String key, String adminId); // Properties로 Fallback
+    
+    // 카테고리별 조회
+    Map<String, ConfigItem> getAllConfigs();
+    Map<String, ConfigItem> getConfigsByCategory(String category);
+    
+    // 캐시 관리
+    void reloadCache();
+    void invalidateCache(String key);
+    
+    // 설정 검증
+    void validateConfig(String key, String value) throws ConfigValidationException;
+}
+```
+
+**구현 클래스:**
+```java
+@Service
+@RequiredArgsConstructor
+public class ConfigurationServiceImpl implements ConfigurationService {
+    
+    private final SystemConfigRepository systemConfigRepository;
+    private final RedisTemplate<String, String> redisTemplate;
+    private final Environment environment; // Properties 조회용
+    
+    private static final String CACHE_PREFIX = "config:";
+    private static final Duration CACHE_TTL = Duration.ofMinutes(5);
+    
+    @Override
+    public String getConfig(String key) {
+        // 1. Redis 캐시 조회
+        String cachedValue = redisTemplate.opsForValue().get(CACHE_PREFIX + key);
+        if (cachedValue != null) {
+            return cachedValue;
+        }
+        
+        // 2. DB 조회
+        Optional<SystemConfig> dbConfig = systemConfigRepository.findById(key);
+        if (dbConfig.isPresent() && StringUtils.hasText(dbConfig.get().getConfigValue())) {
+            String value = dbConfig.get().getConfigValue();
+            cacheValue(key, value);
+            return value;
+        }
+        
+        // 3. Properties Fallback
+        String propertyValue = environment.getProperty(key);
+        if (propertyValue != null) {
+            cacheValue(key, propertyValue);
+            return propertyValue;
+        }
+        
+        return null;
+    }
+    
+    @Override
+    @Transactional
+    public void updateConfig(String key, String value, String adminId) {
+        updateConfig(key, value, adminId, null);
+    }
+    
+    @Override
+    @Transactional
+    public void updateConfig(String key, String value, String adminId, String changeReason) {
+        // 설정 검증
+        validateConfig(key, value);
+        
+        // 기존 값 조회 (감사 로그용)
+        String oldValue = getConfig(key);
+        
+        // DB 저장
+        SystemConfig config = systemConfigRepository.findById(key)
+            .orElse(new SystemConfig(key));
+        config.setConfigValue(value);
+        config.setUpdatedAt(LocalDateTime.now());
+        config.setUpdatedBy(adminId);
+        config.incrementVersion(); // Optimistic Lock
+        systemConfigRepository.save(config);
+        
+        // 감사 로그 기록
+        saveChangeHistory(key, oldValue, value, adminId, changeReason);
+        
+        // 캐시 무효화
+        invalidateCache(key);
+    }
+    
+    private void cacheValue(String key, String value) {
+        redisTemplate.opsForValue().set(CACHE_PREFIX + key, value, CACHE_TTL);
+    }
+    
+    private void saveChangeHistory(String key, String oldValue, String newValue, 
+                                   String changedBy, String reason) {
+        ConfigChangeHistory history = ConfigChangeHistory.builder()
+            .configKey(key)
+            .oldValue(oldValue)
+            .newValue(newValue)
+            .changedBy(changedBy)
+            .changedAt(LocalDateTime.now())
+            .changeReason(reason)
+            .build();
+        configChangeHistoryRepository.save(history);
+    }
+}
+```
+
+### Entity 설계
+
+**SystemConfig Entity:**
+```java
+@Entity
+@Table(name = "SYSTEM_CONFIG")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class SystemConfig {
+    
+    @Id
+    @Column(name = "config_key", length = 100)
+    private String configKey;
+    
+    @Column(name = "config_value", columnDefinition = "TEXT")
+    private String configValue;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "value_type", length = 20)
+    private ValueType valueType;
+    
+    @Column(name = "description", length = 500)
+    private String description;
+    
+    @Column(name = "category", length = 50)
+    private String category;
+    
+    @Column(name = "editable")
+    private Boolean editable = true;
+    
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+    
+    @Column(name = "updated_by", length = 50)
+    private String updatedBy;
+    
+    @Version
+    @Column(name = "version")
+    private Integer version = 0;
+    
+    public SystemConfig(String configKey) {
+        this.configKey = configKey;
+    }
+    
+    public void incrementVersion() {
+        this.version = (this.version == null ? 0 : this.version) + 1;
+    }
+}
+
+enum ValueType {
+    BOOLEAN,
+    INT,
+    STRING,
+    JSON,
+    LIST
+}
+```
+
+**ConfigChangeHistory Entity:**
+```java
+@Entity
+@Table(name = "CONFIG_CHANGE_HISTORY")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class ConfigChangeHistory {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(name = "config_key", length = 100, nullable = false)
+    private String configKey;
+    
+    @Column(name = "old_value", columnDefinition = "TEXT")
+    private String oldValue;
+    
+    @Column(name = "new_value", columnDefinition = "TEXT")
+    private String newValue;
+    
+    @Column(name = "changed_by", length = 50, nullable = false)
+    private String changedBy;
+    
+    @Column(name = "changed_at", nullable = false)
+    private LocalDateTime changedAt;
+    
+    @Column(name = "change_reason", length = 500)
+    private String changeReason;
+    
+    @PrePersist
+    protected void onCreate() {
+        if (changedAt == null) {
+            changedAt = LocalDateTime.now();
+        }
+    }
+}
+```
+
+### Repository 설계
+
+**SystemConfigRepository:**
+```java
+public interface SystemConfigRepository extends JpaRepository<SystemConfig, String> {
+    
+    List<SystemConfig> findByCategory(String category);
+    
+    List<SystemConfig> findByEditableTrue();
+    
+    @Query("SELECT c FROM SystemConfig c WHERE c.configKey LIKE :pattern")
+    List<SystemConfig> findByKeyPattern(@Param("pattern") String pattern);
+}
+```
+
+**ConfigChangeHistoryRepository:**
+```java
+public interface ConfigChangeHistoryRepository extends JpaRepository<ConfigChangeHistory, Long> {
+    
+    List<ConfigChangeHistory> findByConfigKeyOrderByChangedAtDesc(String configKey);
+    
+    List<ConfigChangeHistory> findByChangedByOrderByChangedAtDesc(String changedBy);
+    
+    @Query("SELECT h FROM ConfigChangeHistory h WHERE h.changedAt >= :since ORDER BY h.changedAt DESC")
+    List<ConfigChangeHistory> findRecentChanges(@Param("since") LocalDateTime since);
+}
+```
+
+### REST API Controller
+
+**SystemConfigController:**
+```java
+@RestController
+@RequestMapping("/api/v1/admin/system-config")
+@RequiredArgsConstructor
+@Tag(name = "System Configuration", description = "시스템 설정 관리 API")
+public class SystemConfigController {
+    
+    private final ConfigurationService configurationService;
+    
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "전체 설정 조회", description = "카테고리별 전체 설정 조회")
+    public ResponseEntity<ApiResponse<Map<String, List<ConfigItemDto>>>> getAllConfigs() {
+        Map<String, ConfigItem> configs = configurationService.getAllConfigs();
+        Map<String, List<ConfigItemDto>> groupedConfigs = groupByCategory(configs);
+        return ResponseEntity.ok(ApiResponse.success(groupedConfigs));
+    }
+    
+    @GetMapping("/{key}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "개별 설정 조회")
+    public ResponseEntity<ApiResponse<ConfigItemDto>> getConfig(@PathVariable String key) {
+        String value = configurationService.getConfig(key);
+        ConfigItemDto dto = ConfigItemDto.builder()
+            .key(key)
+            .value(value)
+            .build();
+        return ResponseEntity.ok(ApiResponse.success(dto));
+    }
+    
+    @PutMapping("/{key}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "개별 설정 수정")
+    public ResponseEntity<ApiResponse<Void>> updateConfig(
+            @PathVariable String key,
+            @RequestBody @Valid UpdateConfigRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        configurationService.updateConfig(key, request.getValue(), 
+                                         userDetails.getUsername(), 
+                                         request.getChangeReason());
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+    
+    @DeleteMapping("/{key}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "개별 설정 삭제", description = "Properties 기본값으로 Fallback")
+    public ResponseEntity<ApiResponse<Void>> deleteConfig(
+            @PathVariable String key,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        configurationService.deleteConfig(key, userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+    
+    @PostMapping("/reload-cache")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "캐시 재로드")
+    public ResponseEntity<ApiResponse<Void>> reloadCache() {
+        configurationService.reloadCache();
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+    
+    @GetMapping("/history")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "변경 이력 조회")
+    public ResponseEntity<ApiResponse<List<ConfigChangeHistoryDto>>> getChangeHistory(
+            @RequestParam(required = false) String configKey,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime since) {
+        List<ConfigChangeHistory> history = configChangeHistoryService.getHistory(configKey, since);
+        List<ConfigChangeHistoryDto> dtos = history.stream()
+            .map(ConfigChangeHistoryDto::from)
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(ApiResponse.success(dtos));
+    }
+}
+```
+
+### Flyway 마이그레이션 스크립트
+
+**V1__create_system_config_tables.sql:**
+```sql
+-- SYSTEM_CONFIG 테이블
+CREATE TABLE SYSTEM_CONFIG (
+    config_key VARCHAR(100) PRIMARY KEY,
+    config_value TEXT,
+    value_type VARCHAR(20) NOT NULL,
+    description VARCHAR(500),
+    category VARCHAR(50),
+    editable BOOLEAN DEFAULT TRUE,
+    updated_at TIMESTAMP,
+    updated_by VARCHAR(50),
+    version INT DEFAULT 0
+);
+
+-- 인덱스
+CREATE INDEX idx_system_config_category ON SYSTEM_CONFIG(category);
+CREATE INDEX idx_system_config_editable ON SYSTEM_CONFIG(editable);
+
+-- CONFIG_CHANGE_HISTORY 테이블
+CREATE TABLE CONFIG_CHANGE_HISTORY (
+    id BIGSERIAL PRIMARY KEY,
+    config_key VARCHAR(100) NOT NULL,
+    old_value TEXT,
+    new_value TEXT,
+    changed_by VARCHAR(50) NOT NULL,
+    changed_at TIMESTAMP NOT NULL,
+    change_reason VARCHAR(500)
+);
+
+-- 인덱스
+CREATE INDEX idx_config_history_key ON CONFIG_CHANGE_HISTORY(config_key);
+CREATE INDEX idx_config_history_changed_by ON CONFIG_CHANGE_HISTORY(changed_by);
+CREATE INDEX idx_config_history_changed_at ON CONFIG_CHANGE_HISTORY(changed_at DESC);
+
+-- 코멘트
+COMMENT ON TABLE SYSTEM_CONFIG IS '시스템 전역 설정 (Global Configuration)';
+COMMENT ON COLUMN SYSTEM_CONFIG.config_key IS '설정 키 (점 구분 계층 구조)';
+COMMENT ON COLUMN SYSTEM_CONFIG.config_value IS '설정 값 (문자열 또는 JSON)';
+COMMENT ON COLUMN SYSTEM_CONFIG.value_type IS '값 타입 (BOOLEAN, INT, STRING, JSON, LIST)';
+COMMENT ON COLUMN SYSTEM_CONFIG.category IS '설정 카테고리 (LOGIN, PASSWORD, SESSION, IP, ACCOUNT, ADVANCED)';
+COMMENT ON COLUMN SYSTEM_CONFIG.editable IS 'UI에서 수정 가능 여부';
+COMMENT ON COLUMN SYSTEM_CONFIG.version IS '낙관적 락 (Optimistic Lock)';
+
+COMMENT ON TABLE CONFIG_CHANGE_HISTORY IS '설정 변경 이력 (Audit Log)';
+```
+
+**V2__migrate_to_global_config.sql:**
+```sql
+-- 기존 SecurityPolicy 테이블에서 글로벌 정책 추출 (orgId = NULL)
+-- 예시: PASSWORD_EXPIRATION 정책
+INSERT INTO SYSTEM_CONFIG (config_key, config_value, value_type, description, category, editable)
+SELECT 
+    'auth.password.expiration.enabled',
+    CAST(enabled AS TEXT),
+    'BOOLEAN',
+    '비밀번호 만료 정책 활성화',
+    'PASSWORD',
+    TRUE
+FROM SECURITY_POLICY
+WHERE policy_type = 'PASSWORD_EXPIRATION' AND org_id IS NULL
+ON CONFLICT (config_key) DO NOTHING;
+
+INSERT INTO SYSTEM_CONFIG (config_key, config_value, value_type, description, category, editable)
+SELECT 
+    'auth.password.expiration.days',
+    config::jsonb->>'expirationDays',
+    'INT',
+    '비밀번호 만료 일수',
+    'PASSWORD',
+    TRUE
+FROM SECURITY_POLICY
+WHERE policy_type = 'PASSWORD_EXPIRATION' AND org_id IS NULL
+ON CONFLICT (config_key) DO NOTHING;
+
+-- 기타 정책들도 동일한 패턴으로 변환...
+
+-- 조직별 정책 아카이브 (삭제하지 않고 백업)
+-- ALTER TABLE SECURITY_POLICY RENAME TO SECURITY_POLICY_ARCHIVED;
+```
+
+**V3__insert_default_configs.sql:**
+```sql
+-- 기본 설정 값 삽입 (Properties에 없는 경우 대비)
+INSERT INTO SYSTEM_CONFIG (config_key, config_value, value_type, description, category, editable)
+VALUES
+-- 로그인 방식
+('auth.login.local.enabled', 'true', 'BOOLEAN', 'LOCAL 로그인 활성화', 'LOGIN', true),
+('auth.login.ad.enabled', 'false', 'BOOLEAN', 'AD 로그인 활성화', 'LOGIN', true),
+('auth.login.sso.enabled', 'false', 'BOOLEAN', 'SSO 로그인 활성화', 'LOGIN', true),
+('auth.login.priority', 'SSO,AD,LOCAL', 'LIST', '로그인 우선순위', 'LOGIN', true),
+
+-- 세션 정책
+('auth.session.accessToken.expirationSeconds', '3600', 'INT', 'Access Token 만료시간 (초)', 'SESSION', true),
+('auth.session.refreshToken.expirationSeconds', '86400', 'INT', 'Refresh Token 만료시간 (초)', 'SESSION', true),
+('auth.session.maxConcurrentSessions', '10', 'INT', '최대 동시 세션 수', 'SESSION', true),
+('auth.session.idleTimeoutMinutes', '30', 'INT', 'Idle Timeout (분)', 'SESSION', true),
+('auth.session.enforceSingleDevice', 'false', 'BOOLEAN', 'Single Device 모드', 'SESSION', true),
+('auth.session.requireReauthOnIpChange', 'false', 'BOOLEAN', 'IP 변경 시 재인증', 'SESSION', true)
+ON CONFLICT (config_key) DO NOTHING;
+```
+
+---
+
+## 🎨 Frontend UI Design - System Configuration
+
+### 화면 구조
+
+**페이지 경로:** `/admin/system-settings`
+
+**권한:** ROLE_ADMIN 필수
+
+**레이아웃:**
+```
+┌──────────────────────────────────────────────────────────┐
+│  System Settings                            [Save All]   │
+├──────────────────────────────────────────────────────────┤
+│  ┌────────┬────────┬────────┬──────┬──────┬──────────┐  │
+│  │ Login  │Password│Session │  IP  │Account│Advanced │  │
+│  └────────┴────────┴────────┴──────┴──────┴──────────┘  │
+├──────────────────────────────────────────────────────────┤
+│                                                           │
+│  🔐 Login Methods                                        │
+│  ┌─────────────────────────────────────────────────────┐│
+│  │ ☑ LOCAL Login              [Enabled]  [Configure] ││
+│  │ ☐ Active Directory (AD)    [Disabled] [Configure] ││
+│  │ ☐ Single Sign-On (SSO)     [Disabled] [Configure] ││
+│  └─────────────────────────────────────────────────────┘│
+│                                                           │
+│  🎯 Login Priority                                       │
+│  ┌─────────────────────────────────────────────────────┐│
+│  │ 1. SSO  [↑] [↓]                                    ││
+│  │ 2. AD   [↑] [↓]                                    ││
+│  │ 3. LOCAL [↑] [↓]                                   ││
+│  └─────────────────────────────────────────────────────┘│
+│                                                           │
+│  [Test AD Connection]  [Test SSO Authorization]         │
+│                                                           │
+└──────────────────────────────────────────────────────────┘
+```
+
+### 컴포넌트 구조 (FSD + Atomic Design)
+
+**pages/admin/system-settings/ui/SystemSettingsPage.vue:**
+```vue
+<template>
+  <div class="tw-p-6">
+    <PageHeader 
+      title="System Settings" 
+      subtitle="Configure global system policies and authentication"
+    />
+    
+    <PrimeTabView v-model:activeIndex="activeTab" class="tw-mt-4">
+      <PrimeTabPanel header="Login">
+        <LoginSettingsPanel />
+      </PrimeTabPanel>
+      
+      <PrimeTabPanel header="Password">
+        <PasswordSettingsPanel />
+      </PrimeTabPanel>
+      
+      <PrimeTabPanel header="Session">
+        <SessionSettingsPanel />
+      </PrimeTabPanel>
+      
+      <PrimeTabPanel header="IP">
+        <IpSettingsPanel />
+      </PrimeTabPanel>
+      
+      <PrimeTabPanel header="Account">
+        <AccountSettingsPanel />
+      </PrimeTabPanel>
+      
+      <PrimeTabPanel header="Advanced">
+        <AdvancedSettingsPanel />
+      </PrimeTabPanel>
+    </PrimeTabView>
+    
+    <div class="tw-flex tw-justify-end tw-gap-3 tw-mt-6">
+      <Button label="Reset All to Defaults" severity="danger" outlined @click="resetAll" />
+      <Button label="Reload Cache" severity="secondary" outlined @click="reloadCache" />
+      <Button label="Save All Changes" severity="success" @click="saveAll" />
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useSystemConfigStore } from '~/features/system-config/model/system-config.store'
+
+const systemConfigStore = useSystemConfigStore()
+const activeTab = ref(0)
+
+const saveAll = async () => {
+  await systemConfigStore.saveAll()
+  // Show success toast
+}
+
+const resetAll = async () => {
+  // Show confirmation dialog
+  await systemConfigStore.resetAll()
+}
+
+const reloadCache = async () => {
+  await systemConfigStore.reloadCache()
+  // Show success toast
+}
+</script>
+```
+
+**features/system-config/ui/LoginSettingsPanel.vue:**
+```vue
+<template>
+  <div class="tw-space-y-6">
+    <!-- Login Methods -->
+    <SettingSection title="Login Methods" icon="pi pi-sign-in">
+      <div class="tw-space-y-4">
+        <SettingToggle
+          label="LOCAL Login"
+          description="Username and password authentication"
+          v-model="config['auth.login.local.enabled']"
+        >
+          <template #extra>
+            <Button label="Configure" size="small" outlined />
+          </template>
+        </SettingToggle>
+        
+        <SettingToggle
+          label="Active Directory (AD)"
+          description="LDAP-based authentication"
+          v-model="config['auth.login.ad.enabled']"
+        >
+          <template #extra>
+            <Button label="Configure" size="small" outlined @click="openAdConfig" />
+            <Button label="Test Connection" size="small" outlined @click="testAdConnection" />
+          </template>
+        </SettingToggle>
+        
+        <SettingToggle
+          label="Single Sign-On (SSO)"
+          description="OAuth2/OIDC authentication"
+          v-model="config['auth.login.sso.enabled']"
+        >
+          <template #extra>
+            <Button label="Configure" size="small" outlined @click="openSsoConfig" />
+            <Button label="Test Authorization" size="small" outlined @click="testSsoAuth" />
+          </template>
+        </SettingToggle>
+      </div>
+    </SettingSection>
+    
+    <!-- Login Priority -->
+    <SettingSection title="Login Priority" icon="pi pi-sort-alt">
+      <LoginPriorityList v-model="loginPriority" />
+    </SettingSection>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useSystemConfigStore } from '~/features/system-config/model/system-config.store'
+
+const systemConfigStore = useSystemConfigStore()
+const config = computed(() => systemConfigStore.configs)
+
+const loginPriority = computed({
+  get: () => config.value['auth.login.priority'].split(','),
+  set: (value) => systemConfigStore.updateConfig('auth.login.priority', value.join(','))
+})
+
+const testAdConnection = async () => {
+  // Call test API
+}
+</script>
+```
+
+**shared/ui/molecules/SettingToggle.vue:**
+```vue
+<template>
+  <div class="tw-flex tw-items-center tw-justify-between tw-p-4 tw-border tw-rounded">
+    <div class="tw-flex-1">
+      <div class="tw-font-semibold">{{ label }}</div>
+      <div class="tw-text-sm tw-text-gray-600">{{ description }}</div>
+    </div>
+    
+    <div class="tw-flex tw-items-center tw-gap-3">
+      <slot name="extra" />
+      
+      <PrimeInputSwitch 
+        :modelValue="modelValue" 
+        @update:modelValue="$emit('update:modelValue', $event)"
+      />
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+defineProps<{
+  label: string
+  description: string
+  modelValue: boolean
+}>()
+
+defineEmits<{
+  'update:modelValue': [value: boolean]
+}>()
+</script>
+```
+
+### Pinia Store
+
+**features/system-config/model/system-config.store.ts:**
+```typescript
+import { defineStore } from 'pinia'
+import { useApiClient } from '~/shared/api/client'
+
+export const useSystemConfigStore = defineStore('systemConfig', () => {
+  const api = useApiClient()
+  
+  const configs = ref<Record<string, any>>({})
+  const originalConfigs = ref<Record<string, any>>({})
+  const isDirty = ref(false)
+  
+  const fetchAll = async () => {
+    const response = await api.get('/api/v1/admin/system-config')
+    configs.value = response.data
+    originalConfigs.value = { ...response.data }
+  }
+  
+  const updateConfig = (key: string, value: any) => {
+    configs.value[key] = value
+    isDirty.value = true
+  }
+  
+  const saveAll = async () => {
+    const changes = Object.keys(configs.value).filter(
+      key => configs.value[key] !== originalConfigs.value[key]
+    )
+    
+    for (const key of changes) {
+      await api.put(`/api/v1/admin/system-config/${key}`, {
+        value: configs.value[key]
+      })
+    }
+    
+    await fetchAll()
+    isDirty.value = false
+  }
+  
+  const resetAll = async () => {
+    await api.post('/api/v1/admin/system-config/reset')
+    await fetchAll()
+  }
+  
+  const reloadCache = async () => {
+    await api.post('/api/v1/admin/system-config/reload-cache')
+  }
+  
+  return {
+    configs,
+    isDirty,
+    fetchAll,
+    updateConfig,
+    saveAll,
+    resetAll,
+    reloadCache
+  }
+})
+```
+
+### UI/UX 요구사항
+
+**1. 실시간 변경 감지:**
+- 모든 설정 변경 시 isDirty 플래그 true
+- 페이지 떠날 때 "저장되지 않은 변경사항" 경고
+
+**2. 검증:**
+- 숫자 입력 필드: 최소/최대값 검증
+- JSON 입력: 실시간 JSON 파싱 검증
+- CIDR 입력: IP 범위 형식 검증
+
+**3. 도움말:**
+- 각 설정 항목에 ?아이콘 hover시 상세 설명 표시
+- "기본값" 버튼으로 Properties 값 확인 가능
+
+**4. 변경 이력:**
+- 각 설정 항목 옆 "History" 아이콘
+- 클릭 시 모달로 변경 이력 표시 (누가, 언제, 이전값 → 새값)
+
+**5. 연동 테스트:**
+- AD Connection Test: LDAP 연결 테스트 + 결과 표시
+- SSO Authorization Test: OAuth2 흐름 테스트 + 결과 표시
+- 테스트 성공/실패 명확한 피드백
+
+**6. 일괄 작업:**
+- "Save All Changes" 버튼: 모든 변경사항 한번에 저장
+- "Reset All to Defaults" 버튼: Properties 기본값으로 리셋
+- "Export Config" 버튼: JSON 파일로 내보내기
+- "Import Config" 버튼: JSON 파일에서 가져오기
+
+---
+
+## 📝 구현 체크리스트
+
+### Backend
+
+- [ ] ConfigurationService 인터페이스 및 구현 클래스 작성
+- [ ] SystemConfig Entity 및 Repository 작성
+- [ ] ConfigChangeHistory Entity 및 Repository 작성
+- [ ] SystemConfigController REST API 작성
+- [ ] ConfigurationService 단위 테스트 작성 (우선순위 로직 검증)
+- [ ] SystemConfigController 통합 테스트 작성
+- [ ] Flyway 마이그레이션 스크립트 작성 (V1, V2, V3)
+- [ ] application.properties 기본 설정값 추가
+- [ ] Redis 캐시 설정 (TTL 5분)
+- [ ] 설정 변경 감사 로그 자동 기록 AOP
+- [ ] 설정 검증 로직 작성 (범위, 타입, 형식)
+- [ ] AD Connection Test API 작성
+- [ ] SSO Authorization Test API 작성
+
+### Frontend
+
+- [ ] System Settings 페이지 라우팅 설정 (/admin/system-settings)
+- [ ] SystemConfigStore Pinia 스토어 작성
+- [ ] SystemSettingsPage 컴포넌트 작성 (TabView)
+- [ ] LoginSettingsPanel 컴포넌트 작성
+- [ ] PasswordSettingsPanel 컴포넌트 작성
+- [ ] SessionSettingsPanel 컴포넌트 작성
+- [ ] IpSettingsPanel 컴포넌트 작성
+- [ ] AccountSettingsPanel 컴포넌트 작성
+- [ ] AdvancedSettingsPanel 컴포넌트 작성
+- [ ] SettingToggle Molecule 컴포넌트 작성
+- [ ] SettingInput Molecule 컴포넌트 작성 (타입별)
+- [ ] SettingSection Organism 컴포넌트 작성
+- [ ] 변경 이력 모달 컴포넌트 작성
+- [ ] AD/SSO 설정 모달 컴포넌트 작성
+- [ ] 테스트 결과 표시 Toast/Modal
+- [ ] isDirty 상태 기반 페이지 이탈 경고
+- [ ] 일괄 저장/리셋 기능 구현
+- [ ] Export/Import JSON 기능 구현 (Optional)
+
+### Documentation
+
+- [ ] System Configuration API 문서 작성 (Swagger)
+- [ ] UI 사용 가이드 작성
+- [ ] 설정 키 레퍼런스 문서 작성
+- [ ] 마이그레이션 가이드 작성 (SecurityPolicy → SYSTEM_CONFIG)
+- [ ] 운영 가이드 작성 (Properties vs DB 선택 기준)
+
+---
+
+## 🔍 추가 고려사항 (Additional Considerations)
+
+### 설정 값 검증 및 타입 안전성
+
+**설정 키별 검증 규칙:**
+
+```java
+@Component
+public class ConfigValidator {
+    
+    public void validate(String key, String value, ValueType type) {
+        switch (key) {
+            case "auth.password.expiration.days":
+                validateIntRange(value, 1, 3650, "비밀번호 만료 일수는 1~3650일 범위여야 합니다");
+                break;
+                
+            case "auth.password.complexity.minLength":
+                validateIntRange(value, 4, 128, "최소 길이는 4~128자 범위여야 합니다");
+                break;
+                
+            case "auth.session.accessToken.expirationSeconds":
+                validateIntRange(value, 300, 86400, "Access Token 만료는 5분~24시간 범위여야 합니다");
+                break;
+                
+            case "auth.session.refreshToken.expirationSeconds":
+                validateIntRange(value, 3600, 604800, "Refresh Token 만료는 1시간~7일 범위여야 합니다");
+                break;
+                
+            case "auth.ip.whitelist.allowedIpRanges":
+                validateCidrList(value, "CIDR 표기법이 올바르지 않습니다");
+                break;
+                
+            case "auth.login.priority":
+                validateEnum(value, List.of("LOCAL", "AD", "SSO"), "유효하지 않은 로그인 방식입니다");
+                validateUnique(value, "중복된 로그인 방식이 있습니다");
+                break;
+                
+            default:
+                // 기본 타입 검증만 수행
+                validateType(value, type);
+        }
+    }
+    
+    private void validateIntRange(String value, int min, int max, String message) {
+        try {
+            int intValue = Integer.parseInt(value);
+            if (intValue < min || intValue > max) {
+                throw new ConfigValidationException(message);
+            }
+        } catch (NumberFormatException e) {
+            throw new ConfigValidationException("정수 형식이 아닙니다");
+        }
+    }
+    
+    private void validateCidrList(String value, String message) {
+        List<String> cidrs = Arrays.asList(value.split(","));
+        for (String cidr : cidrs) {
+            if (!CidrUtils.isValidCIDR(cidr.trim())) {
+                throw new ConfigValidationException(message + ": " + cidr);
+            }
+        }
+    }
+    
+    private void validateEnum(String value, List<String> allowedValues, String message) {
+        List<String> values = Arrays.asList(value.split(","));
+        for (String val : values) {
+            if (!allowedValues.contains(val.trim())) {
+                throw new ConfigValidationException(message + ": " + val);
+            }
+        }
+    }
+    
+    private void validateUnique(String value, String message) {
+        List<String> values = Arrays.asList(value.split(","));
+        Set<String> uniqueValues = new HashSet<>(values);
+        if (uniqueValues.size() != values.size()) {
+            throw new ConfigValidationException(message);
+        }
+    }
+}
+```
+
+**Frontend 검증 스키마 (Zod):**
+
+```typescript
+// features/system-config/model/validation.schemas.ts
+
+import { z } from 'zod'
+
+export const configSchemas = {
+  'auth.password.expiration.days': z.number()
+    .int('정수만 입력 가능합니다')
+    .min(1, '최소 1일 이상이어야 합니다')
+    .max(3650, '최대 10년(3650일) 이하여야 합니다'),
+    
+  'auth.password.complexity.minLength': z.number()
+    .int()
+    .min(4, '최소 4자 이상')
+    .max(128, '최대 128자 이하'),
+    
+  'auth.session.accessToken.expirationSeconds': z.number()
+    .int()
+    .min(300, '최소 5분(300초)')
+    .max(86400, '최대 24시간(86400초)'),
+    
+  'auth.session.refreshToken.expirationSeconds': z.number()
+    .int()
+    .min(3600, '최소 1시간(3600초)')
+    .max(604800, '최대 7일(604800초)'),
+    
+  'auth.ip.whitelist.allowedIpRanges': z.array(
+    z.string().refine(
+      (val) => /^(\d{1,3}\.){3}\d{1,3}\/\d{1,2}$/.test(val),
+      'CIDR 표기법이 올바르지 않습니다 (예: 192.168.1.0/24)'
+    )
+  ),
+  
+  'auth.login.priority': z.array(
+    z.enum(['LOCAL', 'AD', 'SSO'])
+  ).refine(
+    (arr) => new Set(arr).size === arr.length,
+    '중복된 로그인 방식이 있습니다'
+  )
+}
+
+export const validateConfig = (key: string, value: any) => {
+  const schema = configSchemas[key]
+  if (!schema) {
+    return { success: true, data: value }
+  }
+  return schema.safeParse(value)
+}
+```
+
+### 에러 처리 전략
+
+**에러 코드 체계:**
+
+```java
+public enum ConfigErrorCode {
+    // 설정 조회 에러
+    CONFIG_NOT_FOUND("CFG001", "설정을 찾을 수 없습니다"),
+    CONFIG_PARSE_ERROR("CFG002", "설정 값 파싱 실패"),
+    
+    // 설정 검증 에러
+    CONFIG_VALIDATION_FAILED("CFG101", "설정 검증 실패"),
+    CONFIG_INVALID_RANGE("CFG102", "설정 값이 유효 범위를 벗어났습니다"),
+    CONFIG_INVALID_FORMAT("CFG103", "설정 형식이 올바르지 않습니다"),
+    CONFIG_REQUIRED("CFG104", "필수 설정이 누락되었습니다"),
+    
+    // 설정 수정 에러
+    CONFIG_READ_ONLY("CFG201", "읽기 전용 설정입니다"),
+    CONFIG_UPDATE_FAILED("CFG202", "설정 업데이트 실패"),
+    CONFIG_OPTIMISTIC_LOCK("CFG203", "다른 사용자가 설정을 수정했습니다"),
+    
+    // 캐시 에러
+    CACHE_UNAVAILABLE("CFG301", "캐시 서버에 연결할 수 없습니다"),
+    CACHE_INVALIDATION_FAILED("CFG302", "캐시 무효화 실패"),
+    
+    // 환경 변수 에러
+    ENV_VAR_NOT_SET("CFG401", "필수 환경 변수가 설정되지 않았습니다"),
+    ENV_VAR_INVALID("CFG402", "환경 변수 값이 유효하지 않습니다");
+    
+    private final String code;
+    private final String message;
+    
+    // constructor, getters
+}
+```
+
+**Exception Handling:**
+
+```java
+@RestControllerAdvice
+public class ConfigExceptionHandler {
+    
+    @ExceptionHandler(ConfigValidationException.class)
+    public ResponseEntity<ErrorResponse> handleValidationException(
+            ConfigValidationException ex) {
+        return ResponseEntity
+            .badRequest()
+            .body(ErrorResponse.of(
+                ex.getErrorCode(),
+                ex.getMessage(),
+                ex.getDetails()
+            ));
+    }
+    
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(
+            OptimisticLockingFailureException ex) {
+        return ResponseEntity
+            .status(HttpStatus.CONFLICT)
+            .body(ErrorResponse.of(
+                ConfigErrorCode.CONFIG_OPTIMISTIC_LOCK,
+                "설정이 다른 사용자에 의해 수정되었습니다. 새로고침 후 다시 시도하세요."
+            ));
+    }
+}
+```
+
+### 성능 모니터링
+
+**메트릭 수집:**
+
+```java
+@Service
+@RequiredArgsConstructor
+public class ConfigurationMetrics {
+    
+    private final MeterRegistry meterRegistry;
+    
+    // 설정 조회 시간 측정
+    public void recordGetConfigTime(String key, long durationMs, String source) {
+        Timer.builder("config.get.duration")
+            .tag("key", sanitizeKey(key))
+            .tag("source", source)  // cache, db, properties
+            .register(meterRegistry)
+            .record(Duration.ofMillis(durationMs));
+    }
+    
+    // 캐시 히트율 측정
+    public void recordCacheHit(String key, boolean hit) {
+        Counter.builder("config.cache")
+            .tag("key", sanitizeKey(key))
+            .tag("result", hit ? "hit" : "miss")
+            .register(meterRegistry)
+            .increment();
+    }
+    
+    // 설정 변경 빈도 측정
+    public void recordConfigUpdate(String key) {
+        Counter.builder("config.update")
+            .tag("key", sanitizeKey(key))
+            .register(meterRegistry)
+            .increment();
+    }
+    
+    private String sanitizeKey(String key) {
+        // 키를 카테고리로 그룹화 (auth.password.* → auth.password)
+        int lastDot = key.lastIndexOf('.');
+        return lastDot > 0 ? key.substring(0, lastDot) : key;
+    }
+}
+```
+
+**성능 기준:**
+
+- [ ] 설정 조회 응답 시간 - 평균 < 50ms (캐시), < 200ms (DB), < 100ms (Properties)
+- [ ] 캐시 히트율 - > 95%
+- [ ] 설정 업데이트 응답 시간 - < 500ms
+- [ ] 동시 설정 변경 처리 - TPS 100+ (Optimistic Lock)
+
+### 운영 가이드라인
+
+**설정 변경 시 고려사항:**
+
+1. **비밀번호 만료 정책 변경:**
+   - [ ] 변경 전 사용자 공지 (이메일/시스템 알림)
+   - [ ] 기존 사용자 영향 평가 (만료 예정자 수 확인)
+   - [ ] 점진적 적용 고려 (새 사용자부터 적용)
+
+2. **세션 타임아웃 변경:**
+   - [ ] 피크 시간대 피하기 (업무 시간 외 변경 권장)
+   - [ ] 기존 세션 유지 (새 로그인부터 적용)
+   - [ ] 사용자 공지 (세션 만료 시간 안내)
+
+3. **로그인 방식 변경:**
+   - [ ] AD/SSO 활성화 전 연결 테스트 필수
+   - [ ] Fallback 경로 확보 (LOCAL 로그인 유지)
+   - [ ] 단계적 전환 (일부 사용자 파일럿)
+
+**모니터링 체크리스트:**
+
+- [ ] 설정 변경 후 24시간 모니터링
+  - [ ] 로그인 성공률 변화
+  - [ ] 로그인 실패 원인 분석
+  - [ ] 세션 만료 빈도
+  - [ ] 계정 잠금 발생 빈도
+  - [ ] 사용자 문의 증가 여부
+
+- [ ] 주간 리뷰
+  - [ ] CONFIG_CHANGE_HISTORY 검토
+  - [ ] 설정 변경 효과 분석
+  - [ ] 사용자 피드백 수집
+
+**롤백 계획:**
+
+```sql
+-- 특정 설정 롤백 (변경 이력에서 이전 값 복원)
+UPDATE SYSTEM_CONFIG 
+SET config_value = (
+    SELECT old_value 
+    FROM CONFIG_CHANGE_HISTORY 
+    WHERE config_key = 'auth.password.expiration.days' 
+    ORDER BY changed_at DESC 
+    LIMIT 1 OFFSET 1  -- 바로 이전 값
+),
+version = version + 1,
+updated_at = NOW(),
+updated_by = 'SYSTEM_ROLLBACK'
+WHERE config_key = 'auth.password.expiration.days';
+
+-- 캐시 무효화
+-- Redis: DEL config:auth.password.expiration.days
+```
+
+**재해 복구 (Disaster Recovery):**
+
+1. **설정 백업 (일일):**
+   ```bash
+   # 모든 설정을 JSON으로 백업
+   curl -H "Authorization: Bearer $ADMIN_TOKEN" \
+        http://localhost:8090/api/v1/admin/system-config \
+        > config-backup-$(date +%Y%m%d).json
+   ```
+
+2. **설정 복원:**
+   ```bash
+   # JSON 파일에서 설정 복원
+   curl -X POST \
+        -H "Authorization: Bearer $ADMIN_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d @config-backup-20250113.json \
+        http://localhost:8090/api/v1/admin/system-config/import
+   ```
+
+3. **Properties Fallback 활용:**
+   - DB 전체 장애 시 Properties로 자동 Fallback
+   - 서버 재시작으로 Properties 값 로드
+   - 임시 운영 후 DB 복구
+
+### 보안 강화 방안
+
+**1. 설정 변경 승인 워크플로 (Optional):**
+
+```java
+@Entity
+@Table(name = "CONFIG_CHANGE_REQUEST")
+public class ConfigChangeRequest {
+    @Id
+    private String requestId;
+    
+    private String configKey;
+    private String currentValue;
+    private String requestedValue;
+    
+    @Enumerated(EnumType.STRING)
+    private RequestStatus status;  // PENDING, APPROVED, REJECTED
+    
+    private String requestedBy;
+    private LocalDateTime requestedAt;
+    
+    private String approvedBy;
+    private LocalDateTime approvedAt;
+    
+    private String rejectionReason;
+}
+```
+
+**2. 설정 값 암호화 (민감 정보 DB 저장 시):**
+
+```java
+@Component
+public class ConfigEncryption {
+    
+    private final AesGcmEncryptor encryptor;
+    
+    public String encrypt(String configKey, String value) {
+        if (isSensitive(configKey)) {
+            return encryptor.encrypt(value);
+        }
+        return value;
+    }
+    
+    public String decrypt(String configKey, String encryptedValue) {
+        if (isSensitive(configKey) && encryptedValue.startsWith("ENC(")) {
+            return encryptor.decrypt(extractEncryptedPart(encryptedValue));
+        }
+        return encryptedValue;
+    }
+    
+    private boolean isSensitive(String configKey) {
+        return configKey.contains("password") ||
+               configKey.contains("secret") ||
+               configKey.contains("key");
+    }
+}
+```
+
+**3. 설정 접근 감사:**
+
+- [ ] 모든 설정 조회 기록 (관리자 페이지 접근)
+- [ ] 민감 설정 조회 시 추가 인증 (2FA)
+- [ ] 비정상적 접근 패턴 탐지 (짧은 시간 다량 조회)
+
+### 테스트 전략
+
+**단위 테스트:**
+
+```java
+@Test
+void getConfig_DB_우선_Properties_Fallback() {
+    // Given
+    when(systemConfigRepository.findById("auth.password.expiration.days"))
+        .thenReturn(Optional.empty());
+    when(environment.getProperty("auth.password.expiration.days"))
+        .thenReturn("90");
+    
+    // When
+    String value = configService.getConfig("auth.password.expiration.days");
+    
+    // Then
+    assertEquals("90", value);
+    verify(redisTemplate).opsForValue().set(eq("config:auth.password.expiration.days"), eq("90"), any());
+}
+
+@Test
+void updateConfig_낙관적_락_충돌() {
+    // Given
+    SystemConfig config = new SystemConfig();
+    config.setConfigKey("auth.password.expiration.days");
+    config.setConfigValue("90");
+    config.setVersion(1);
+    
+    when(systemConfigRepository.findById(any()))
+        .thenReturn(Optional.of(config));
+    when(systemConfigRepository.save(any()))
+        .thenThrow(new OptimisticLockingFailureException("Version mismatch"));
+    
+    // When & Then
+    assertThrows(OptimisticLockingFailureException.class, () -> {
+        configService.updateConfig("auth.password.expiration.days", "120", "admin");
+    });
+}
+```
+
+**통합 테스트:**
+
+```java
+@SpringBootTest
+@AutoConfigureMockMvc
+class SystemConfigControllerIntegrationTest {
+    
+    @Autowired
+    private MockMvc mockMvc;
+    
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void 설정_전체_조회_성공() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/system-config"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data").isMap())
+            .andExpect(jsonPath("$.data['auth.login.local.enabled']").exists());
+    }
+    
+    @Test
+    @WithMockUser(roles = "USER")
+    void 설정_수정_권한_없음() throws Exception {
+        mockMvc.perform(put("/api/v1/admin/system-config/auth.password.expiration.days")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"value\":\"120\"}"))
+            .andExpect(status().isForbidden());
+    }
+}
+```
+
+**E2E 테스트 (Playwright):**
+
+```typescript
+// e2e/system-settings.spec.ts
+
+test('시스템 설정 변경 및 저장', async ({ page }) => {
+  // Given: Admin으로 로그인
+  await page.goto('/admin/system-settings')
+  
+  // When: 비밀번호 만료 일수 변경
+  await page.getByLabel('비밀번호 만료 일수').fill('120')
+  await page.getByRole('button', { name: 'Save All Changes' }).click()
+  
+  // Then: 성공 메시지 표시
+  await expect(page.getByText('설정이 저장되었습니다')).toBeVisible()
+  
+  // And: 값이 실제로 변경되었는지 확인
+  await page.reload()
+  await expect(page.getByLabel('비밀번호 만료 일수')).toHaveValue('120')
+})
+
+test('유효하지 않은 값 입력 시 에러', async ({ page }) => {
+  await page.goto('/admin/system-settings')
+  
+  // 범위 벗어난 값 입력
+  await page.getByLabel('비밀번호 만료 일수').fill('5000')
+  await page.getByRole('button', { name: 'Save All Changes' }).click()
+  
+  // 에러 메시지 확인
+  await expect(page.getByText('최대 10년(3650일) 이하여야 합니다')).toBeVisible()
+})
+```
+
+---
+
