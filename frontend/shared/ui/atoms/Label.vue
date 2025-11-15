@@ -1,6 +1,6 @@
 <template>
   <label
-    :for="for"
+    :for="htmlFor"
     :class="computedClass"
   >
     <slot>{{ text }}</slot>
@@ -21,12 +21,13 @@
  *
  * @example
  * ```vue
- * <Label for="username" text="사용자명" required />
- * <Label for="email">이메일</Label>
- * <Label for="phone" text="전화번호" class="tw-font-bold" />
+ * <Label htmlFor="username" text="사용자명" required />
+ * <Label htmlFor="email">이메일</Label>
+ * <Label htmlFor="phone" text="전화번호" class="tw-font-bold" />
  * ```
  */
 
+import { computed } from 'vue'
 import type { PropType } from 'vue'
 
 export type LabelSize = 'small' | 'medium' | 'large'
@@ -35,7 +36,7 @@ const props = defineProps({
   /**
    * ID of the form element this label is for
    */
-  for: {
+  htmlFor: {
     type: String,
     default: undefined,
   },
@@ -95,7 +96,12 @@ const computedClass = computed(() => {
     } else if (Array.isArray(props.class)) {
       classes.push(...props.class)
     } else {
-      classes.push(props.class)
+      // Object형식 { 'class-name': true } - 활성화된 클래스만 추가
+      Object.entries(props.class).forEach(([className, active]) => {
+        if (active) {
+          classes.push(className)
+        }
+      })
     }
   }
 

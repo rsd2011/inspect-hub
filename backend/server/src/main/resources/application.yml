@@ -3,6 +3,22 @@ spring:
     name: inspect-hub
   profiles:
     active: dev
+    include: auth
+
+  # Database (H2 for development)
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
 
   # Jackson 설정
   jackson:
@@ -16,6 +32,21 @@ spring:
   messages:
     basename: messages/messages
     encoding: UTF-8
+
+  # Redis 설정
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+
+  # Cache 설정
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000  # 1 hour in milliseconds
+      cache-null-values: false
 
 # Server 설정
 server:
@@ -64,3 +95,13 @@ mybatis:
     aggressive-lazy-loading: false
   mapper-locations: classpath:mybatis/mapper/**/*.xml
   type-aliases-package: com.inspecthub.aml.server.domain
+  type-handlers-package: com.inspecthub.auth.repository.typehandler
+
+# Flyway 설정
+spring.flyway:
+  enabled: true
+  locations: classpath:db/migration
+  baseline-on-migrate: true
+  baseline-version: 0
+  validate-on-migrate: true
+  out-of-order: false

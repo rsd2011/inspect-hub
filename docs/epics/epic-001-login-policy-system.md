@@ -67,17 +67,21 @@ MyBatis Mapper implementation for LoginPolicy persistence.
 
 ---
 
-### 🔨 Story 3: API Endpoints & Validation
-**Status**: ⏳ TODO
+### ✅ Story 3: API Endpoints & Validation
+**Status**: ✅ COMPLETED (38% of total Epic)
 
 REST API for policy management with validation.
 
-**Scope**:
-- GET /api/v1/system/login-policy (public)
-- PUT /api/v1/system/login-policy (admin only)
-- PATCH endpoints for methods and priority
-- Request/response DTOs
-- Validation rules
+**Delivered**:
+- ✅ SystemConfigController (5 REST endpoints)
+- ✅ LoginPolicyResponse DTO (immutable collections with defensive copying)
+- ✅ UpdateLoginPolicyRequest, UpdateMethodsRequest, UpdatePriorityRequest DTOs
+- ✅ Jakarta Bean Validation (@NotBlank, @NotEmpty, @Size)
+- ✅ @PreAuthorize("hasRole('ADMIN')") for all endpoints
+- ✅ LoginPolicyService update methods (updateGlobalPolicy, updateEnabledMethods, updatePriority)
+- ✅ Controller integration tests (5/5 passed)
+- ✅ Service unit tests (6/6 passed)
+- ✅ DTO validation tests (all passed)
 
 **File**: [Story 1.3 - API Endpoints & Validation](../stories/story-1.3-login-policy-api-validation.md)
 

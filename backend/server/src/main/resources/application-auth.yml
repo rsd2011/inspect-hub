@@ -1,0 +1,69 @@
+# Authentication & Authorization Configuration
+
+auth:
+  # Login Methods
+  login:
+    local:
+      enabled: true
+    ad:
+      enabled: false
+    sso:
+      enabled: false
+    priority: LOCAL,AD,SSO
+
+  # JWT Configuration
+  jwt:
+    secret: ${JWT_SECRET_KEY:default-secret-key-change-this-in-production-min-32-chars}
+    access-token:
+      expiration-seconds: 3600  # 1 hour
+    refresh-token:
+      expiration-seconds: 86400  # 24 hours
+
+  # Session Configuration
+  session:
+    max-concurrent-sessions: 10
+    idle-timeout-minutes: 30
+
+  # Password Policy (LOCAL only)
+  password:
+    expiration:
+      enabled: true
+      days: 90
+    complexity:
+      enabled: true
+      min-length: 8
+      require-uppercase: true
+      require-lowercase: true
+      require-digit: true
+      require-special: true
+    history:
+      enabled: true
+      count: 5
+
+  # Account Security (LOCAL only)
+  account:
+    inactive:
+      enabled: true
+      days: 365
+    failed-attempts:
+      enabled: true
+      thresholds:
+        - attempts: 5
+          lock-minutes: 5
+        - attempts: 10
+          lock-minutes: 30
+        - attempts: 15
+          lock-minutes: null  # permanent lock
+
+  # IP Policies (LOCAL only)
+  ip:
+    blacklist:
+      enabled: true
+      failure-threshold: 30
+      block-hours: 24
+    whitelist:
+      enabled: false
+      allowed-ip-ranges: []
+    rate-limit:
+      enabled: true
+      max-requests-per-minute: 10

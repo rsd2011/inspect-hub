@@ -2,23 +2,22 @@ package com.inspecthub.auth.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.Data;
 
-@Getter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-@Schema(description = "전통 방식 로그인 요청")
+/**
+ * 로그인 요청 DTO
+ */
+@Schema(description = "LOCAL 로그인 요청")
+@Data
+@Builder(toBuilder = true)
 public class LoginRequest {
 
-    @NotBlank(message = "Username is required")
-    @Schema(description = "사용자명 또는 이메일", example = "admin")
-    private String username;
+    @Schema(description = "사원번호 (로그인 ID)", example = "EMP001", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotBlank(message = "사원ID는 필수입니다")
+    private String employeeId;
 
-    @NotBlank(message = "Password is required")
-    @Schema(description = "비밀번호", example = "password123")
+    @Schema(description = "비밀번호", example = "Password123!", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotBlank(message = "비밀번호는 필수입니다")
     private String password;
 }

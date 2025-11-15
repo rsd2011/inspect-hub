@@ -17,10 +17,22 @@ dependencies {
 
     // Spring Boot
     implementation libs.bundles.spring.boot.basic
+    implementation libs.spring.boot.starter.web
+    implementation libs.spring.boot.starter.security
     implementation libs.spring.boot.starter.mail
+    implementation libs.spring.boot.starter.data.redis
 
     // MyBatis
     implementation libs.mybatis.spring.boot.starter
+    
+    // PostgreSQL Driver (for PGobject in TypeHandlers)
+    implementation libs.postgresql
+
+    // ULID
+    implementation libs.ulid.creator
+
+    // Swagger/OpenAPI
+    implementation libs.springdoc.openapi
 
     // Lombok
     compileOnly libs.lombok
@@ -28,7 +40,10 @@ dependencies {
 
     // Test
     testImplementation libs.bundles.test.basic
+    testImplementation libs.spring.security.test
     testImplementation libs.mybatis.spring.boot.starter.test
+    testRuntimeOnly libs.h2
+    testRuntimeOnly libs.postgresql
 }
 
 description = 'Admin Module - User/Org/Permission/Menu/Audit management'

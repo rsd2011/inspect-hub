@@ -37,6 +37,8 @@ dependencies {
     // Database
     runtimeOnly libs.postgresql
     runtimeOnly libs.h2
+    implementation libs.flyway.core
+    runtimeOnly libs.flyway.database.postgresql
 
     // Kafka
     implementation libs.spring.kafka

@@ -1,11 +1,14 @@
 package com.inspecthub.auth.service;
 
+import com.inspecthub.auth.domain.User;
+import com.inspecthub.auth.domain.UserId;
+import com.inspecthub.auth.repository.UserRepository;
 import com.inspecthub.auth.dto.LoginRequest;
-import com.inspecthub.auth.dto.LoginResponse;
-import com.inspecthub.auth.dto.TokenRefreshRequest;
-import com.inspecthub.auth.dto.TokenRefreshResponse;
-import com.inspecthub.auth.exception.InvalidCredentialsException;
-import com.inspecthub.auth.exception.TokenExpiredException;
+import com.inspecthub.auth.dto.RefreshTokenRequest;
+import com.inspecthub.auth.dto.TokenResponse;
+import com.inspecthub.common.config.AuthProperties;
+import com.inspecthub.common.exception.BusinessException;
+import com.inspecthub.common.service.AuditLogService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -16,402 +19,526 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.BDDMockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 
+/**
+ * AuthService BDD Tests
+ * 
+ * Story 1: LOCAL Login Implementation
+ * - POST /api/v1/auth/login
+ * - BCrypt password validation
+ * - JWT token generation (Access + Refresh)
+ * - Audit logging
+ */
 @ExtendWith(MockitoExtension.class)
-@DisplayName("AuthService 테스트")
+@DisplayName("AuthService - LOCAL Login Authentication")
 class AuthServiceTest {
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @Mock
     private JwtTokenProvider jwtTokenProvider;
 
     @Mock
-    private PasswordEncoder passwordEncoder;
+    private AuditLogService auditLogService;
+
+    @Mock
+    private AuthProperties authProperties;
 
     @InjectMocks
     private AuthService authService;
 
+    private User validUser;
+    private LoginRequest validLoginRequest;
+
+    @BeforeEach
+    void setUp() {
+        // Given: AuthProperties Mock 설정 (lenient - 모든 테스트에서 필요하지 않을 수 있음)
+        AuthProperties.JwtConfig jwtConfig = new AuthProperties.JwtConfig();
+        AuthProperties.JwtConfig.TokenConfig accessTokenConfig = new AuthProperties.JwtConfig.TokenConfig();
+        accessTokenConfig.setExpirationSeconds(3600);
+        AuthProperties.JwtConfig.TokenConfig refreshTokenConfig = new AuthProperties.JwtConfig.TokenConfig();
+        refreshTokenConfig.setExpirationSeconds(86400);
+
+        jwtConfig.setAccessToken(accessTokenConfig);
+        jwtConfig.setRefreshToken(refreshTokenConfig);
+        org.mockito.Mockito.lenient().when(authProperties.getJwt()).thenReturn(jwtConfig);
+
+        // Given: 테스트용 유효한 사용자 준비
+        validUser = User.builder()
+                .id(UserId.of("01ARZ3NDEKTSV4RRFFQ69G5FAV"))
+                .employeeId("EMP001")
+                .password("$2a$10$hashedPassword")  // BCrypt hashed
+                .name("홍길동")
+                .email("hong@example.com")
+                .active(true)
+                .failedAttempts(0)
+                .build();
+
+        validLoginRequest = LoginRequest.builder()
+                .employeeId("EMP001")
+                .password("Password123!")
+                .build();
+    }
+
     @Nested
-    @DisplayName("로그인 테스트")
-    class LoginTests {
+    @DisplayName("로그인 성공 시나리오")
+    class SuccessScenarios {
 
         @Test
-        @DisplayName("유효한 사용자 정보로 로그인에 성공한다")
-        void login_WithValidCredentials_ReturnsLoginResponse() {
-            // given
-            LoginRequest request = new LoginRequest();
-            request.setUsername("admin");
-            request.setPassword("test123");
+        @DisplayName("유효한 자격증명으로 로그인 시 JWT 토큰을 반환한다")
+        void shouldAuthenticateLocalUser_WhenValidCredentials() {
+            // Given: 유효한 사용자와 비밀번호
+            given(userRepository.findByEmployeeId("EMP001"))
+                    .willReturn(Optional.of(validUser));
+            given(passwordEncoder.matches("Password123!", validUser.getPassword()))
+                    .willReturn(true);
+            given(jwtTokenProvider.generateAccessToken(validUser))
+                    .willReturn("access.token.jwt");
+            given(jwtTokenProvider.generateRefreshToken(validUser))
+                    .willReturn("refresh.token.jwt");
 
-            String expectedAccessToken = "access.token.jwt";
-            String expectedRefreshToken = "refresh.token.jwt";
-            List<String> expectedRoles = Arrays.asList("ROLE_ADMIN", "ROLE_USER");
+            // When: 로그인 시도
+            TokenResponse response = authService.authenticate(validLoginRequest);
 
-            given(jwtTokenProvider.createAccessToken(anyString(), eq("admin"), anyList()))
-                    .willReturn(expectedAccessToken);
-            given(jwtTokenProvider.createRefreshToken(anyString()))
-                    .willReturn(expectedRefreshToken);
-
-            // when
-            LoginResponse response = authService.login(request);
-
-            // then
+            // Then: JWT 토큰이 정상적으로 반환되어야 함
             assertThat(response).isNotNull();
-            assertThat(response.getAccessToken()).isEqualTo(expectedAccessToken);
-            assertThat(response.getRefreshToken()).isEqualTo(expectedRefreshToken);
-            assertThat(response.getUsername()).isEqualTo("admin");
-            assertThat(response.getRoles()).containsExactlyInAnyOrderElementsOf(expectedRoles);
+            assertThat(response.getAccessToken()).isEqualTo("access.token.jwt");
+            assertThat(response.getRefreshToken()).isEqualTo("refresh.token.jwt");
+            assertThat(response.getTokenType()).isEqualTo("Bearer");
+            assertThat(response.getExpiresIn()).isEqualTo(3600); // 1 hour
 
-            // Password check is currently disabled for demo, so it should not be called
-            verify(passwordEncoder, never()).matches(anyString(), anyString());
-            verify(jwtTokenProvider).createAccessToken(anyString(), eq("admin"), anyList());
-            verify(jwtTokenProvider).createRefreshToken(anyString());
+            // And: 로그인 성공 감사 로그가 기록되어야 함
+            then(auditLogService).should(times(1))
+                    .logLoginSuccess(validUser.getEmployeeId(), "LOCAL");
+
+            // And: 실패 횟수가 초기화되어야 함
+            then(userRepository).should(times(1))
+                    .resetFailedAttempts(validUser.getId());
         }
 
         @Test
-        @DisplayName("존재하지 않는 사용자로 로그인 시도 시 예외가 발생한다")
-        void login_WithNonExistentUser_ThrowsInvalidCredentialsException() {
-            // given
-            LoginRequest request = new LoginRequest();
-            request.setUsername("nonexistent");
-            request.setPassword("password");
+        @DisplayName("첫 로그인 시 lastLoginAt이 업데이트된다")
+        void shouldUpdateLastLoginAt_OnSuccessfulLogin() {
+            // Given
+            given(userRepository.findByEmployeeId("EMP001"))
+                    .willReturn(Optional.of(validUser));
+            given(passwordEncoder.matches(any(), any())).willReturn(true);
+            given(jwtTokenProvider.generateAccessToken(any())).willReturn("token");
+            given(jwtTokenProvider.generateRefreshToken(any())).willReturn("refresh");
 
-            // when & then
-            assertThatThrownBy(() -> authService.login(request))
-                    .isInstanceOf(InvalidCredentialsException.class)
-                    .hasMessageContaining("Invalid username or password");
+            // When
+            authService.authenticate(validLoginRequest);
 
-            verify(passwordEncoder, never()).matches(anyString(), anyString());
-            verify(jwtTokenProvider, never()).createAccessToken(anyString(), anyString(), anyList());
-            verify(jwtTokenProvider, never()).createRefreshToken(anyString());
-        }
-
-        @Test
-        @DisplayName("잘못된 비밀번호로도 로그인에 성공한다 (현재는 비밀번호 검증이 비활성화됨)")
-        void login_WithInvalidPassword_SucceedsForDemo() {
-            // given
-            LoginRequest request = new LoginRequest();
-            request.setUsername("admin");
-            request.setPassword("wrongpassword");
-
-            String expectedAccessToken = "access.token.jwt";
-            String expectedRefreshToken = "refresh.token.jwt";
-
-            given(jwtTokenProvider.createAccessToken(anyString(), eq("admin"), anyList()))
-                    .willReturn(expectedAccessToken);
-            given(jwtTokenProvider.createRefreshToken(anyString()))
-                    .willReturn(expectedRefreshToken);
-
-            // when
-            LoginResponse response = authService.login(request);
-
-            // then
-            assertThat(response).isNotNull();
-            assertThat(response.getUsername()).isEqualTo("admin");
-
-            // Password validation is currently disabled for demo
-            verify(passwordEncoder, never()).matches(anyString(), anyString());
-            verify(jwtTokenProvider).createAccessToken(anyString(), eq("admin"), anyList());
-            verify(jwtTokenProvider).createRefreshToken(anyString());
-        }
-
-        @Test
-        @DisplayName("null username으로 로그인 시도 시 예외가 발생한다")
-        void login_WithNullUsername_ThrowsException() {
-            // given
-            LoginRequest request = new LoginRequest();
-            request.setUsername(null);
-            request.setPassword("password");
-
-            // when & then
-            assertThatThrownBy(() -> authService.login(request))
-                    .isInstanceOf(Exception.class);
-        }
-
-        @Test
-        @DisplayName("null password로도 로그인에 성공한다 (현재는 비밀번호 검증이 비활성화됨)")
-        void login_WithNullPassword_SucceedsForDemo() {
-            // given
-            LoginRequest request = new LoginRequest();
-            request.setUsername("admin");
-            request.setPassword(null);
-
-            String expectedAccessToken = "access.token.jwt";
-            String expectedRefreshToken = "refresh.token.jwt";
-
-            given(jwtTokenProvider.createAccessToken(anyString(), eq("admin"), anyList()))
-                    .willReturn(expectedAccessToken);
-            given(jwtTokenProvider.createRefreshToken(anyString()))
-                    .willReturn(expectedRefreshToken);
-
-            // when
-            LoginResponse response = authService.login(request);
-
-            // then
-            assertThat(response).isNotNull();
-            assertThat(response.getUsername()).isEqualTo("admin");
-        }
-
-        @Test
-        @DisplayName("빈 username으로 로그인 시도 시 예외가 발생한다")
-        void login_WithEmptyUsername_ThrowsException() {
-            // given
-            LoginRequest request = new LoginRequest();
-            request.setUsername("");
-            request.setPassword("password");
-
-            // when & then
-            assertThatThrownBy(() -> authService.login(request))
-                    .isInstanceOf(InvalidCredentialsException.class);
-        }
-
-        @Test
-        @DisplayName("빈 password로도 로그인에 성공한다 (현재는 비밀번호 검증이 비활성화됨)")
-        void login_WithEmptyPassword_SucceedsForDemo() {
-            // given
-            LoginRequest request = new LoginRequest();
-            request.setUsername("admin");
-            request.setPassword("");
-
-            String expectedAccessToken = "access.token.jwt";
-            String expectedRefreshToken = "refresh.token.jwt";
-
-            given(jwtTokenProvider.createAccessToken(anyString(), eq("admin"), anyList()))
-                    .willReturn(expectedAccessToken);
-            given(jwtTokenProvider.createRefreshToken(anyString()))
-                    .willReturn(expectedRefreshToken);
-
-            // when
-            LoginResponse response = authService.login(request);
-
-            // then
-            assertThat(response).isNotNull();
-            assertThat(response.getUsername()).isEqualTo("admin");
+            // Then: lastLoginAt이 업데이트되어야 함
+            then(userRepository).should(times(1))
+                    .updateLastLoginAt(validUser.getId());
         }
     }
 
     @Nested
-    @DisplayName("토큰 갱신 테스트")
-    class RefreshTokenTests {
+    @DisplayName("로그인 실패 시나리오")
+    class FailureScenarios {
 
         @Test
-        @DisplayName("유효한 Refresh Token으로 Access Token을 갱신할 수 있다")
-        void refreshToken_WithValidRefreshToken_ReturnsNewAccessToken() {
-            // given
-            TokenRefreshRequest request = new TokenRefreshRequest();
-            request.setRefreshToken("valid.refresh.token");
+        @DisplayName("존재하지 않는 사용자로 로그인 시 예외를 발생시킨다")
+        void shouldThrowException_WhenUserNotFound() {
+            // Given: 존재하지 않는 사용자
+            given(userRepository.findByEmployeeId("INVALID"))
+                    .willReturn(Optional.empty());
 
-            String userId = "user123";
-            String newAccessToken = "new.access.token";
-            String newRefreshToken = "new.refresh.token";
+            LoginRequest invalidRequest = LoginRequest.builder()
+                    .employeeId("INVALID")
+                    .password("Password123!")
+                    .build();
 
-            given(jwtTokenProvider.validateToken(eq("valid.refresh.token"))).willReturn(true);
-            given(jwtTokenProvider.getUserId(eq("valid.refresh.token"))).willReturn(userId);
-            given(jwtTokenProvider.createAccessToken(anyString(), anyString(), anyList()))
-                    .willReturn(newAccessToken);
-            given(jwtTokenProvider.createRefreshToken(eq(userId)))
-                    .willReturn(newRefreshToken);
+            // When & Then: BusinessException 발생
+            assertThatThrownBy(() -> authService.authenticate(invalidRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessage("사용자를 찾을 수 없습니다")
+                    .satisfies(ex -> {
+                        BusinessException businessEx = (BusinessException) ex;
+                        assertThat(businessEx.getErrorCode()).isEqualTo("AUTH_001");
+                    });
 
-            // when
-            TokenRefreshResponse response = authService.refreshToken(request);
+            // And: 토큰 생성이 호출되지 않아야 함
+            then(jwtTokenProvider).should(never()).generateAccessToken(any());
 
-            // then
+            // And: 로그인 실패 감사 로그가 기록되어야 함
+            then(auditLogService).should(times(1))
+                    .logLoginFailure("INVALID", "USER_NOT_FOUND", "LOCAL");
+        }
+
+        @Test
+        @DisplayName("잘못된 비밀번호로 로그인 시 예외를 발생시킨다")
+        void shouldThrowException_WhenInvalidPassword() {
+            // Given: 비밀번호 불일치
+            given(userRepository.findByEmployeeId("EMP001"))
+                    .willReturn(Optional.of(validUser));
+            given(passwordEncoder.matches("WrongPassword!", validUser.getPassword()))
+                    .willReturn(false);
+
+            LoginRequest invalidRequest = LoginRequest.builder()
+                    .employeeId("EMP001")
+                    .password("WrongPassword!")
+                    .build();
+
+            // When & Then
+            assertThatThrownBy(() -> authService.authenticate(invalidRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessage("비밀번호가 일치하지 않습니다")
+                    .satisfies(ex -> {
+                        BusinessException businessEx = (BusinessException) ex;
+                        assertThat(businessEx.getErrorCode()).isEqualTo("AUTH_002");
+                    });
+
+            // And: 실패 횟수가 증가되어야 함
+            then(userRepository).should(times(1))
+                    .incrementFailedAttempts(validUser.getId());
+
+            // And: 로그인 실패 감사 로그가 기록되어야 함
+            then(auditLogService).should(times(1))
+                    .logLoginFailure("EMP001", "INVALID_PASSWORD", "LOCAL");
+        }
+
+        @Test
+        @DisplayName("비활성화된 사용자로 로그인 시 예외를 발생시킨다")
+        void shouldThrowException_WhenUserIsInactive() {
+            // Given: 비활성화된 사용자
+            User inactiveUser = validUser.toBuilder()
+                    .active(false)
+                    .build();
+            given(userRepository.findByEmployeeId("EMP001"))
+                    .willReturn(Optional.of(inactiveUser));
+
+            // When & Then
+            assertThatThrownBy(() -> authService.authenticate(validLoginRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessage("비활성화된 계정입니다")
+                    .satisfies(ex -> {
+                        BusinessException businessEx = (BusinessException) ex;
+                        assertThat(businessEx.getErrorCode()).isEqualTo("AUTH_003");
+                    });
+
+            // And: 비밀번호 검증이 수행되지 않아야 함
+            then(passwordEncoder).should(never()).matches(any(), any());
+        }
+
+        @Test
+        @DisplayName("잠금된 사용자로 로그인 시 예외를 발생시킨다")
+        void shouldThrowException_WhenUserIsLocked() {
+            // Given: 잠금된 사용자 (5회 실패)
+            User lockedUser = validUser.toBuilder()
+                    .active(true)
+                    .locked(true)
+                    .failedAttempts(5)
+                    .lockedUntil(java.time.LocalDateTime.now().plusMinutes(5))
+                    .build();
+            given(userRepository.findByEmployeeId("EMP001"))
+                    .willReturn(Optional.of(lockedUser));
+
+            // When & Then
+            assertThatThrownBy(() -> authService.authenticate(validLoginRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("계정이 잠금되었습니다")
+                    .satisfies(ex -> {
+                        BusinessException businessEx = (BusinessException) ex;
+                        assertThat(businessEx.getErrorCode()).isEqualTo("AUTH_004");
+                    });
+
+            // And: 비밀번호 검증이 수행되지 않아야 함
+            then(passwordEncoder).should(never()).matches(any(), any());
+        }
+    }
+
+    @Nested
+    @DisplayName("계정 잠금 정책 시나리오")
+    class AccountLockScenarios {
+
+        @Test
+        @DisplayName("5회 실패 시 5분 잠금된다")
+        void shouldLockAccount_After5Failures() {
+            // Given: 4회 실패한 사용자
+            User user = validUser.toBuilder()
+                    .failedAttempts(4)
+                    .build();
+            given(userRepository.findByEmployeeId("EMP001"))
+                    .willReturn(Optional.of(user));
+            given(passwordEncoder.matches(any(), any())).willReturn(false);
+
+            LoginRequest request = validLoginRequest.toBuilder()
+                    .password("WrongPassword")
+                    .build();
+
+            // When: 5번째 실패
+            assertThatThrownBy(() -> authService.authenticate(request))
+                    .isInstanceOf(BusinessException.class);
+
+            // Then: 계정이 5분 잠금되어야 함
+            then(userRepository).should(times(1))
+                    .lockAccount(any(UserId.class), any(java.time.LocalDateTime.class)); // 5 minutes lock
+        }
+
+        @Test
+        @DisplayName("10회 실패 시 30분 잠금된다")
+        void shouldLockAccount_After10Failures() {
+            // Given: 9회 실패한 사용자
+            User user = validUser.toBuilder()
+                    .failedAttempts(9)
+                    .build();
+            given(userRepository.findByEmployeeId("EMP001"))
+                    .willReturn(Optional.of(user));
+            given(passwordEncoder.matches(any(), any())).willReturn(false);
+
+            // When: 10번째 실패
+            assertThatThrownBy(() -> authService.authenticate(validLoginRequest.toBuilder()
+                    .password("WrongPassword").build()))
+                    .isInstanceOf(BusinessException.class);
+
+            // Then: 계정이 30분 잠금되어야 함
+            then(userRepository).should(times(1))
+                    .lockAccount(any(UserId.class), any(java.time.LocalDateTime.class)); // 30 minutes lock
+        }
+
+        @Test
+        @DisplayName("15회 실패 시 영구 잠금된다")
+        void shouldPermanentlyLockAccount_After15Failures() {
+            // Given: 14회 실패한 사용자
+            User user = validUser.toBuilder()
+                    .failedAttempts(14)
+                    .build();
+            given(userRepository.findByEmployeeId("EMP001"))
+                    .willReturn(Optional.of(user));
+            given(passwordEncoder.matches(any(), any())).willReturn(false);
+
+            // When: 15번째 실패
+            assertThatThrownBy(() -> authService.authenticate(validLoginRequest.toBuilder()
+                    .password("WrongPassword").build()))
+                    .isInstanceOf(BusinessException.class);
+
+            // Then: 계정이 영구 잠금되어야 함 (null = permanent)
+            then(userRepository).should(times(1))
+                    .lockAccount(user.getId(), null); // permanent lock
+        }
+    }
+
+    @Nested
+    @DisplayName("토큰 생성 검증")
+    class TokenGenerationValidation {
+
+        @Test
+        @DisplayName("Access Token은 1시간 유효기간을 가진다")
+        void shouldGenerateAccessToken_With1HourExpiration() {
+            // Given
+            given(userRepository.findByEmployeeId(any()))
+                    .willReturn(Optional.of(validUser));
+            given(passwordEncoder.matches(any(), any())).willReturn(true);
+            given(jwtTokenProvider.generateAccessToken(validUser))
+                    .willReturn("access.token");
+            given(jwtTokenProvider.generateRefreshToken(validUser))
+                    .willReturn("refresh.token");
+
+            // When
+            TokenResponse response = authService.authenticate(validLoginRequest);
+
+            // Then
+            assertThat(response.getExpiresIn()).isEqualTo(3600); // 1 hour = 3600 seconds
+        }
+
+        @Test
+        @DisplayName("Refresh Token은 24시간 유효기간을 가진다")
+        void shouldGenerateRefreshToken_With24HourExpiration() {
+            // Given
+            given(userRepository.findByEmployeeId(any()))
+                    .willReturn(Optional.of(validUser));
+            given(passwordEncoder.matches(any(), any())).willReturn(true);
+            given(jwtTokenProvider.generateAccessToken(validUser))
+                    .willReturn("access.token");
+            given(jwtTokenProvider.generateRefreshToken(validUser))
+                    .willReturn("refresh.token");
+
+            // When
+            TokenResponse response = authService.authenticate(validLoginRequest);
+
+            // Then: Refresh Token 정보 확인
+            then(jwtTokenProvider).should(times(1))
+                    .generateRefreshToken(validUser);
+        }
+    }
+
+    @Nested
+    @DisplayName("Refresh Token 정책")
+    class RefreshTokenPolicy {
+
+        @Test
+        @DisplayName("유효한 Refresh Token으로 새로운 Access Token을 발급한다")
+        void shouldIssueNewAccessToken_WithValidRefreshToken() {
+            // Given: 유효한 Refresh Token
+            String validRefreshToken = "valid.refresh.token";
+            RefreshTokenRequest request = RefreshTokenRequest.builder()
+                    .refreshToken(validRefreshToken)
+                    .build();
+
+            given(jwtTokenProvider.validateToken(validRefreshToken)).willReturn(true);
+            given(jwtTokenProvider.isRefreshToken(validRefreshToken)).willReturn(true);
+            given(jwtTokenProvider.getEmployeeId(validRefreshToken)).willReturn("EMP001");
+            given(userRepository.findByEmployeeId("EMP001"))
+                    .willReturn(Optional.of(validUser));
+            given(jwtTokenProvider.generateAccessToken(validUser))
+                    .willReturn("new.access.token");
+            given(jwtTokenProvider.generateRefreshToken(validUser))
+                    .willReturn("new.refresh.token");
+
+            // When: Refresh Token으로 갱신
+            TokenResponse response = authService.refreshToken(request);
+
+            // Then: 새로운 토큰이 발급되어야 함
             assertThat(response).isNotNull();
-            assertThat(response.getAccessToken()).isEqualTo(newAccessToken);
-            assertThat(response.getRefreshToken()).isEqualTo(newRefreshToken);
-
-            verify(jwtTokenProvider).validateToken(eq("valid.refresh.token"));
-            verify(jwtTokenProvider).getUserId(eq("valid.refresh.token"));
-            // AuthService uses hardcoded values for username and roles, not from token
-            verify(jwtTokenProvider).createAccessToken(eq(userId), eq("admin"), anyList());
-            verify(jwtTokenProvider).createRefreshToken(eq(userId));
+            assertThat(response.getAccessToken()).isEqualTo("new.access.token");
+            assertThat(response.getRefreshToken()).isEqualTo("new.refresh.token");
+            assertThat(response.getTokenType()).isEqualTo("Bearer");
+            assertThat(response.getExpiresIn()).isEqualTo(3600);
         }
 
         @Test
-        @DisplayName("만료된 Refresh Token으로 갱신 시도 시 예외가 발생한다")
-        void refreshToken_WithExpiredToken_ThrowsTokenExpiredException() {
-            // given
-            TokenRefreshRequest request = new TokenRefreshRequest();
-            request.setRefreshToken("expired.refresh.token");
+        @DisplayName("만료된 Refresh Token을 거부한다")
+        void shouldRejectExpiredRefreshToken() {
+            // Given: 만료된 Refresh Token
+            String expiredRefreshToken = "expired.refresh.token";
+            RefreshTokenRequest request = RefreshTokenRequest.builder()
+                    .refreshToken(expiredRefreshToken)
+                    .build();
 
-            given(jwtTokenProvider.validateToken(eq("expired.refresh.token"))).willReturn(false);
+            given(jwtTokenProvider.validateToken(expiredRefreshToken))
+                    .willThrow(new io.jsonwebtoken.ExpiredJwtException(null, null, "Token expired"));
 
-            // when & then
+            // When & Then: AUTH_005 예외 발생
             assertThatThrownBy(() -> authService.refreshToken(request))
-                    .isInstanceOf(TokenExpiredException.class)
-                    .hasMessageContaining("invalid or expired");
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessage("만료된 Refresh Token입니다. 다시 로그인하세요.")
+                    .satisfies(ex -> {
+                        BusinessException businessEx = (BusinessException) ex;
+                        assertThat(businessEx.getErrorCode()).isEqualTo("AUTH_005");
+                    });
 
-            verify(jwtTokenProvider).validateToken(eq("expired.refresh.token"));
-            verify(jwtTokenProvider, never()).getUserId(anyString());
-            verify(jwtTokenProvider, never()).createAccessToken(anyString(), anyString(), anyList());
+            // And: 새로운 토큰이 생성되지 않아야 함
+            then(jwtTokenProvider).should(never()).generateAccessToken(any());
+            then(jwtTokenProvider).should(never()).generateRefreshToken(any());
         }
 
         @Test
-        @DisplayName("잘못된 형식의 Refresh Token으로 갱신 시도 시 예외가 발생한다")
-        void refreshToken_WithInvalidToken_ThrowsTokenExpiredException() {
-            // given
-            TokenRefreshRequest request = new TokenRefreshRequest();
-            request.setRefreshToken("invalid.token");
+        @DisplayName("유효하지 않은 Refresh Token을 거부한다")
+        void shouldRejectInvalidRefreshToken() {
+            // Given: 유효하지 않은 Refresh Token
+            String invalidRefreshToken = "invalid.refresh.token";
+            RefreshTokenRequest request = RefreshTokenRequest.builder()
+                    .refreshToken(invalidRefreshToken)
+                    .build();
 
-            given(jwtTokenProvider.validateToken(eq("invalid.token"))).willReturn(false);
+            given(jwtTokenProvider.validateToken(invalidRefreshToken)).willReturn(false);
 
-            // when & then
+            // When & Then: AUTH_006 예외 발생
             assertThatThrownBy(() -> authService.refreshToken(request))
-                    .isInstanceOf(TokenExpiredException.class)
-                    .hasMessageContaining("invalid or expired");
-
-            verify(jwtTokenProvider).validateToken(eq("invalid.token"));
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessage("유효하지 않은 Refresh Token입니다.")
+                    .satisfies(ex -> {
+                        BusinessException businessEx = (BusinessException) ex;
+                        assertThat(businessEx.getErrorCode()).isEqualTo("AUTH_006");
+                    });
         }
 
         @Test
-        @DisplayName("null Refresh Token으로 갱신 시도 시 예외가 발생한다")
-        void refreshToken_WithNullToken_ThrowsException() {
-            // given
-            TokenRefreshRequest request = new TokenRefreshRequest();
-            request.setRefreshToken(null);
-
-            // when & then
-            assertThatThrownBy(() -> authService.refreshToken(request))
-                    .isInstanceOf(Exception.class);
-        }
-
-        @Test
-        @DisplayName("빈 Refresh Token으로 갱신 시도 시 예외가 발생한다")
-        void refreshToken_WithEmptyToken_ThrowsException() {
-            // given
-            TokenRefreshRequest request = new TokenRefreshRequest();
-            request.setRefreshToken("");
-
-            given(jwtTokenProvider.validateToken(eq(""))).willReturn(false);
-
-            // when & then
-            assertThatThrownBy(() -> authService.refreshToken(request))
-                    .isInstanceOf(Exception.class);
-        }
-    }
-
-    @Nested
-    @DisplayName("로그아웃 테스트")
-    class LogoutTests {
-
-        @Test
-        @DisplayName("유효한 userId로 로그아웃을 할 수 있다")
-        void logout_WithValidUserId_Success() {
-            // given
-            String userId = "user123";
-
-            // when & then
-            assertThatNoException().isThrownBy(() -> authService.logout(userId));
-        }
-
-        @Test
-        @DisplayName("null userId로 로그아웃 시도 시 정상 처리된다")
-        void logout_WithNullUserId_Success() {
-            // when & then
-            assertThatNoException().isThrownBy(() -> authService.logout(null));
-        }
-
-        @Test
-        @DisplayName("빈 userId로 로그아웃 시도 시 정상 처리된다")
-        void logout_WithEmptyUserId_Success() {
-            // when & then
-            assertThatNoException().isThrownBy(() -> authService.logout(""));
-        }
-
-        @Test
-        @DisplayName("여러 번 로그아웃을 시도해도 정상 처리된다")
-        void logout_MultipleTimes_Success() {
-            // given
-            String userId = "user123";
-
-            // when & then
-            assertThatNoException().isThrownBy(() -> {
-                authService.logout(userId);
-                authService.logout(userId);
-                authService.logout(userId);
-            });
-        }
-    }
-
-    @Nested
-    @DisplayName("인증 통합 시나리오 테스트")
-    class IntegrationScenarioTests {
-
-        @Test
-        @DisplayName("로그인 후 토큰 갱신 시나리오가 정상 작동한다")
-        void loginAndRefresh_Scenario_Success() {
-            // given - 로그인
-            LoginRequest loginRequest = new LoginRequest();
-            loginRequest.setUsername("admin");
-            loginRequest.setPassword("test123");
-
+        @DisplayName("Access Token을 Refresh Token으로 사용할 수 없다")
+        void shouldRejectAccessToken_AsRefreshToken() {
+            // Given: Access Token (Refresh Token 아님)
             String accessToken = "access.token.jwt";
-            String refreshToken = "refresh.token.jwt";
+            RefreshTokenRequest request = RefreshTokenRequest.builder()
+                    .refreshToken(accessToken)
+                    .build();
 
-            given(jwtTokenProvider.createAccessToken(anyString(), eq("admin"), anyList()))
-                    .willReturn(accessToken);
-            given(jwtTokenProvider.createRefreshToken(anyString()))
-                    .willReturn(refreshToken);
+            given(jwtTokenProvider.validateToken(accessToken)).willReturn(true);
+            given(jwtTokenProvider.isRefreshToken(accessToken)).willReturn(false); // Access Token
 
-            // when - 로그인
-            LoginResponse loginResponse = authService.login(loginRequest);
+            // When & Then: AUTH_006 예외 발생
+            assertThatThrownBy(() -> authService.refreshToken(request))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessage("유효하지 않은 Refresh Token입니다.")
+                    .satisfies(ex -> {
+                        BusinessException businessEx = (BusinessException) ex;
+                        assertThat(businessEx.getErrorCode()).isEqualTo("AUTH_006");
+                    });
 
-            // then - 로그인 검증
-            assertThat(loginResponse.getAccessToken()).isEqualTo(accessToken);
-            assertThat(loginResponse.getRefreshToken()).isEqualTo(refreshToken);
-
-            // given - 토큰 갱신
-            TokenRefreshRequest refreshRequest = new TokenRefreshRequest();
-            refreshRequest.setRefreshToken(refreshToken);
-
-            String userId = "user123";
-            String newAccessToken = "new.access.token";
-            String newRefreshToken = "new.refresh.token";
-
-            given(jwtTokenProvider.validateToken(eq(refreshToken))).willReturn(true);
-            given(jwtTokenProvider.getUserId(eq(refreshToken))).willReturn(userId);
-            given(jwtTokenProvider.createAccessToken(eq(userId), eq("admin"), anyList()))
-                    .willReturn(newAccessToken);
-            given(jwtTokenProvider.createRefreshToken(eq(userId)))
-                    .willReturn(newRefreshToken);
-
-            // when - 토큰 갱신
-            TokenRefreshResponse refreshResponse = authService.refreshToken(refreshRequest);
-
-            // then - 갱신 검증
-            assertThat(refreshResponse.getAccessToken()).isEqualTo(newAccessToken);
-            assertThat(refreshResponse.getRefreshToken()).isEqualTo(newRefreshToken);
+            // And: Token Type 검증 후 사용자 조회가 수행되지 않아야 함
+            then(jwtTokenProvider).should(never()).getEmployeeId(any());
+            then(userRepository).should(never()).findByEmployeeId(any());
         }
 
         @Test
-        @DisplayName("로그인 후 로그아웃 시나리오가 정상 작동한다")
-        void loginAndLogout_Scenario_Success() {
-            // given - 로그인
-            LoginRequest loginRequest = new LoginRequest();
-            loginRequest.setUsername("admin");
-            loginRequest.setPassword("test123");
+        @DisplayName("존재하지 않는 사용자의 Refresh Token을 거부한다")
+        void shouldRejectRefreshToken_WhenUserNotFound() {
+            // Given: 유효한 Refresh Token이지만 사용자가 삭제됨
+            String validRefreshToken = "valid.refresh.token";
+            RefreshTokenRequest request = RefreshTokenRequest.builder()
+                    .refreshToken(validRefreshToken)
+                    .build();
 
-            String accessToken = "access.token.jwt";
-            String refreshToken = "refresh.token.jwt";
+            given(jwtTokenProvider.validateToken(validRefreshToken)).willReturn(true);
+            given(jwtTokenProvider.isRefreshToken(validRefreshToken)).willReturn(true);
+            given(jwtTokenProvider.getEmployeeId(validRefreshToken)).willReturn("DELETED_USER");
+            given(userRepository.findByEmployeeId("DELETED_USER"))
+                    .willReturn(Optional.empty());
 
-            given(jwtTokenProvider.createAccessToken(anyString(), eq("admin"), anyList()))
-                    .willReturn(accessToken);
-            given(jwtTokenProvider.createRefreshToken(anyString()))
-                    .willReturn(refreshToken);
+            // When & Then: AUTH_001 예외 발생
+            assertThatThrownBy(() -> authService.refreshToken(request))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessage("사용자를 찾을 수 없습니다")
+                    .satisfies(ex -> {
+                        BusinessException businessEx = (BusinessException) ex;
+                        assertThat(businessEx.getErrorCode()).isEqualTo("AUTH_001");
+                    });
+        }
 
-            // when - 로그인
-            LoginResponse loginResponse = authService.login(loginRequest);
+        @Test
+        @DisplayName("Token Rotation - 새로운 Access Token과 Refresh Token을 모두 발급한다")
+        void shouldRotateTokens_WhenRefreshingToken() {
+            // Given: 유효한 Refresh Token
+            String oldRefreshToken = "old.refresh.token";
+            RefreshTokenRequest request = RefreshTokenRequest.builder()
+                    .refreshToken(oldRefreshToken)
+                    .build();
 
-            // then - 로그인 검증
-            assertThat(loginResponse).isNotNull();
+            given(jwtTokenProvider.validateToken(oldRefreshToken)).willReturn(true);
+            given(jwtTokenProvider.isRefreshToken(oldRefreshToken)).willReturn(true);
+            given(jwtTokenProvider.getEmployeeId(oldRefreshToken)).willReturn("EMP001");
+            given(userRepository.findByEmployeeId("EMP001"))
+                    .willReturn(Optional.of(validUser));
+            given(jwtTokenProvider.generateAccessToken(validUser))
+                    .willReturn("new.access.token");
+            given(jwtTokenProvider.generateRefreshToken(validUser))
+                    .willReturn("new.refresh.token");
 
-            // when & then - 로그아웃
-            assertThatNoException().isThrownBy(() -> authService.logout("admin_id"));
+            // When: Token 갱신
+            TokenResponse response = authService.refreshToken(request);
+
+            // Then: 새로운 Access Token과 Refresh Token이 모두 발급되어야 함
+            assertThat(response.getAccessToken()).isNotEqualTo(oldRefreshToken);
+            assertThat(response.getRefreshToken()).isNotEqualTo(oldRefreshToken);
+
+            // And: 두 토큰 모두 생성되어야 함
+            then(jwtTokenProvider).should(times(1)).generateAccessToken(validUser);
+            then(jwtTokenProvider).should(times(1)).generateRefreshToken(validUser);
         }
     }
 }

@@ -1,97 +1,109 @@
 package com.inspecthub.auth.controller;
 
 import com.inspecthub.auth.dto.LoginRequest;
-import com.inspecthub.auth.dto.LoginResponse;
-import com.inspecthub.auth.dto.SSOLoginRequest;
-import com.inspecthub.auth.dto.TokenRefreshRequest;
-import com.inspecthub.auth.dto.TokenRefreshResponse;
+import com.inspecthub.auth.dto.RefreshTokenRequest;
+import com.inspecthub.auth.dto.TokenResponse;
 import com.inspecthub.auth.service.AuthService;
+import com.inspecthub.common.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 인증 컨트롤러
+ *
+ * LOCAL 로그인, 토큰 갱신 API
+ */
+@Tag(name = "Authentication", description = "인증 API - 로그인 및 토큰 관리")
 @Slf4j
 @RestController
-@RequestMapping("/v1/auth")
+@RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-@Tag(name = "Authentication", description = "사용자 인증 및 토큰 관리 API")
 public class AuthController {
 
     private final AuthService authService;
 
     /**
-     * 전통적인 로그인 API (username/password)
+     * LOCAL 로그인
+     *
+     * POST /api/v1/auth/login
      */
+    @Operation(
+            summary = "LOCAL 로그인",
+            description = "사원번호와 비밀번호로 로그인하여 JWT Access Token과 Refresh Token을 발급받습니다."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "로그인 성공",
+                    content = @Content(schema = @Schema(implementation = TokenResponse.class))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "인증 실패 - 사용자를 찾을 수 없거나 비밀번호가 일치하지 않음"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403",
+                    description = "계정 비활성화"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "423",
+                    description = "계정 잠금 - 로그인 실패 횟수 초과"
+            )
+    })
     @PostMapping("/login")
-    @Operation(
-        summary = "전통 방식 로그인",
-        description = "사용자명과 비밀번호를 사용한 전통적인 로그인 방식입니다. 성공 시 JWT 액세스 토큰과 리프레시 토큰을 반환합니다."
-    )
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        log.info("Traditional login request for username: {}", request.getUsername());
-        LoginResponse response = authService.login(request);
-        return ResponseEntity.ok(response);
-    }
-
-    /**
-     * SSO 로그인 API
-     */
-    @PostMapping("/sso/login")
-    @Operation(
-        summary = "SSO 로그인",
-        description = "Single Sign-On 토큰을 사용한 로그인입니다. Okta, Azure AD 등의 SSO 제공자 토큰을 검증하여 로그인합니다."
-    )
-    public ResponseEntity<LoginResponse> ssoLogin(@Valid @RequestBody SSOLoginRequest request) {
-        log.info("SSO login request with provider: {}", request.getProvider());
-        LoginResponse response = authService.loginSSO(request);
-        return ResponseEntity.ok(response);
-    }
-
-    /**
-     * 토큰 갱신 API
-     */
-    @PostMapping("/refresh")
-    @Operation(
-        summary = "액세스 토큰 갱신",
-        description = "만료된 액세스 토큰을 리프레시 토큰을 사용하여 갱신합니다. 새로운 액세스 토큰과 리프레시 토큰을 반환합니다."
-    )
-    public ResponseEntity<TokenRefreshResponse> refreshToken(
-            @Valid @RequestBody TokenRefreshRequest request
+    public ResponseEntity<ApiResponse<TokenResponse>> login(
+            @Valid @RequestBody LoginRequest request
     ) {
-        log.info("Token refresh request");
-        TokenRefreshResponse response = authService.refreshToken(request);
-        return ResponseEntity.ok(response);
+        log.info("Login attempt: employeeId={}", request.getEmployeeId());
+
+        TokenResponse tokenResponse = authService.authenticate(request);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(tokenResponse)
+        );
     }
 
     /**
-     * 로그아웃 API
+     * Access Token 갱신
+     *
+     * POST /api/v1/auth/refresh
      */
-    @PostMapping("/logout")
     @Operation(
-        summary = "로그아웃",
-        description = "현재 사용자를 로그아웃합니다. 서버 측에서 토큰을 무효화하고 세션을 종료합니다."
+            summary = "Access Token 갱신",
+            description = "Refresh Token을 사용하여 새로운 Access Token과 Refresh Token을 발급받습니다. (Token Rotation)"
     )
-    public ResponseEntity<Void> logout(@AuthenticationPrincipal String userId) {
-        log.info("Logout request for user: {}", userId);
-        authService.logout(userId);
-        return ResponseEntity.ok().build();
-    }
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "토큰 갱신 성공",
+                    content = @Content(schema = @Schema(implementation = TokenResponse.class))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "Refresh Token이 유효하지 않거나 만료됨"
+            )
+    })
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<TokenResponse>> refresh(
+            @Valid @RequestBody RefreshTokenRequest request
+    ) {
+        log.info("Token refresh attempt");
 
-    /**
-     * 현재 사용자 정보 조회 (테스트용)
-     */
-    @GetMapping("/me")
-    @Operation(
-        summary = "현재 사용자 조회",
-        description = "현재 인증된 사용자의 정보를 조회합니다. 테스트 및 디버깅 목적으로 사용됩니다."
-    )
-    public ResponseEntity<String> getCurrentUser(@AuthenticationPrincipal String userId) {
-        log.debug("Get current user request: {}", userId);
-        return ResponseEntity.ok("Authenticated user ID: " + userId);
+        TokenResponse tokenResponse = authService.refreshToken(request);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(tokenResponse)
+        );
     }
 }

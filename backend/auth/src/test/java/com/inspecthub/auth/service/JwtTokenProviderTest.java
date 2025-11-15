@@ -1,396 +1,366 @@
 package com.inspecthub.auth.service;
 
+import com.inspecthub.auth.domain.User;
+import com.inspecthub.auth.domain.UserId;
+import com.inspecthub.common.config.AuthProperties;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
-import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@DisplayName("JwtTokenProvider 테스트")
+/**
+ * JwtTokenProvider TDD Tests
+ * 
+ * Story 2: JWT Access Token Validation
+ * - Token generation with user claims
+ * - Token signature validation
+ * - Token expiration check
+ * - Claims extraction
+ */
+@DisplayName("JwtTokenProvider - JWT Token Generation & Validation")
 class JwtTokenProviderTest {
 
     private JwtTokenProvider jwtTokenProvider;
-    private String secretKey;
-    private long accessTokenValidityInMilliseconds;
-    private long refreshTokenValidityInMilliseconds;
+    private AuthProperties authProperties;
+    private User testUser;
+    private String validSecretKey;
 
     @BeforeEach
     void setUp() {
-        secretKey = "test-secret-key-for-jwt-token-generation-must-be-at-least-256-bits-long";
-        accessTokenValidityInMilliseconds = 3600000L; // 1 hour
-        refreshTokenValidityInMilliseconds = 86400000L; // 24 hours
+        // Given: JWT 설정
+        validSecretKey = "test-secret-key-minimum-256-bits-required-for-HS256-algorithm";
 
-        jwtTokenProvider = new JwtTokenProvider(
-                secretKey,
-                accessTokenValidityInMilliseconds,
-                refreshTokenValidityInMilliseconds
-        );
+        authProperties = new AuthProperties();
+        AuthProperties.JwtConfig jwtConfig = new AuthProperties.JwtConfig();
+        AuthProperties.JwtConfig.TokenConfig accessTokenConfig = new AuthProperties.JwtConfig.TokenConfig();
+        accessTokenConfig.setExpirationSeconds(3600); // 1 hour
+
+        AuthProperties.JwtConfig.TokenConfig refreshTokenConfig = new AuthProperties.JwtConfig.TokenConfig();
+        refreshTokenConfig.setExpirationSeconds(86400); // 24 hours
+
+        jwtConfig.setSecret(validSecretKey);
+        jwtConfig.setAccessToken(accessTokenConfig);
+        jwtConfig.setRefreshToken(refreshTokenConfig);
+
+        authProperties.setJwt(jwtConfig);
+
+        jwtTokenProvider = new JwtTokenProvider(authProperties);
+
+        // Given: 테스트용 사용자
+        testUser = User.builder()
+                .id(UserId.of("01ARZ3NDEKTSV4RRFFQ69G5FAV"))
+                .employeeId("EMP001")
+                .name("홍길동")
+                .email("hong@example.com")
+                .build();
     }
 
     @Nested
-    @DisplayName("Access Token 생성 테스트")
-    class CreateAccessTokenTests {
+    @DisplayName("Access Token 생성")
+    class AccessTokenGeneration {
 
         @Test
-        @DisplayName("유효한 정보로 Access Token을 생성할 수 있다")
-        void createAccessToken_WithValidInfo_ReturnsToken() {
-            // given
-            String userId = "user123";
-            String username = "testuser";
-            List<String> roles = Arrays.asList("ROLE_USER", "ROLE_ADMIN");
+        @DisplayName("유효한 사용자로 Access Token을 생성한다")
+        void shouldGenerateAccessToken_WithValidUser() {
+            // When
+            String token = jwtTokenProvider.generateAccessToken(testUser);
 
-            // when
-            String token = jwtTokenProvider.createAccessToken(userId, username, roles);
-
-            // then
+            // Then: JWT 형식 검증 (header.payload.signature)
             assertThat(token).isNotNull();
-            assertThat(token).isNotEmpty();
-            assertThat(token.split("\\.")).hasSize(3); // JWT는 3개 부분으로 구성
-        }
-
-        @Test
-        @DisplayName("생성된 Access Token에서 userId를 추출할 수 있다")
-        void createAccessToken_ExtractUserId_ReturnsCorrectUserId() {
-            // given
-            String userId = "user123";
-            String username = "testuser";
-            List<String> roles = Arrays.asList("ROLE_USER");
-
-            // when
-            String token = jwtTokenProvider.createAccessToken(userId, username, roles);
-            String extractedUserId = jwtTokenProvider.getUserId(token);
-
-            // then
-            assertThat(extractedUserId).isEqualTo(userId);
-        }
-
-        @Test
-        @DisplayName("생성된 Access Token에서 username을 추출할 수 있다")
-        void createAccessToken_ExtractUsername_ReturnsCorrectUsername() {
-            // given
-            String userId = "user123";
-            String username = "testuser";
-            List<String> roles = Arrays.asList("ROLE_USER");
-
-            // when
-            String token = jwtTokenProvider.createAccessToken(userId, username, roles);
-            String extractedUsername = jwtTokenProvider.getUsername(token);
-
-            // then
-            assertThat(extractedUsername).isEqualTo(username);
-        }
-
-        @Test
-        @DisplayName("생성된 Access Token에서 roles를 추출할 수 있다")
-        void createAccessToken_ExtractRoles_ReturnsCorrectRoles() {
-            // given
-            String userId = "user123";
-            String username = "testuser";
-            List<String> roles = Arrays.asList("ROLE_USER", "ROLE_ADMIN");
-
-            // when
-            String token = jwtTokenProvider.createAccessToken(userId, username, roles);
-            List<String> extractedRoles = jwtTokenProvider.getRoles(token);
-
-            // then
-            assertThat(extractedRoles).containsExactlyInAnyOrderElementsOf(roles);
-        }
-
-        @Test
-        @DisplayName("빈 roles 리스트로 Access Token을 생성할 수 있다")
-        void createAccessToken_WithEmptyRoles_ReturnsToken() {
-            // given
-            String userId = "user123";
-            String username = "testuser";
-            List<String> roles = Arrays.asList();
-
-            // when
-            String token = jwtTokenProvider.createAccessToken(userId, username, roles);
-
-            // then
-            assertThat(token).isNotNull();
-            assertThat(jwtTokenProvider.getRoles(token)).isEmpty();
-        }
-    }
-
-    @Nested
-    @DisplayName("Refresh Token 생성 테스트")
-    class CreateRefreshTokenTests {
-
-        @Test
-        @DisplayName("유효한 userId로 Refresh Token을 생성할 수 있다")
-        void createRefreshToken_WithValidUserId_ReturnsToken() {
-            // given
-            String userId = "user123";
-
-            // when
-            String token = jwtTokenProvider.createRefreshToken(userId);
-
-            // then
-            assertThat(token).isNotNull();
-            assertThat(token).isNotEmpty();
             assertThat(token.split("\\.")).hasSize(3);
         }
 
         @Test
-        @DisplayName("생성된 Refresh Token에서 userId를 추출할 수 있다")
-        void createRefreshToken_ExtractUserId_ReturnsCorrectUserId() {
-            // given
-            String userId = "user123";
+        @DisplayName("생성된 Access Token은 사용자 정보를 포함한다")
+        void shouldIncludeUserClaims_InAccessToken() {
+            // When
+            String token = jwtTokenProvider.generateAccessToken(testUser);
 
-            // when
-            String token = jwtTokenProvider.createRefreshToken(userId);
-            String extractedUserId = jwtTokenProvider.getUserId(token);
-
-            // then
-            assertThat(extractedUserId).isEqualTo(userId);
+            // Then: Claims 추출 및 검증
+            Claims claims = jwtTokenProvider.getClaims(token);
+            assertThat(claims.getSubject()).isEqualTo("EMP001");
+            assertThat(claims.get("userId", String.class)).isEqualTo("01ARZ3NDEKTSV4RRFFQ69G5FAV");
+            assertThat(claims.get("name", String.class)).isEqualTo("홍길동");
+            assertThat(claims.get("email", String.class)).isEqualTo("hong@example.com");
+            assertThat(claims.get("type", String.class)).isEqualTo("access");
         }
 
         @Test
-        @DisplayName("Refresh Token의 유효기간은 Access Token보다 길다")
-        void createRefreshToken_ExpirationTime_IsLongerThanAccessToken() {
-            // given
-            String userId = "user123";
-            String username = "testuser";
-            List<String> roles = Arrays.asList("ROLE_USER");
+        @DisplayName("Access Token은 1시간 후 만료된다")
+        void shouldExpireAccessToken_After1Hour() {
+            // When
+            String token = jwtTokenProvider.generateAccessToken(testUser);
+            Claims claims = jwtTokenProvider.getClaims(token);
 
-            // when
-            String accessToken = jwtTokenProvider.createAccessToken(userId, username, roles);
-            String refreshToken = jwtTokenProvider.createRefreshToken(userId);
-
-            SecretKey key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
-            Claims accessClaims = Jwts.parser().verifyWith(key).build().parseSignedClaims(accessToken).getPayload();
-            Claims refreshClaims = Jwts.parser().verifyWith(key).build().parseSignedClaims(refreshToken).getPayload();
-
-            // then
-            assertThat(refreshClaims.getExpiration().getTime())
-                    .isGreaterThan(accessClaims.getExpiration().getTime());
+            // Then: 만료 시간 검증 (1시간 = 3600초)
+            Instant issuedAt = claims.getIssuedAt().toInstant();
+            Instant expiresAt = claims.getExpiration().toInstant();
+            long durationSeconds = ChronoUnit.SECONDS.between(issuedAt, expiresAt);
+            
+            assertThat(durationSeconds).isEqualTo(3600);
         }
     }
 
     @Nested
-    @DisplayName("Token 검증 테스트")
-    class ValidateTokenTests {
+    @DisplayName("Refresh Token 생성")
+    class RefreshTokenGeneration {
 
         @Test
-        @DisplayName("유효한 Access Token을 검증할 수 있다")
-        void validateToken_WithValidAccessToken_ReturnsTrue() {
-            // given
-            String userId = "user123";
-            String username = "testuser";
-            List<String> roles = Arrays.asList("ROLE_USER");
-            String token = jwtTokenProvider.createAccessToken(userId, username, roles);
+        @DisplayName("유효한 사용자로 Refresh Token을 생성한다")
+        void shouldGenerateRefreshToken_WithValidUser() {
+            // When
+            String token = jwtTokenProvider.generateRefreshToken(testUser);
 
-            // when
+            // Then
+            assertThat(token).isNotNull();
+            assertThat(token.split("\\.")).hasSize(3);
+        }
+
+        @Test
+        @DisplayName("생성된 Refresh Token은 최소 정보만 포함한다")
+        void shouldIncludeMinimalClaims_InRefreshToken() {
+            // When
+            String token = jwtTokenProvider.generateRefreshToken(testUser);
+
+            // Then: Refresh Token은 subject와 type만 포함
+            Claims claims = jwtTokenProvider.getClaims(token);
+            assertThat(claims.getSubject()).isEqualTo("EMP001");
+            assertThat(claims.get("type", String.class)).isEqualTo("refresh");
+            
+            // 보안상 name, email 등 추가 정보는 포함하지 않음
+            assertThat(claims.get("name")).isNull();
+            assertThat(claims.get("email")).isNull();
+        }
+
+        @Test
+        @DisplayName("Refresh Token은 24시간 후 만료된다")
+        void shouldExpireRefreshToken_After24Hours() {
+            // When
+            String token = jwtTokenProvider.generateRefreshToken(testUser);
+            Claims claims = jwtTokenProvider.getClaims(token);
+
+            // Then: 만료 시간 검증 (24시간 = 86400초)
+            Instant issuedAt = claims.getIssuedAt().toInstant();
+            Instant expiresAt = claims.getExpiration().toInstant();
+            long durationSeconds = ChronoUnit.SECONDS.between(issuedAt, expiresAt);
+            
+            assertThat(durationSeconds).isEqualTo(86400);
+        }
+    }
+
+    @Nested
+    @DisplayName("Token 검증")
+    class TokenValidation {
+
+        @Test
+        @DisplayName("유효한 토큰을 검증한다")
+        void shouldValidateToken_WhenTokenIsValid() {
+            // Given
+            String token = jwtTokenProvider.generateAccessToken(testUser);
+
+            // When
             boolean isValid = jwtTokenProvider.validateToken(token);
 
-            // then
+            // Then
             assertThat(isValid).isTrue();
         }
 
         @Test
-        @DisplayName("유효한 Refresh Token을 검증할 수 있다")
-        void validateToken_WithValidRefreshToken_ReturnsTrue() {
-            // given
-            String userId = "user123";
-            String token = jwtTokenProvider.createRefreshToken(userId);
+        @DisplayName("잘못된 서명의 토큰을 거부한다")
+        void shouldRejectToken_WhenSignatureIsInvalid() {
+            // Given: 다른 secret으로 생성된 토큰
+            String invalidToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+                    "eyJzdWIiOiJFTVAwMDEiLCJ0eXBlIjoiYWNjZXNzIn0." +
+                    "invalid_signature_here";
 
-            // when
-            boolean isValid = jwtTokenProvider.validateToken(token);
-
-            // then
-            assertThat(isValid).isTrue();
+            // When & Then
+            assertThatThrownBy(() -> jwtTokenProvider.validateToken(invalidToken))
+                    .isInstanceOf(SignatureException.class);
         }
 
         @Test
-        @DisplayName("만료된 토큰은 검증에 실패한다")
-        void validateToken_WithExpiredToken_ReturnsFalse() {
-            // given
-            String userId = "user123";
-            SecretKey key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
+        @DisplayName("잘못된 형식의 토큰을 거부한다")
+        void shouldRejectToken_WhenFormatIsInvalid() {
+            // Given: JWT 형식이 아닌 문자열
+            String malformedToken = "not.a.valid.jwt.token";
 
-            String expiredToken = Jwts.builder()
-                    .subject(userId)
-                    .issuedAt(new Date(System.currentTimeMillis() - 7200000)) // 2 hours ago
-                    .expiration(new Date(System.currentTimeMillis() - 3600000)) // 1 hour ago (expired)
-                    .signWith(key)
-                    .compact();
-
-            // when
-            boolean isValid = jwtTokenProvider.validateToken(expiredToken);
-
-            // then
-            assertThat(isValid).isFalse();
+            // When & Then
+            assertThatThrownBy(() -> jwtTokenProvider.validateToken(malformedToken))
+                    .isInstanceOf(MalformedJwtException.class);
         }
 
         @Test
-        @DisplayName("잘못된 형식의 토큰은 검증에 실패한다")
-        void validateToken_WithMalformedToken_ReturnsFalse() {
-            // given
-            String malformedToken = "invalid.token.format";
+        @DisplayName("만료된 토큰을 거부한다")
+        void shouldRejectToken_WhenExpired() {
+            // Given: 만료 시간이 -1초인 토큰 (즉시 만료)
+            AuthProperties.JwtConfig.TokenConfig expiredConfig = 
+                    new AuthProperties.JwtConfig.TokenConfig();
+            expiredConfig.setExpirationSeconds(-1);
+            authProperties.getJwt().setAccessToken(expiredConfig);
+            
+            JwtTokenProvider expiredProvider = new JwtTokenProvider(authProperties);
+            String expiredToken = expiredProvider.generateAccessToken(testUser);
 
-            // when
-            boolean isValid = jwtTokenProvider.validateToken(malformedToken);
-
-            // then
-            assertThat(isValid).isFalse();
+            // When & Then: 토큰이 이미 만료됨
+            assertThatThrownBy(() -> jwtTokenProvider.validateToken(expiredToken))
+                    .isInstanceOf(ExpiredJwtException.class);
         }
 
         @Test
-        @DisplayName("잘못된 서명의 토큰은 검증에 실패한다")
-        void validateToken_WithInvalidSignature_ReturnsFalse() {
-            // given
-            String differentSecretKey = "different-secret-key-for-jwt-token-generation-must-be-at-least-256-bits";
-            SecretKey key = Keys.hmacShaKeyFor(differentSecretKey.getBytes(StandardCharsets.UTF_8));
-
-            String tokenWithDifferentSignature = Jwts.builder()
-                    .subject("user123")
-                    .issuedAt(new Date())
-                    .expiration(new Date(System.currentTimeMillis() + 3600000))
-                    .signWith(key)
-                    .compact();
-
-            // when
-            boolean isValid = jwtTokenProvider.validateToken(tokenWithDifferentSignature);
-
-            // then
-            assertThat(isValid).isFalse();
-        }
-
-        @Test
-        @DisplayName("null 토큰은 검증에 실패한다")
-        void validateToken_WithNullToken_ReturnsFalse() {
-            // when
+        @DisplayName("null 토큰을 거부한다")
+        void shouldRejectToken_WhenNull() {
+            // When
             boolean isValid = jwtTokenProvider.validateToken(null);
 
-            // then
+            // Then
             assertThat(isValid).isFalse();
         }
 
         @Test
-        @DisplayName("빈 문자열 토큰은 검증에 실패한다")
-        void validateToken_WithEmptyToken_ReturnsFalse() {
-            // when
+        @DisplayName("빈 문자열 토큰을 거부한다")
+        void shouldRejectToken_WhenEmpty() {
+            // When
             boolean isValid = jwtTokenProvider.validateToken("");
 
-            // then
+            // Then
             assertThat(isValid).isFalse();
         }
     }
 
     @Nested
-    @DisplayName("Claims 추출 테스트")
-    class ExtractClaimsTests {
+    @DisplayName("Claims 추출")
+    class ClaimsExtraction {
 
         @Test
-        @DisplayName("유효하지 않은 토큰에서 userId 추출 시 예외가 발생한다")
-        void getUserId_WithInvalidToken_ThrowsException() {
-            // given
-            String invalidToken = "invalid.token.format";
+        @DisplayName("토큰에서 employeeId를 추출한다")
+        void shouldExtractEmployeeId_FromToken() {
+            // Given
+            String token = jwtTokenProvider.generateAccessToken(testUser);
 
-            // when & then
-            assertThatThrownBy(() -> jwtTokenProvider.getUserId(invalidToken))
-                    .isInstanceOf(RuntimeException.class);
+            // When
+            String employeeId = jwtTokenProvider.getEmployeeId(token);
+
+            // Then
+            assertThat(employeeId).isEqualTo("EMP001");
         }
 
         @Test
-        @DisplayName("유효하지 않은 토큰에서 username 추출 시 예외가 발생한다")
-        void getUsername_WithInvalidToken_ThrowsException() {
-            // given
-            String invalidToken = "invalid.token.format";
+        @DisplayName("토큰에서 userId를 추출한다")
+        void shouldExtractUserId_FromToken() {
+            // Given
+            String token = jwtTokenProvider.generateAccessToken(testUser);
 
-            // when & then
-            assertThatThrownBy(() -> jwtTokenProvider.getUsername(invalidToken))
-                    .isInstanceOf(RuntimeException.class);
+            // When
+            String userId = jwtTokenProvider.getUserId(token);
+
+            // Then
+            assertThat(userId).isEqualTo("01ARZ3NDEKTSV4RRFFQ69G5FAV");
         }
 
         @Test
-        @DisplayName("유효하지 않은 토큰에서 roles 추출 시 예외가 발생한다")
-        void getRoles_WithInvalidToken_ThrowsException() {
-            // given
-            String invalidToken = "invalid.token.format";
+        @DisplayName("토큰 타입을 확인한다 - Access Token")
+        void shouldIdentifyTokenType_AsAccess() {
+            // Given
+            String token = jwtTokenProvider.generateAccessToken(testUser);
 
-            // when & then
-            assertThatThrownBy(() -> jwtTokenProvider.getRoles(invalidToken))
-                    .isInstanceOf(RuntimeException.class);
+            // When
+            String tokenType = jwtTokenProvider.getTokenType(token);
+
+            // Then
+            assertThat(tokenType).isEqualTo("access");
         }
 
         @Test
-        @DisplayName("roles가 없는 토큰에서 roles 추출 시 null을 반환한다")
-        void getRoles_WithTokenWithoutRoles_ReturnsNull() {
-            // given
-            String userId = "user123";
-            String token = jwtTokenProvider.createRefreshToken(userId); // refresh token에는 roles가 없음
+        @DisplayName("토큰 타입을 확인한다 - Refresh Token")
+        void shouldIdentifyTokenType_AsRefresh() {
+            // Given
+            String token = jwtTokenProvider.generateRefreshToken(testUser);
 
-            // when
-            List<String> roles = jwtTokenProvider.getRoles(token);
+            // When
+            String tokenType = jwtTokenProvider.getTokenType(token);
 
-            // then
-            assertThat(roles).isNull();
+            // Then
+            assertThat(tokenType).isEqualTo("refresh");
+        }
+
+        @Test
+        @DisplayName("토큰의 만료 여부를 확인한다")
+        void shouldCheckTokenExpiration() {
+            // Given
+            String token = jwtTokenProvider.generateAccessToken(testUser);
+
+            // When
+            boolean isExpired = jwtTokenProvider.isTokenExpired(token);
+
+            // Then: 방금 생성된 토큰은 만료되지 않음
+            assertThat(isExpired).isFalse();
         }
     }
 
     @Nested
-    @DisplayName("토큰 유효기간 테스트")
-    class TokenExpirationTests {
+    @DisplayName("Token Type 검증")
+    class TokenTypeValidation {
 
         @Test
-        @DisplayName("Access Token의 유효기간은 설정값과 일치한다")
-        void accessToken_ExpirationTime_MatchesConfiguration() {
-            // given
-            String userId = "user123";
-            String username = "testuser";
-            List<String> roles = Arrays.asList("ROLE_USER");
+        @DisplayName("Access Token 타입이 맞는지 검증한다")
+        void shouldValidateAccessTokenType() {
+            // Given
+            String accessToken = jwtTokenProvider.generateAccessToken(testUser);
 
-            // when
-            long beforeCreation = System.currentTimeMillis();
-            String token = jwtTokenProvider.createAccessToken(userId, username, roles);
-            long afterCreation = System.currentTimeMillis();
+            // When
+            boolean isAccessToken = jwtTokenProvider.isAccessToken(accessToken);
 
-            SecretKey key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
-            Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
-            long expirationTime = claims.getExpiration().getTime();
-
-            // then
-            assertThat(expirationTime).isBetween(
-                    beforeCreation + accessTokenValidityInMilliseconds - 1000,
-                    afterCreation + accessTokenValidityInMilliseconds + 1000
-            );
+            // Then
+            assertThat(isAccessToken).isTrue();
         }
 
         @Test
-        @DisplayName("Refresh Token의 유효기간은 설정값과 일치한다")
-        void refreshToken_ExpirationTime_MatchesConfiguration() {
-            // given
-            String userId = "user123";
+        @DisplayName("Refresh Token 타입이 맞는지 검증한다")
+        void shouldValidateRefreshTokenType() {
+            // Given
+            String refreshToken = jwtTokenProvider.generateRefreshToken(testUser);
 
-            // when
-            long beforeCreation = System.currentTimeMillis();
-            String token = jwtTokenProvider.createRefreshToken(userId);
-            long afterCreation = System.currentTimeMillis();
+            // When
+            boolean isRefreshToken = jwtTokenProvider.isRefreshToken(refreshToken);
 
-            SecretKey key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
-            Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
-            long expirationTime = claims.getExpiration().getTime();
+            // Then
+            assertThat(isRefreshToken).isTrue();
+        }
 
-            // then
-            assertThat(expirationTime).isBetween(
-                    beforeCreation + refreshTokenValidityInMilliseconds - 1000,
-                    afterCreation + refreshTokenValidityInMilliseconds + 1000
-            );
+        @Test
+        @DisplayName("Access Token을 Refresh Token으로 사용할 수 없다")
+        void shouldRejectAccessToken_AsRefreshToken() {
+            // Given
+            String accessToken = jwtTokenProvider.generateAccessToken(testUser);
+
+            // When
+            boolean isRefreshToken = jwtTokenProvider.isRefreshToken(accessToken);
+
+            // Then
+            assertThat(isRefreshToken).isFalse();
+        }
+
+        @Test
+        @DisplayName("Refresh Token을 Access Token으로 사용할 수 없다")
+        void shouldRejectRefreshToken_AsAccessToken() {
+            // Given
+            String refreshToken = jwtTokenProvider.generateRefreshToken(testUser);
+
+            // When
+            boolean isAccessToken = jwtTokenProvider.isAccessToken(refreshToken);
+
+            // Then
+            assertThat(isAccessToken).isFalse();
         }
     }
 }

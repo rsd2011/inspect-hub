@@ -1,9 +1,8 @@
 package com.inspecthub.server;
 
-import com.inspecthub.auth.config.AuthModuleConfig;
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Import;
 
 /**
  * Inspect-Hub 통합 준법감시 시스템
@@ -14,8 +13,8 @@ import org.springframework.context.annotation.Import;
  * - WLF(감시대상명단)
  * - 준법감시 워크플로
  */
-@SpringBootApplication
-@Import(AuthModuleConfig.class)  // auth 모듈 명시적 import
+@SpringBootApplication(scanBasePackages = "com.inspecthub")
+@MapperScan(basePackages = "com.inspecthub.*.repository")
 public class InspectHubApplication {
 
     public static void main(String[] args) {

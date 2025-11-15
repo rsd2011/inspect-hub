@@ -14,6 +14,7 @@ jar {
 dependencies {
     // Module dependencies
     implementation project(':backend:common')
+    implementation project(':backend:admin')
 
     // Spring Boot
     implementation libs.bundles.spring.boot.basic

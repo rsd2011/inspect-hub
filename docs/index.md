@@ -34,7 +34,7 @@
 
 - **[README.md](./frontend/README.md)** - 전체 가이드, SSR 제약사항, 코딩 규칙
 - **[COMPONENTS_ROADMAP.md](./frontend/COMPONENTS_ROADMAP.md)** - 공통 컴포넌트, 시스템 클래스, 구현 계획
-- **[AGENTS.md](./frontend/AGENTS.md)** - Mock API Server, Component Generator, Build Validator
+- **[TOOLS.md](./frontend/TOOLS.md)** - Mock API Server (MSW), Component Generator, Build Validator
 - **[TESTING.md](./frontend/TESTING.md)** - Vitest, Testing Library, Playwright E2E, MSW 모킹
 - **[STATE_MANAGEMENT.md](./frontend/STATE_MANAGEMENT.md)** - Pinia Store 패턴, SSE 알림, 상태 영속화
 
@@ -51,7 +51,7 @@
 백엔드 개발 가이드 및 설계 문서
 
 - **[README.md](./backend/README.md)** - 백엔드 전체 가이드, 멀티모듈 구조, MyBatis 패턴
-- **[AGENTS.md](./backend/AGENTS.md)** - API Generator, Module Validator
+- **[TOOLS.md](./backend/TOOLS.md)** - API Generator, Module Validator
 - **[ULID.md](./backend/ULID.md)** - ULID 식별자 가이드 (26자 time-sortable ID)
 - **[TESTING.md](./backend/TESTING.md)** - JUnit 5, Mockito, Testcontainers, API 테스트, 커버리지
 
@@ -67,6 +67,7 @@ API 계약 및 명세
 
 - **[CONTRACT.md](./api/CONTRACT.md)** - Frontend ↔ Backend API 계약 및 동기화 계획
 - **[DESIGN.md](./api/DESIGN.md)** - RESTful API 설계 원칙, URL 구조, 에러 처리
+- **[AUTHENTICATION.md](./api/AUTHENTICATION.md)** - 인증 API 설계 (AD, SSO, 일반 로그인)
 - **[ENDPOINTS.md](./api/ENDPOINTS.md)** - 전체 API 엔드포인트 명세 및 Request/Response 예제
 
 ### [🏗️ Architecture](./architecture/)
@@ -80,9 +81,17 @@ API 계약 및 명세
 
 ### [🛠️ Development](./development/)
 
-개발 가이드 및 규칙
+개발 방법론 및 테스트 계획
 
-- **[AGENTS.md](./development/AGENTS.md)** - 코딩 스타일, 테스트, 빌드, 커밋 규칙
+- **[Development Guide](./development/index.md)** - 전체 개발 가이드 (TDD + BDD + DDD)
+- **[Test Plan](./development/plan.md)** - TDD + BDD 테스트 계획서 (Progressive Disclosure 적용)
+- **[TDD + DDD Workflow](./development/TDD_DDD_WORKFLOW.md)** - 상세 워크플로우 가이드
+- **[Development Workflow](./development/WORKFLOW.md)** - 일반 개발 가이드, 코딩 스타일, 커밋 규칙
+
+**하위 문서:**
+- **DDD Layers** - [Layer 1 (Domain)](./development/layers/layer-1-domain.md) | [Layer 2 (Application)](./development/layers/layer-2-application.md) | [Layer 3 (Infrastructure)](./development/layers/layer-3-infrastructure.md) | [Layer 4 (Interface)](./development/layers/layer-4-interface.md)
+- **Cross-Cutting** - [Login Policy](./development/cross-cutting/login-policy.md) | [Authentication](./development/cross-cutting/authentication.md) | [JWT](./development/cross-cutting/jwt.md) | [Audit Logging](./development/cross-cutting/audit-logging.md)
+- **Implementation** - [Backend Guide](./development/implementation/backend-guide.md) | [Frontend Guide](./development/implementation/frontend-guide.md) | [Checklist](./development/implementation/checklist.md) | [Considerations](./development/implementation/considerations.md)
 
 ### [🚀 Deployment](./DEPLOYMENT.md)
 
@@ -145,7 +154,7 @@ API 계약 및 명세
 
 **DevOps:**
 - [배포 가이드](./DEPLOYMENT.md) - **필독**
-- [개발 가이드](./development/AGENTS.md)
+- [개발 워크플로우](./development/WORKFLOW.md)
 - [보안 설정](./architecture/SECURITY.md)
 
 ---
@@ -186,6 +195,11 @@ API 계약 및 명세
 
 | 날짜 | 변경 내용 | 작성자 |
 |------|-----------|--------|
+| 2025-01-15 | **Progressive Disclosure 전면 적용** - development/ 구조화 (13개 파일 → 체계적 계층 구조) | PM |
+| 2025-01-15 | development/plan.md Progressive Disclosure 적용 (3259줄 → 228줄 메인 + 13개 하위 파일) | PM |
+| 2025-01-15 | 파일명 정리: AGENTS.md → TOOLS.md (backend/frontend), WORKFLOW.md (development) | PM |
+| 2025-01-15 | development/index.md, layers/index.md, implementation/index.md 생성 | PM |
+| 2025-01-15 | docs/index.md 대폭 업데이트 (development 섹션 보강, 하위 문서 링크 추가) | PM |
 | 2025-01-13 | 핵심 기술 문서 9개 추가 (OVERVIEW, DATABASE, SECURITY, DESIGN, ENDPOINTS, TESTING x2, DEPLOYMENT, STATE_MANAGEMENT) | PM |
 | 2025-01-13 | docs/index.md 업데이트 (새 문서 링크, 역할별 가이드 보강) | PM |
 | 2025-01-13 | PRD 분할 (15개 파일) | PM |

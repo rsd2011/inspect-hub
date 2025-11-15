@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **[Documentation Center](./docs/index.md)** - Start here for complete navigation
 - **[PRD (Product Requirements)](./docs/prd/index.md)** - 15 documents covering all requirements
-- **[Frontend Guide](./docs/frontend/README.md)** - Nuxt 4, components (675-line roadmap)
+- **[Frontend Guide](./docs/frontend/README.md)** - Nuxt 4, components, architecture
 - **[Backend Guide](./docs/backend/AGENTS.md)** - Spring Boot, API development
 - **[API Contract](./docs/api/CONTRACT.md)** - Frontend ↔ Backend communication
 - **[Architecture](./docs/architecture/DDD_DESIGN.md)** - System design, DDD patterns
@@ -28,42 +28,18 @@ This project follows **Kent Beck's TDD + Domain-Driven Design** methodology.
 
 When you type **"go"**:
 
-1. **Find next unchecked test** in `plan.md`
+1. **Find next unchecked test** in [plan.md](./docs/development/plan.md)
 2. **Execute Red → Green → Refactor cycle:**
    - **Red**: Write failing test first
    - **Green**: Implement minimum code to pass
    - **Refactor**: Improve code while keeping tests green
-3. **Mark test as `[x]`** in `plan.md`
+3. **Mark test as `[x]`** in [plan.md](./docs/development/plan.md)
 4. **Commit** (only when all tests pass)
 5. **Wait for next "go"**
 
-### Core Principles
-
-| Principle | Description | Example |
-|-----------|-------------|---------|
-| **Test First** | Write test before implementation | `shouldRejectDuplicatePolicyName()` test → `PolicyDomainService.validateUniqueness()` implementation |
-| **Minimal Implementation** | Just enough code to pass | Hardcoding is OK initially, refactor later |
-| **Tidy First** | Separate structural changes from behavioral changes | Commit 1: `refactor: Extract method`, Commit 2: `feat: Add validation` |
-| **DDD Layers** | Develop in order: Domain → Application → Infrastructure → Interface | Domain tests → Application tests → Controller tests |
-
-### Test Execution
-
-```bash
-# Single test method
-./gradlew test --tests PolicyTest.shouldCreatePolicyWithValidVersion
-
-# Specific test class
-./gradlew test --tests PolicyTest
-
-# All tests
-./gradlew test
-
-# With coverage report
-./gradlew test jacocoTestReport
-open backend/server/build/reports/jacoco/test/html/index.html
-```
-
-**Reference**: See [TDD_DDD_WORKFLOW.md](./docs/development/TDD_DDD_WORKFLOW.md) for detailed 1298-line guide.
+**References**:
+- **[Test Plan](./docs/development/plan.md)** ⭐ Current test checklist (always check here)
+- **[TDD_DDD_WORKFLOW.md](./docs/development/TDD_DDD_WORKFLOW.md)** - Detailed workflow guide
 
 ## Tech Stack
 
@@ -89,1408 +65,158 @@ open backend/server/build/reports/jacoco/test/html/index.html
 ```
 inspect-hub/
 ├── docs/                           # 📚 Central documentation
-│   ├── index.md                    # Documentation center (start here)
-│   ├── prd/                        # Product requirements (15 files)
-│   ├── frontend/                   # Frontend guides
-│   ├── backend/                    # Backend guides
-│   ├── api/                        # API contract
-│   ├── architecture/               # System design
-│   └── development/                # Development rules
 ├── backend/                        # Spring Boot multi-module
 │   ├── common/                     # Shared entities, DTOs, utilities
 │   ├── policy/, detection/, ...    # Domain modules
 │   └── server/                     # Main application
 └── frontend/                       # Nuxt 4 application (SPA only)
     ├── app/                        # Application layer (Nuxt 4 standard)
-    │   ├── assets/                 # Static assets
-    │   ├── components/             # Vue components
-    │   ├── composables/            # Composition API reusables
-    │   ├── layouts/                # Page layouts
-    │   ├── middleware/             # Route middleware
-    │   ├── pages/                  # File-based routing
-    │   ├── plugins/                # Nuxt plugins
-    │   └── utils/                  # Utility functions
-    ├── content/                    # Content files (optional)
-    ├── public/                     # Static public files
-    ├── shared/                     # Shared resources
-    └── server/                     # Server directory (SSR disabled)
+    └── shared/                     # Shared resources
 ```
 
-## Frontend Architecture
+## Critical Constraints
 
-**Architecture Pattern:** Nuxt 4 표준 구조 + Atomic Design (컴포넌트)
-
-**Important Notes:**
-- ⚠️ **NOT using FSD (Feature-Sliced Design)** - This project uses Nuxt 4 standard directory structure
-- ✅ **Nuxt 4 `app/` directory** - Standard Nuxt application layer (components, composables, layouts, pages, etc.)
-- ✅ **Atomic Design for components** - atoms/molecules/organisms structure within `app/components/`
-- ✅ **Auto-imports enabled** - Components, composables automatically available without explicit imports
-
-### 디렉토리 구조
-
-```
-frontend/
-├── app/                           # Nuxt 4 app directory
-│   ├── assets/                    # Static assets (images, styles)
-│   │   ├── styles/
-│   │   │   ├── main.css
-│   │   │   ├── tailwind.css
-│   │   │   └── variables.scss
-│   │   └── images/
-│   ├── components/                # Vue components (auto-imported)
-│   │   ├── atoms/                 # Basic UI elements
-│   │   │   ├── Button.vue
-│   │   │   ├── Input.vue
-│   │   │   └── Badge.vue
-│   │   ├── molecules/             # Composite components
-│   │   │   ├── FormField.vue
-│   │   │   └── SearchBox.vue
-│   │   ├── organisms/             # Complex components
-│   │   │   ├── DataTable.vue
-│   │   │   ├── AppHeader.vue
-│   │   │   └── AppSidebar.vue
-│   │   └── layout/                # Layout-specific components
-│   │       ├── Navbar.vue
-│   │       └── Footer.vue
-│   ├── composables/               # Composition API reusables
-│   │   ├── useAuth.ts
-│   │   ├── useApi.ts
-│   │   ├── usePermission.ts
-│   │   └── useNotification.ts
-│   ├── layouts/                   # Page layouts
-│   │   ├── default.vue
-│   │   ├── auth.vue
-│   │   └── empty.vue
-│   ├── middleware/                # Route middleware
-│   │   ├── auth.ts
-│   │   ├── permission.ts
-│   │   └── guest.ts
-│   ├── pages/                     # File-based routing
-│   │   ├── index.vue
-│   │   ├── login.vue
-│   │   ├── dashboard.vue
-│   │   └── cases/
-│   │       ├── index.vue
-│   │       └── [id].vue
-│   ├── plugins/                   # Nuxt plugins
-│   │   ├── primevue.ts
-│   │   ├── realgrid.ts
-│   │   └── api.ts
-│   ├── utils/                     # Utility functions
-│   │   ├── format.ts
-│   │   ├── validation.ts
-│   │   └── constants.ts
-│   ├── app.vue                    # Root component
-│   ├── app.config.ts              # App-level config
-│   └── error.vue                  # Error page
-├── content/                       # Nuxt Content (optional)
-│   └── docs/
-├── public/                        # Static files (served as-is)
-│   ├── favicon.ico
-│   └── robots.txt
-├── shared/                        # Shared resources
-│   ├── api/                       # API clients
-│   │   ├── client.ts
-│   │   └── endpoints.ts
-│   ├── stores/                    # Pinia stores
-│   │   ├── auth.ts
-│   │   ├── user.ts
-│   │   └── notification.ts
-│   ├── types/                     # TypeScript types
-│   │   ├── api.ts
-│   │   ├── models.ts
-│   │   └── common.ts
-│   └── config/                    # Shared config
-│       └── constants.ts
-├── server/                        # Server directory (SSR disabled, unused)
-├── i18n/                          # i18n locales
-│   └── locales/
-│       ├── ko.json
-│       └── en.json
-└── nuxt.config.ts                 # Nuxt configuration
-```
-
-**주요 특징:**
-- ✅ Nuxt 4 공식 권장 구조 준수
-- ✅ 자동 import 활용 (components, composables)
-- ✅ File-based routing (app/pages/)
-- ✅ Atomic Design (components 디렉토리 내에서만)
-- ✅ Pinia stores는 shared/stores/에 배치
-
-## Frontend Critical Constraints
-
-### ⚠️ SSR/Node.js API STRICTLY FORBIDDEN
+### ⚠️ Frontend: SSR STRICTLY FORBIDDEN
 
 **This frontend MUST be deployed as static resources only. SSR is absolutely prohibited.**
 
-#### What is FORBIDDEN:
-
 ```typescript
-// ❌ NEVER do this - SSR configuration
+// ✅ REQUIRED - nuxt.config.ts
 export default defineNuxtConfig({
-  ssr: true,  // FORBIDDEN - must always be false
+  ssr: false,  // MUST always be false
 })
 
-// ❌ NEVER create server directory
-/server/
-  /api/
-    hello.ts  // FORBIDDEN - No Nuxt Server API routes
-
-// ❌ NEVER use server-side only features
-const { data } = await useAsyncData('users', () => $fetch('/api/users'))  // Server API forbidden
-const { data } = await useFetch('/api/users')  // Server API forbidden
-
-// ❌ NEVER use Nitro server features
-export default defineNitroPlugin((nitroApp) => {  // FORBIDDEN
-  // Server-side logic forbidden
-})
-
-// ❌ NEVER use server middleware
-export default defineEventHandler((event) => {  // FORBIDDEN
-  // Server routes forbidden
-})
+// ❌ FORBIDDEN - No /server directory
+// ❌ FORBIDDEN - No Nuxt Server API routes
+// ❌ FORBIDDEN - No server-side only features
 ```
 
-#### What is ALLOWED:
+**See [Frontend Guide](./docs/frontend/README.md) for complete constraints.**
 
-```typescript
-// ✅ SPA mode configuration
-export default defineNuxtConfig({
-  ssr: false,  // REQUIRED - must always be false
-})
-
-// ✅ Client-side API calls to backend
-const api = useApiClient()
-const users = await api.get('/api/v1/users')  // Calls Spring Boot backend
-
-// ✅ Client-side data fetching
-const data = ref(null)
-onMounted(async () => {
-  data.value = await api.get('/data')
-})
-
-// ✅ Browser APIs
-localStorage.setItem('key', 'value')
-sessionStorage.getItem('token')
-window.addEventListener('resize', handler)
-```
-
-#### Deployment Architecture:
-
-```
-┌─────────────────────┐         ┌──────────────────────┐
-│   Nginx/Apache      │         │   Spring Boot        │
-│   (Static hosting)  │────────▶│   (Backend API)      │
-│                     │  CORS   │                      │
-│   - index.html      │         │   /api/v1/*          │
-│   - _nuxt/*.js      │         │                      │
-│   - _nuxt/*.css     │         │   PostgreSQL         │
-│                     │         │   Redis              │
-└─────────────────────┘         │   Kafka              │
-                                 └──────────────────────┘
-```
-
-#### Build & Deployment:
-
-```bash
-# Build for production (generates static files)
-npm run build
-
-# Output: .output/public/ contains:
-#   - index.html
-#   - _nuxt/*.js (bundled JavaScript)
-#   - _nuxt/*.css (bundled CSS)
-#   - assets/* (images, fonts, etc.)
-
-# Deploy .output/public/ to:
-#   - Nginx/Apache web server
-#   - AWS S3 + CloudFront
-#   - Netlify/Vercel (static hosting)
-#   - Any CDN or static file server
-```
-
-#### API Communication:
-
-- **Backend Base URL:** `http://localhost:8090/api/v1` (development)
-- **Production URL:** `https://api.inspecthub.example.com/api/v1`
-- **All API calls** must go through `shared/api/client.ts`
-- **CORS handling** is done on Spring Boot backend
-- **Authentication** uses JWT tokens (stored in Pinia store)
-- **No server-side rendering** - all data fetching happens in browser
-
-#### Checklist for Every Feature:
-
-- [ ] Does this feature use `ssr: false`?
-- [ ] Does this avoid creating `/server` directory?
-- [ ] Does this use `shared/api/client.ts` for API calls?
-- [ ] Does this work without Node.js server running?
-- [ ] Can this be deployed as static HTML/CSS/JS?
-- [ ] Does this avoid `useAsyncData` with server-side logic?
-- [ ] Does this avoid Nitro/server middleware?
-
-**See `frontend/README.md` for detailed constraints and examples.**
-
-### ⚠️ Web Browser Focus - Desktop/Laptop Priority
+### 🖥️ Web Browser Focus - Desktop/Laptop Priority
 
 **This project targets desktop/laptop web browsers, NOT mobile devices.**
 
-#### UI Design Priorities:
+- **Primary Target:** Desktop/Laptop (1366px+ resolutions)
+- **NOT Mobile-First:** Mobile-specific UI/UX not required
+- **Responsive Design:** Must support various desktop resolutions
 
-- 🖥️ **Primary Target:** Desktop/Laptop web browsers (Chrome, Firefox, Safari)
-- ❌ **NOT Mobile-First:** Mobile-specific UI/UX is not required
-- ✅ **Responsive Design:** Must support various desktop resolutions
+**See [Frontend Guide](./docs/frontend/README.md) for design guidelines.**
 
-#### Target Screen Resolutions:
+## Backend Coding Standards
 
+### Lombok Usage Policy (MUST)
+
+**❌ PROHIBITED:**
+- `@Data` - **절대 금지** (Too broad)
+
+**✅ ALLOWED:**
+- `@Getter`, `@Setter`, `@Builder`
+- `@NoArgsConstructor`, `@AllArgsConstructor`, `@RequiredArgsConstructor`
+- `@Slf4j`, `@ToString`, `@EqualsAndHashCode`
+
+**Recommended Patterns:**
+```java
+// DTO Pattern
+@Getter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class UserDTO { ... }
+
+// Entity Pattern
+@Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Builder
+public class User { ... }
+
+// Service Pattern (DI)
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class AuthService { ... }
 ```
-Primary Support:
-- 1920x1080 (Full HD) - Most common
-- 1680x1050 (WSXGA+)
-- 1600x900 (HD+)
-- 1366x768 (HD) - Minimum supported resolution
 
-Optional:
-- 2560x1440 (QHD)
-- 3840x2160 (4K)
-```
+### Test-Driven Development (TDD) - MANDATORY
 
-#### Design Guidelines:
+**ALL features MUST be written with tests FIRST.**
 
-```vue
-<!-- ✅ Use desktop-focused layouts -->
-<div class="tw-grid tw-grid-cols-4 tw-gap-6">
-  <!-- Multi-column layouts for wide screens -->
-</div>
+**Red → Green → Refactor Cycle:**
+1. **Red**: Write failing test
+2. **Green**: Implement minimum code
+3. **Refactor**: Improve code while keeping tests green
 
-<!-- ✅ Use minimum width for consistent experience -->
-<div class="tw-min-w-[1280px] tw-mx-auto">
-  <!-- Prevent layouts from breaking on small screens -->
-</div>
+**BDD-style Test Structure (Given-When-Then):**
+```java
+@Test
+@DisplayName("유효한 사원ID와 비밀번호로 로그인 시 JWT 토큰을 반환한다")
+void shouldReturnJwtTokenWhenValidCredentials() {
+    // Given (준비)
+    // ... setup
 
-<!-- ❌ Avoid mobile-specific patterns -->
-<!-- - Touch gestures (swipe, pinch-zoom) -->
-<!-- - Bottom navigation bars -->
-<!-- - Hamburger menus (use sidebar instead) -->
-<!-- - Mobile-first breakpoints -->
-```
+    // When (실행)
+    // ... execute
 
-#### What to Avoid:
-
-- ❌ Mobile touch gestures and interactions
-- ❌ Mobile-first CSS breakpoints (sm, md)
-- ❌ Bottom tab navigation
-- ❌ Hamburger menus for primary navigation
-- ❌ Single-column mobile layouts
-
-#### What to Emphasize:
-
-- ✅ Mouse + keyboard interactions
-- ✅ Multi-column layouts (sidebars, grids)
-- ✅ Data tables and grids (RealGrid)
-- ✅ Desktop-class navigation (persistent sidebar)
-- ✅ Rich data visualizations (ECharts)
-- ✅ Keyboard shortcuts and accessibility
-
-#### Responsive Breakpoints:
-
-Use `lg`, `xl`, `2xl` Tailwind breakpoints for desktop resolution variations:
-
-```javascript
-// tailwind.config.js
-screens: {
-  'lg': '1024px',   // 1366px+ screens
-  'xl': '1280px',   // 1680px+ screens
-  '2xl': '1536px',  // 1920px+ screens
+    // Then (검증)
+    // ... assertions
 }
 ```
 
-**See `frontend/README.md` section "웹 브라우저 중심 UI 설계" for detailed guidelines.**
+**Test Coverage Requirements:**
 
-### Architecture Guidelines
+| Layer | Minimum Coverage | Test Type |
+|-------|-----------------|-----------|
+| **Domain Logic** | 90% | Unit Tests |
+| **Service Layer** | 80% | Unit Tests |
+| **Repository** | 70% | Integration Tests |
+| **Controller** | 80% | Integration Tests |
 
-#### 1. Nuxt Auto-Import Configuration
+**See [Development Guide](./docs/development/AGENTS.md) for complete TDD workflow.**
 
-**Components Auto-Import:**
-```typescript
-// nuxt.config.ts
-components: [
-  { path: '~/app/components/atoms', pathPrefix: false },
-  { path: '~/app/components/molecules', pathPrefix: false },
-  { path: '~/app/components/organisms', pathPrefix: false },
-  { path: '~/app/components/layout', pathPrefix: false }
-]
-```
+## Development Commands
 
-**Imports Auto-Import:**
-```typescript
-// nuxt.config.ts
-imports: {
-  dirs: [
-    'app/composables',
-    'app/utils',
-    'shared/stores'
-  ]
-}
-```
+### Backend (Gradle)
 
-#### 2. Atomic Design Guidelines (Components Only)
-
-**Atoms (app/components/atoms/):** Pure presentational components
-- No business logic
-- Only receive props and emit events
-- Examples: Button, Input, Label, Icon
-
-**Molecules (app/components/molecules/):** Simple combinations of atoms
-- Minimal business logic
-- Composable units
-- Examples: FormField (Label + Input + Error), SearchBox (Input + Button)
-
-**Organisms (app/components/organisms/):** Complex functional components
-- Can contain business logic
-- Standalone sections
-- Examples: LoginForm, DataTable, AppHeader, AppSidebar
-
-**Note:** Atomic Design은 app/components/ 디렉토리 내에서만 적용됩니다. Pages, Layouts, Composables는 Nuxt 4 표준 구조를 따릅니다.
-
-#### 3. File Naming Conventions
-
-**Components:**
-- PascalCase: `LoginPage.vue`, `AppHeader.vue`, `Button.vue`
-- Page components: `app/pages/*.vue`
-- Layout components: `app/layouts/*.vue`
-- Organisms prefix: `App*` for app-level components (AppHeader, AppSidebar)
-
-**Stores:**
-- kebab-case with suffix: `auth.ts`, `user.ts` (in `shared/stores/`)
-- Use `defineStore('storeName', () => {})` composition API style
-
-**API files:**
-- kebab-case: `client.ts`, `endpoints.ts` (in `shared/api/`)
-
-**Composables:**
-- camelCase with prefix: `useAuth.ts`, `usePermissions.ts` (in `app/composables/`)
-
-**Middleware:**
-- kebab-case: `auth.ts`, `permission.ts` (in `app/middleware/`)
-
-**Utils:**
-- kebab-case: `format.ts`, `validation.ts` (in `app/utils/`)
-
-#### 4. Best Practices
-
-**State Management:**
-- Global stores → `shared/stores/`
-- All stores use Pinia
-- Examples: `shared/stores/auth.ts`, `shared/stores/user.ts`, `shared/stores/notification.ts`
-
-**API Calls:**
-- API client configuration → `shared/api/client.ts`
-- Endpoint definitions → `shared/api/endpoints.ts`
-- Use composables to wrap API calls
-
-**Composables:**
-- App-level composables → `app/composables/`
-- Business logic, state access, API integration
-- Examples: `useAuth.ts`, `useApi.ts`, `usePermission.ts`
-
-**Types:**
-- Shared types → `shared/types/`
-- API types → `shared/types/api.ts`
-- Model types → `shared/types/models.ts`
-
-**Styling:**
-- Use Tailwind CSS with `tw-` prefix
-- Global styles → `app/assets/styles/`
-- Component-scoped styles → `<style scoped>`
-- PrimeVue plugin → `app/plugins/primevue.ts`
-
-## Package Management (Frontend)
-
-### Configuration Files
-
-**package.json:**
-- Contains all project dependencies and scripts
-- Use semantic versioning (^major.minor.patch)
-- Separate dependencies from devDependencies
-
-**.npmrc:**
-- NPM configuration for consistent behavior across team
-- Configures audit, peer dependencies, and caching
-
-**.nvmrc:**
-- Specifies Node.js version (20.18.0)
-- Ensures consistent Node.js version across environments
-
-**renovate.json:**
-- Automated dependency updates via Renovate Bot
-- Groups related packages for easier review
-- Auto-merges minor/patch updates
-
-### Dependencies Classification
-
-**dependencies** (Production runtime):
-- Framework: `nuxt`, `@nuxtjs/*`
-- UI: `primevue`, `@primevue/themes`
-- State: `pinia`, `@pinia/nuxt`
-- Validation: `vee-validate`, `zod`
-- Charts: `echarts`, `vue-echarts`
-- i18n: `@nuxtjs/i18n`
-
-**devDependencies** (Development only):
-- Build tools: `typescript`, `vue-tsc`
-- Linting: `eslint`, `@nuxt/eslint`
-- Styling: `tailwindcss`, `postcss`, `autoprefixer`
-- Types: `@types/node`
-- Tools: `@nuxt/devtools`
-
-### NPM Scripts Reference
-
-**Development:**
 ```bash
-npm run dev              # Start dev server (0.0.0.0:3000)
-npm run dev:open         # Start dev + auto-open browser
+# Build all modules
+./gradlew buildAll
+
+# Run backend server
+./gradlew :backend:server:bootRun
+
+# All tests
+./gradlew test
+
+# Specific test
+./gradlew test --tests AuthServiceTest.shouldReturnJwtTokenWhenValidCredentials
+
+# Coverage report
+./gradlew test jacocoTestReport
+open backend/auth/build/reports/jacoco/test/html/index.html
 ```
 
-**Build & Preview:**
+### Frontend (Nuxt 4)
+
 ```bash
-npm run build            # Production build
-npm run build:analyze    # Build with bundle analyzer
-npm run generate         # Generate static site
+cd frontend
+
+# Development
+npm run dev              # Dev server (http://localhost:3000)
+
+# Build & Preview
+npm run build            # Production build (SPA mode)
 npm run preview          # Preview production build
-npm run start            # Start production server
-```
 
-**Code Quality:**
-```bash
+# Code Quality
 npm run lint             # Check code quality
-npm run lint:fix         # Fix linting issues
 npm run typecheck        # TypeScript type checking
-npm test                 # Run tests (not configured yet)
+
+# Testing
+npm test                 # Unit tests (Vitest)
+npm run test:e2e         # E2E tests (Playwright)
 ```
-
-**Maintenance:**
-```bash
-npm run clean            # Clean build artifacts
-npm run clean:modules    # Clean & reinstall node_modules
-npm run audit            # Security audit (production only)
-npm run audit:fix        # Fix security issues
-npm run outdated         # Check outdated packages
-npm run update:check     # Check available updates (npm-check-updates)
-npm run update:interactive # Interactive update selection
-```
-
-### Version Management Best Practices
-
-**Node.js Version:**
-- Use exact version in `.nvmrc` (20.18.0)
-- Minimum version in `package.json` engines (>=20.0.0)
-- Use `nvm use` to switch to project version
-
-**Package Updates:**
-1. **Regular Updates (Weekly)**:
-   ```bash
-   npm run outdated           # Check outdated packages
-   npm run update:interactive # Select packages to update
-   npm run build              # Test build
-   npm run lint               # Check for issues
-   ```
-
-2. **Security Updates (Immediate)**:
-   ```bash
-   npm run audit              # Check vulnerabilities
-   npm run audit:fix          # Auto-fix if possible
-   ```
-
-3. **Major Version Updates**:
-   - Review breaking changes in changelog
-   - Update one major package at a time
-   - Test thoroughly before merging
-
-### Dependency Installation Rules
-
-**Adding New Dependencies:**
-```bash
-# Production dependency
-npm install package-name
-
-# Development dependency
-npm install -D package-name
-
-# Exact version (for critical packages)
-npm install --save-exact package-name@1.2.3
-```
-
-**Before Installing:**
-1. Check package popularity and maintenance status
-2. Review package size (use bundlephobia.com)
-3. Check for TypeScript support
-4. Verify license compatibility
-5. Look for security vulnerabilities
-
-### Performance Optimization
-
-**Chunk Splitting (nuxt.config.ts):**
-```typescript
-vite: {
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'primevue': ['primevue'],
-          'charts': ['echarts', 'vue-echarts'],
-          'vendor': ['pinia', 'zod', 'vee-validate']
-        }
-      }
-    }
-  }
-}
-```
-
-**Bundle Analysis:**
-```bash
-npm run build:analyze
-# Opens visual bundle analyzer
-```
-
-**Optimization Checklist:**
-- [ ] Code splitting configured for large libraries
-- [ ] Tree-shaking enabled (default in Vite)
-- [ ] CSS purging enabled (Tailwind)
-- [ ] Image optimization configured
-- [ ] Lazy loading for routes and components
-- [ ] Asset compression enabled (Nitro)
-
-### Security Best Practices
-
-**Regular Audits:**
-- Run `npm audit` weekly
-- Fix critical/high vulnerabilities immediately
-- Review moderate vulnerabilities
-
-**Lock File:**
-- Always commit `package-lock.json`
-- Never manually edit lock file
-- Run `npm ci` in CI/CD (not `npm install`)
-
-**Private Packages:**
-- Use `.npmrc` for authentication
-- Never commit credentials
-- Use environment variables for tokens
-
-### Troubleshooting
-
-**Common Issues:**
-
-1. **Dependency conflicts:**
-   ```bash
-   npm run clean:modules
-   ```
-
-2. **Build cache issues:**
-   ```bash
-   npm run clean
-   npm run build
-   ```
-
-3. **Type errors after update:**
-   ```bash
-   npm run typecheck
-   # Fix errors in code
-   ```
-
-4. **Peer dependency warnings:**
-   - Check if packages are compatible
-   - Update related packages together
-   - Use `--legacy-peer-deps` only as last resort
-
-## Common Components & System Requirements
-
-### UI Components Roadmap
-
-Components are organized by FSD layers and Atomic Design principles.
-
-#### shared/ui/atoms (Basic UI Elements)
-- **Button**: Primary, secondary, icon buttons with loading states
-- **Input**: Text, number, date inputs with validation states
-- **Badge**: Status badges, notification counts
-- **Icon**: Icon wrapper component
-- **Skeleton**: Loading skeleton UI elements
-- **Avatar**: User avatar component
-- **Label**: Form labels with required indicator
-- **Checkbox/Radio**: Form controls
-- **Switch**: Toggle switches
-
-#### shared/ui/molecules (Simple Composites)
-- **FormField**: Label + Input + Error message combo
-- **SearchBox**: Search input with icon and clear button
-- **FileUpload**: File upload with drag-drop support
-- **ThemeToggle**: Dark/light mode switch
-- **DateRangePicker**: Start/end date selector
-- **StatusBadge**: Status with icon and text
-- **ActionButtons**: Common action button groups (Save, Cancel, Delete)
-
-#### shared/ui/organisms (Complex Components)
-- **DataTable**: RealGrid2 wrapper component with:
-  - **Column Types**: Text, Number, Date, Dropdown, Checkbox, Button, Custom
-  - **Editing**: Inline editing with validators, commitByCell for immediate save
-  - **Sorting & Filtering**: Explicit mode to prevent auto-resorting
-  - **Selection**: Single/multiple row selection with checkbar
-  - **Export**: Excel, CSV export with customizable options
-  - **Copy/Paste**: Smart copy/paste with lookup value conversion
-  - **Fixed Columns/Rows**: Freeze columns and rows for scrolling
-  - **Merged Cells**: Cell merging with batch edit support
-  - **Soft Delete**: Logical deletion with show/hide option
-  - **Custom Renderers**: Extensible rendering with class-based approach
-  - **Virtual Scrolling**: High performance for large datasets
-  - **Footer Aggregation**: Sum, avg, min, max calculations
-  - **Validation**: Built-in and custom validators
-  - **Styling**: Static and dynamic cell styling
-  - **Context Menu**: Right-click menu support
-  - See [DataTable README](frontend/shared/ui/organisms/DataTable/README.md) for details
-- **Modal**: Dialog component with:
-  - Customizable header/footer
-  - Size variants (sm, md, lg, xl, full)
-  - Draggable option
-  - Nested modal support
-- **Toast**: Notification toast with:
-  - Success, error, warning, info types
-  - Auto-dismiss with configurable duration
-  - Action buttons support
-  - Queue management
-- **Alert**: Inline alert component
-- **SlidePanel**: Side panel overlay (left/right)
-- **FileViewer**: Multi-format file viewer
-  - Image preview (jpg, png, gif, webp)
-  - PDF viewer
-  - Document preview
-- **MarkdownEditor**: WYSIWYG markdown editor
-  - Live preview
-  - Toolbar for formatting
-  - Image upload support
-- **HelpViewer**: Context-sensitive help panel
-  - Markdown-based help content
-  - Search functionality
-  - Related topics
-- **FormBuilder**: Dynamic form generator
-  - Schema-based rendering
-  - Field validation with VeeValidate + Zod
-  - Conditional fields
-  - Custom field templates
-- **SearchPanel**: Collapsible search filter panel
-  - Save/load search presets
-  - Clear all filters
-  - Advanced filter builder
-
-#### widgets (Large Page Blocks)
-- **TabManager**: VS Code-style tab system
-  - URL-based tab creation
-  - Tab persistence (session storage)
-  - Tab reordering (drag-drop)
-  - Dirty state indicator
-  - Tab context menu (close, close others, close all)
-  - Maximum tab limit
-- **MenuNavigation**: Hierarchical menu with:
-  - Permission-based visibility
-  - Active state tracking
-  - Favorites/bookmarks
-  - Search functionality
-  - Collapsible/expandable
-- **AppHeader**: Application header with:
-  - Logo and branding
-  - User profile dropdown
-  - Notifications bell
-  - Quick actions
-  - Theme toggle
-- **AppSidebar**: Sidebar navigation
-  - Collapsible menu
-  - Breadcrumb integration
-  - Resize handle
-- **AppFooter**: Application footer
-  - Version info
-  - Copyright
-  - Quick links
-- **Breadcrumb**: Navigation breadcrumb trail
-  - Auto-generated from route
-  - Clickable navigation
-  - Home icon
-- **NotificationWidget**: Real-time notification center
-  - SSE-based updates
-  - Unread count badge
-  - Mark as read/unread
-  - Notification history
-  - Action links
-- **ScreenCapture**: Screen capture utility
-  - Capture viewport
-  - Capture element
-  - Download as image
-  - Copy to clipboard
-
-#### features (User Features)
-- **features/attachment/**
-  - File upload/download
-  - File list management
-  - Drag-drop support
-  - Progress tracking
-  - File type validation
-  - Size limit enforcement
-- **features/memo/**
-  - Page-specific memos
-  - Personal business notes
-  - Auto-save draft
-  - Markdown support
-  - Search memos
-- **features/theme/**
-  - Dark/light mode toggle
-  - Theme persistence
-  - System preference detection
-  - Custom theme support
-- **features/help/**
-  - Help page routing
-  - Context-sensitive help
-  - FAQ search
-  - Help articles management
-- **features/notification/**
-  - Real-time notifications (SSE)
-  - Notification preferences
-  - Notification history
-  - Mark as read/unread
-- **features/hotkey/**
-  - Global hotkey mapping
-  - Hotkey customization
-  - Hotkey help overlay
-  - Conflict detection
-
-### System Management Classes
-
-Located in `shared/lib/` for cross-cutting concerns.
-
-#### shared/lib/code-manager
-**Purpose**: Common code value management and caching
-
-**Features:**
-- Fetch code groups from backend
-- In-memory cache with TTL
-- Code value lookup by key
-- Multi-language code labels
-- Code hierarchy support (parent-child)
-
-**API:**
-```typescript
-class CodeManager {
-  getCodeGroup(groupCode: string): Promise<Code[]>
-  getCodeValue(groupCode: string, codeValue: string): Code | undefined
-  getCodeLabel(groupCode: string, codeValue: string, locale?: string): string
-  invalidateCache(groupCode?: string): void
-}
-```
-
-#### shared/lib/api-client
-**Purpose**: Standardized API request/response handling
-
-**Features:**
-- Request/response interceptors
-- Automatic token injection
-- Token refresh on 401
-- Unified error handling
-- Loading state management
-- Request cancellation
-- Response caching
-
-**API:**
-```typescript
-class ApiClient {
-  get<T>(url: string, options?: RequestOptions): Promise<ApiResponse<T>>
-  post<T>(url: string, data: any, options?: RequestOptions): Promise<ApiResponse<T>>
-  put<T>(url: string, data: any, options?: RequestOptions): Promise<ApiResponse<T>>
-  delete<T>(url: string, options?: RequestOptions): Promise<ApiResponse<T>>
-  upload(url: string, files: File[], options?: RequestOptions): Promise<ApiResponse<UploadResult>>
-}
-```
-
-#### shared/lib/sse-client
-**Purpose**: Server-Sent Events (SSE) management for real-time updates
-
-**Features:**
-- Auto-reconnection on disconnect
-- Event subscription/unsubscription
-- Event type routing
-- Heartbeat monitoring
-- Error recovery
-
-**API:**
-```typescript
-class SSEClient {
-  connect(url: string): void
-  disconnect(): void
-  subscribe(eventType: string, handler: (data: any) => void): () => void
-  isConnected(): boolean
-}
-```
-
-#### shared/lib/session-manager
-**Purpose**: User session and authentication state management
-
-**Features:**
-- User info storage (Pinia store)
-- Token refresh automation
-- Session expiry warning (5min, 1min before)
-- Multi-tab synchronization (BroadcastChannel)
-- Auto-logout on expiry
-- "Remember me" support
-
-**API:**
-```typescript
-class SessionManager {
-  getCurrentUser(): User | null
-  refreshToken(): Promise<void>
-  logout(): Promise<void>
-  syncAcrossTabs(): void
-  onSessionExpiring(callback: (remainingSeconds: number) => void): () => void
-}
-```
-
-#### shared/lib/permission-manager
-**Purpose**: Fine-grained access control
-
-**Features:**
-- Menu visibility control
-- Button/action permission checking
-- Permission directive (v-permission)
-- Composable (usePermission)
-- Role-based + permission-based
-
-**API:**
-```typescript
-class PermissionManager {
-  hasPermission(permission: string): boolean
-  hasRole(role: string): boolean
-  hasAnyPermission(permissions: string[]): boolean
-  hasAllPermissions(permissions: string[]): boolean
-  canAccessMenu(menuCode: string): boolean
-  canPerformAction(featureCode: string, actionCode: string): boolean
-}
-```
-
-#### shared/lib/i18n-manager
-**Purpose**: Internationalization and label management
-
-**Features:**
-- Dynamic label loading
-- Locale switching
-- Fallback to default locale
-- Label caching
-- Pluralization support
-- Date/number formatting
-
-**API:**
-```typescript
-class I18nManager {
-  getLabel(key: string, params?: Record<string, any>): string
-  setLocale(locale: string): void
-  getAvailableLocales(): Locale[]
-  formatDate(date: Date, format?: string): string
-  formatNumber(value: number, options?: NumberFormatOptions): string
-}
-```
-
-#### shared/lib/page-state-manager
-**Purpose**: Maintain page state across navigation and tabs
-
-**Features:**
-- Tab-specific data persistence
-- Dirty state detection (unsaved changes)
-- Navigation guard (confirm before leave)
-- State restoration on tab switch
-- Auto-save draft support
-
-**API:**
-```typescript
-class PageStateManager {
-  saveState(tabId: string, state: any): void
-  restoreState(tabId: string): any | null
-  markDirty(tabId: string, isDirty: boolean): void
-  isDirty(tabId: string): boolean
-  clearState(tabId: string): void
-  registerBeforeLeave(tabId: string, handler: () => boolean | Promise<boolean>): () => void
-}
-```
-
-#### shared/lib/audit-logger
-**Purpose**: Client-side action logging for audit trail
-
-**Features:**
-- User action tracking
-- Page view logging
-- Data access logging
-- Batch log submission
-- Offline log queue
-
-**API:**
-```typescript
-class AuditLogger {
-  logAction(action: string, target: string, details?: any): void
-  logPageView(page: string, params?: any): void
-  logDataAccess(resource: string, action: 'read' | 'create' | 'update' | 'delete', recordId?: string): void
-  flush(): Promise<void>
-}
-```
-
-#### shared/lib/loading-manager
-**Purpose**: Centralized loading state management
-
-**Features:**
-- Global loading overlay
-- Partial/local loading states
-- Multiple concurrent loaders
-- Minimum display time (prevent flicker)
-- Loading message customization
-
-**API:**
-```typescript
-class LoadingManager {
-  showGlobal(message?: string): () => void
-  showLocal(key: string, message?: string): () => void
-  hideGlobal(): void
-  hideLocal(key: string): void
-  isLoading(key?: string): boolean
-}
-```
-
-### Feature Requirements Implementation
-
-#### URL-based Tab Management
-**Location**: `widgets/tab-manager/`
-
-**Implementation:**
-- Router integration for tab creation
-- Tab state in Pinia store
-- URL change triggers new tab
-- Tab close cleanup
-
-#### Data Persistence
-**Location**: `shared/lib/page-state-manager`
-
-**Implementation:**
-- SessionStorage for tab data
-- Dirty flag tracking
-- Confirmation dialog on close
-
-#### Personal Memos
-**Location**: `features/memo/`
-
-**Implementation:**
-- Page-scoped memo component
-- LocalStorage or backend API
-- Markdown editor integration
-
-#### Permission-based Menu
-**Location**: `widgets/menu-navigation/`
-
-**Implementation:**
-- Filter menu items by permission
-- Dynamic menu loading from backend
-- Cache menu structure
-
-#### Common Error Handling
-**Location**: `shared/lib/api-client` + `shared/ui/organisms/Toast`
-
-**Implementation:**
-- Axios/fetch interceptor
-- Error code to message mapping
-- Auto-display toast/modal
-
-#### Attachment CRUD
-**Location**: `features/attachment/`
-
-**Implementation:**
-- Upload component with progress
-- File list component
-- Download/delete actions
-- Page-scoped file association
-
-#### SSE Notifications
-**Location**: `features/notification/` + `shared/lib/sse-client`
-
-**Implementation:**
-- SSE client connection
-- Event dispatcher
-- Notification widget UI
-- Unread count management
-
-#### Help Integration
-**Location**: `features/help/` + `shared/ui/organisms/HelpViewer`
-
-**Implementation:**
-- Context-aware help lookup
-- Help modal/panel
-- Markdown content rendering
-
-#### Dark Mode
-**Location**: `features/theme/`
-
-**Implementation:**
-- CSS variable switching
-- Persistence in localStorage
-- System preference detection
-- Tailwind dark mode integration
-
-#### Skeleton UI
-**Location**: `shared/ui/atoms/Skeleton` + page components
-
-**Implementation:**
-- Skeleton component variants
-- Loading state detection
-- Automatic fallback rendering
-
-#### Form/Grid/Search Commonization
-**Location**: `shared/ui/organisms/FormBuilder`, `DataTable`, `SearchPanel`
-
-**Implementation:**
-- Schema-driven rendering
-- Reusable templates
-- Standard validation
-- Consistent styling
-
-#### Page State Management
-**Location**: `shared/lib/page-state-manager` + `widgets/tab-manager`
-
-**Implementation:**
-- State machine (Idle, Dirty, Loading, Error)
-- Status indicators
-- Error boundaries
-- Retry mechanisms
-
-### Recommended Additional Features
-
-#### Breadcrumb
-**Location**: `widgets/breadcrumb/`
-
-**Features:**
-- Auto-generated from route meta
-- Manual override support
-- Click navigation
-- Customizable separator
-
-#### Layout Container
-**Location**: `app/layouts/default.vue`
-
-**Features:**
-- Responsive header/sidebar/footer
-- Collapsible sidebar
-- Sticky header
-- Footer auto-hide on scroll
-
-#### Lazy Loading
-**Implementation**: Nuxt auto-imports + dynamic imports
-
-**Usage:**
-```vue
-<script setup>
-// Lazy load heavy component
-const HeavyComponent = defineAsyncComponent(() =>
-  import('~/features/detection/ui/DetectionChart.vue')
-)
-</script>
-```
-
-#### Infinite Scroll
-**Location**: `shared/lib/composables/useInfiniteScroll.ts`
-
-**Features:**
-- Intersection Observer API
-- Page-based loading
-- Loading state management
-- End of list detection
-
-#### Accessibility (A11y)
-**Implementation**: Throughout all components
-
-**Requirements:**
-- ARIA labels and roles
-- Keyboard navigation support
-- Focus management
-- Screen reader compatibility
-- Color contrast compliance (WCAG AA)
-- Skip to main content link
-
-**Checklist:**
-- [ ] All interactive elements keyboard accessible
-- [ ] Proper heading hierarchy (h1-h6)
-- [ ] Form labels associated with inputs
-- [ ] Error messages announced
-- [ ] Loading states announced
-- [ ] Modal focus trap
-- [ ] Toast announcements
-
-## RealGrid2 Integration
-
-### Overview
-
-RealGrid2는 프로젝트의 핵심 데이터 그리드 솔루션입니다.
-
-**License**: Commercial license required
-**Version**: RealGrid2
-**Wrapper Location**: `shared/ui/organisms/DataTable.vue`
-
-### Recommended Grid Configuration
-
-모든 DataTable 컴포넌트는 다음 권장 설정을 기본값으로 사용합니다:
-
-```typescript
-const defaultGridOptions = {
-  // Editing
-  edit: {
-    editable: true,
-    commitByCell: true,        // ✅ 셀 편집 완료 즉시 저장
-    commitWhenLeave: true,     // ✅ 그리드 외부 클릭 시 저장
-    crossWhenExitLast: true,   // ✅ Tab으로 마지막 열 벗어날 때 다음 행으로
-    exceptDataClickWhenButton: true  // ✅ 버튼 클릭 시 추가 이벤트 방지
-  },
-
-  // Display
-  display: {
-    rowHeight: 32,
-    rowResizable: false,
-    editItemMerging: true      // ✅ 병합 셀 편집 시 분리 방지
-  },
-
-  // Sorting & Filtering
-  sortMode: 'explicit',        // ✅ 자동 재정렬 방지
-  filterMode: 'explicit',      // ✅ 자동 재필터링 방지
-
-  // CheckBar
-  checkBar: {
-    visible: true,
-    syncHeadCheck: true        // ✅ 전체 선택 시 헤더 체크
-  },
-
-  // Copy/Paste
-  copy: {
-    enabled: true,
-    lookupDisplay: true        // ✅ 드롭다운 라벨 복사
-  },
-  paste: {
-    enabled: true,
-    convertLookupLabel: true,  // ✅ 라벨을 값으로 변환
-    checkDomainOnly: true,     // ✅ 드롭다운 외 값 거부
-    checkReadOnly: true,       // ✅ 읽기 전용 열 건너뛰기
-    numberChars: [',']         // ✅ 천단위 구분자 처리
-  },
-
-  // Soft Delete
-  softDeleting: true,          // ✅ 논리적 삭제
-  hideDeletedRows: false       // 삭제된 행 표시
-}
-```
-
-### Column Types & Best Practices
-
-#### Dropdown Column
-```typescript
-{
-  name: 'status',
-  fieldName: 'status',
-  header: { text: '상태' },
-  editor: {
-    type: 'dropdown',
-    textReadOnly: true,      // ✅ 필수: 키보드 입력 방지
-    domainOnly: true,        // ✅ 필수: 목록 값만 허용
-    dropDownWhenClick: true, // ✅ 권장: 클릭 시 드롭다운 열기
-    values: ['active', 'inactive'],
-    labels: ['활성', '비활성']
-  },
-  lookupDisplay: true        // ✅ 라벨 표시
-}
-```
-
-#### Checkbox Column
-```typescript
-{
-  name: 'enabled',
-  fieldName: 'enabled',
-  header: { text: '활성화' },
-  editable: false,           // ✅ 필수! (체크박스 렌더러 요구사항)
-  renderer: {
-    type: 'check',
-    trueValues: 'Y',
-    falseValues: 'N',
-    editable: true
-  }
-}
-```
-
-#### Number Column with Footer
-```typescript
-{
-  name: 'amount',
-  fieldName: 'amount',
-  header: { text: '금액' },
-  dataType: 'number',
-  numberFormat: '#,##0',
-  styleName: 'right-number',
-  footer: {
-    expression: 'sum',       // sum, avg, min, max, count
-    numberFormat: '#,##0'
-  }
-}
-```
-
-### Custom Renderers
-
-#### Creating Custom Renderer
-
-```typescript
-// shared/ui/organisms/DataTable/renderers/StatusRenderer.ts
-import { RealGrid } from 'realgrid'
-
-export class StatusRenderer extends RealGrid.CustomCellRendererImpl {
-  get styleName() {
-    return 'rg-renderer custom-status-renderer'
-  }
-
-  _doInitContent(parent: HTMLElement) {
-    this._span = document.createElement('span')
-    this._span.className = 'status-badge'
-    parent.appendChild(this._span)
-  }
-
-  _doClearContent(parent: HTMLElement) {
-    parent.innerHTML = ''
-  }
-
-  render(grid: any, model: any, width: number, height: number) {
-    const value = model.value
-    this._span.className = `status-badge status-${value}`
-    this._span.textContent = this.getLabel(value)
-  }
-
-  canEdit() { return false }
-  canClick() { return false }
-
-  get showTooltip() { return true }
-  tooltip(model: any) { return `상태: ${this.getLabel(model.value)}` }
-
-  private getLabel(value: string): string {
-    const labels: Record<string, string> = {
-      'pending': '대기',
-      'approved': '승인',
-      'rejected': '거부'
-    }
-    return labels[value] || value
-  }
-
-  private _span!: HTMLSpanElement
-}
-```
-
-#### Registration
-
-```typescript
-// app/providers/realgrid.ts
-import { RealGrid } from 'realgrid'
-import { StatusRenderer } from '~/shared/ui/organisms/DataTable/renderers/StatusRenderer'
-
-export default defineNuxtPlugin(() => {
-  // Register custom renderers once
-  RealGrid.registerCustomRenderer('status_renderer', StatusRenderer)
-})
-```
-
-#### Usage
-
-```typescript
-const columns = [{
-  name: 'status',
-  fieldName: 'status',
-  renderer: { type: 'status_renderer' }
-}]
-```
-
-### Performance Best Practices
-
-#### Batch Updates
-
-```typescript
-// ❌ Bad: Multiple redraws
-grid.updateRow(0, data1)
-grid.updateRow(1, data2)
-grid.updateRow(2, data3)
-
-// ✅ Good: Single redraw
-grid.beginUpdate()
-grid.updateRow(0, data1)
-grid.updateRow(1, data2)
-grid.updateRow(2, data3)
-grid.endUpdate()
-```
-
-#### Virtual Scrolling
-
-RealGrid2는 기본적으로 virtual scrolling을 지원하여 대용량 데이터(10만+ 행)도 빠르게 렌더링합니다.
-
-#### Lazy Loading
-
-```typescript
-const loadMore = async () => {
-  const newData = await fetchData(page++)
-  grid.appendRows(newData)
-}
-```
-
-### Common Issues & Solutions
-
-#### Issue: 병합 셀이 편집 시 분리됨
-**Solution**: `displayOptions.editItemMerging = true` 설정
-
-#### Issue: 붙여넣기 시 드롭다운 라벨이 변환되지 않음
-**Solution**: `pasteOptions.convertLookupLabel = true` 설정
-
-#### Issue: 체크박스를 클릭할 수 없음
-**Solution**: 컬럼에 `editable: false` 설정 (필수)
-
-#### Issue: 커스텀 렌더러가 표시되지 않음
-**Solution**: 그리드 초기화 전에 렌더러 등록 확인
-
-### DataTable Wrapper API
-
-```typescript
-// Props
-interface DataTableProps {
-  columns: GridColumn[]
-  data: any[]
-  options?: GridOptions
-  height?: string | number
-  showCheckBar?: boolean
-  showStateBar?: boolean
-}
-
-// Events
-interface DataTableEmits {
-  'row-click': (row: any) => void
-  'cell-click': (event: CellClickEvent) => void
-  'cell-edit': (event: CellEditEvent) => void
-  'cell-button-click': (event: CellButtonClickEvent) => void
-  'selection-changed': (selection: any[]) => void
-}
-
-// Methods
-interface DataTableMethods {
-  setData(data: any[]): void
-  appendRow(row: any): void
-  updateRow(index: number, row: any): void
-  deleteRow(index: number): void
-  getSelectedRows(): any[]
-  exportToExcel(filename: string): void
-  exportToCsv(filename: string): void
-}
-```
-
-### Resources
-
-- **Detailed Guide**: [DataTable README](frontend/shared/ui/organisms/DataTable/README.md)
-- **Official Docs**: [RealGrid2 Documentation](https://docs.realgrid.com/)
-- **Recommended Options**: [Grid Settings Guide](https://docs.realgrid.com/guides/tip/recommended-options)
-- **Custom Renderers**: [Renderer Guide](https://docs.realgrid.com/guides/renderer/class-custom-renderer)
 
 ## Core Architecture Principles
 
@@ -1498,17 +224,9 @@ interface DataTableMethods {
 
 **All policy/standard data uses snapshot structure:**
 - Similar to Spring Batch's `BATCH_JOB_INSTANCE` / `BATCH_JOB_EXECUTION` pattern
-- Core table: `STANDARD_SNAPSHOT` with fields:
-  - `id`, `type` (KYC/STR/CTR/RBA/WLF/FIU)
-  - `version`, `effective_from`, `effective_to`
-  - `status`, `created_by`, `approved_by`
-  - `prev_id`, `next_id` (version chain)
-
-**Version control requirements:**
+- Core table: `STANDARD_SNAPSHOT` with version control
 - Immutable once approved/deployed
-- Support rollback to previous snapshot versions
-- What-if analysis using draft snapshots
-- Audit trail of all version changes
+- Support rollback to previous versions
 
 ### 2. Audit Requirements (100% Coverage)
 
@@ -1516,18 +234,15 @@ interface DataTableMethods {
 - User access logs (login, page views, data access)
 - Data modification logs (before/after state)
 - Configuration changes (policy updates, rule deployments)
-- Approval workflows (who approved/rejected what, when)
+- Approval workflows
 
-**Implementation:**
-- `AUDIT_LOG` table with: `who`, `when`, `what`, `before_json`, `after_json`
-- Use AOP interceptors for automatic audit logging
-- Never delete audit logs (retention policy: regulatory requirement, typically 5-10 years)
+**Implementation:** `AUDIT_LOG` table with `who`, `when`, `what`, `before_json`, `after_json`
 
 ### 3. Separation of Duties (SoD)
 
 **Maker-Checker principle:**
-- Same user cannot both create and approve (STR/CTR cases, policy changes, etc.)
-- Enforce at application level via Role-Based Access Control (RBAC)
+- Same user cannot both create and approve
+- Enforce at application level via RBAC
 - Approval lines configured by organization + permission group
 
 ### 4. Detection Engine Architecture
@@ -1538,16 +253,7 @@ Data Ingestion → Detection (STR/CTR/WLF) → Event Generation → Case Creatio
 Investigation → Approval Workflow → Reporting → FIU Submission
 ```
 
-**Detection tables:**
-- `TX_STAGING` - Incoming transaction data
-- `DETECTION_EVENT` - Rule matches (linked to `snapshot_ver`)
-- `ALERT_CASE` - Investigation cases
-- `CASE_ACTIVITY` - Case actions/comments
-- `REPORT_STR` / `REPORT_CTR` - Final reports
-
-**Batch processing structure (Spring Batch pattern):**
-- `INSPECTION_INSTANCE` - Job instance (type, snapshot_ver, created_ts)
-- `INSPECTION_EXECUTION` - Job execution (status, start/end time, read/write/skip counts)
+**See [Architecture Guide](./docs/architecture/DDD_DESIGN.md) for complete design.**
 
 ## Key Technical Requirements
 
@@ -1562,200 +268,37 @@ Investigation → Approval Workflow → Reporting → FIU Submission
 
 #### Authentication (3가지 로그인 방식)
 
-**내부 시스템 특성상 다중 인증 방식 지원:**
+1. **AD 로그인 (Active Directory)** - LDAP/Kerberos
+2. **SSO 로그인 (Single Sign-On)** - Backend API 직접 호출 방식
+3. **일반 로그인 (Fallback)** - 자체 DB 인증 (BCrypt)
 
-1. **AD 로그인 (Active Directory)**
-   - 사원ID + 비밀번호 입력
-   - AD 서버 인증 (LDAP/Kerberos)
-   - 성공 시 JWT 토큰 발급
-
-2. **SSO 로그인 (Single Sign-On)**
-   - Backend API 직접 호출 방식
-   - SSO 서버 Redirect 처리
-   - 자동 인증 후 JWT 토큰 발급
-   - **Note:** Frontend는 SPA 모드이므로 SSO Redirect는 Backend에서 처리
-
-3. **일반 로그인 (Fallback - 장애 대비)**
-   - 사원ID + 비밀번호 입력
-   - 자체 DB 인증 (BCrypt 해시)
-   - AD/SSO 서버 장애 시 사용
-
-**Authentication Flow:**
-```
-사용자 로그인 시도
-    ↓
-1. SSO 사용 가능? → YES → SSO 인증 → JWT 발급
-    ↓ NO
-2. AD 서버 사용 가능? → YES → AD 인증 → JWT 발급
-    ↓ NO
-3. 일반 로그인 (DB 인증) → JWT 발급
-```
-
-**Implementation Notes:**
-- AD/SSO 서버 상태 체크 (Health Check) 필요
-- Timeout 설정: AD (3초), SSO (5초)
-- Fallback 자동 전환 로직 구현
-- 로그인 시도 이력 Audit Log 기록 필수
+**Authentication Flow:** SSO 사용 가능? → YES → SSO 인증 → JWT 발급
+                        ↓ NO
+                        AD 서버 사용 가능? → YES → AD 인증 → JWT 발급
+                        ↓ NO
+                        일반 로그인 (DB 인증) → JWT 발급
 
 #### Authorization & Data Security
 
 - **Encryption:** TLS in transit, field-level encryption for PII at rest
 - **Authorization:** RBAC + SoD enforcement
-- **Data masking:** Configurable by role (via `DATA_POLICY` table)
-- **Access control:** Menu permissions managed in `MENU` table with `PERM_GROUP_FEATURE` mapping
+- **Data masking:** Configurable by role
 - **Session:** JWT-based stateless authentication
 
-### Database Design Patterns
-
-**User & Permission Structure:**
-```
-USER → belongs to → ORGANIZATION → references → ORGANIZATION_POLICY
-USER → belongs to → PERMISSION_GROUP → has → MENU + FEATURE_ACTION permissions
-```
-
-**Approval Line:**
-- Template-based by business type
-- Each step references `PERMISSION_GROUP` (not individual users)
-- Example: `STEP1=PG.REVIEWER`, `STEP2=PG.APPROVER`, `STEP3=PG.HEAD_COMPLIANCE`
-- Self-approval prevention (same user cannot be requester and approver)
-
-**Data Policy (Row-Level + Field-Level):**
-```sql
-DATA_POLICY(
-  policy_id, feature_code, action_code, perm_group_code, org_policy_id,
-  business_type, row_scope, default_mask_rule, priority, active
-)
-```
-- `row_scope`: OWN | ORG | ALL | CUSTOM
-- `default_mask_rule`: NONE | PARTIAL | FULL | HASH
-
-## Korean Terminology Reference
-
-Key terms from PRD (Korean ↔ English):
-- **자금세탁방지** = Anti-Money Laundering (AML)
-- **의심거래보고** = Suspicious Transaction Report (STR)
-- **고액현금거래보고** = Currency Transaction Report (CTR)
-- **감시대상명단** = Watch List Filtering (WLF)
-- **준법감시** = Compliance Monitoring
-- **금융정보분석원** = Financial Intelligence Unit (FIU)
-- **스냅샷** = Snapshot (versioning system)
-- **결재선** = Approval Line
-- **권한그룹** = Permission Group
-
-## Development Commands
-
-### Root Level (Gradle)
-
-```bash
-# Build all modules (backend + frontend)
-./gradlew buildAll
-
-# Run frontend dev server
-./gradlew dev
-
-# Backend server with H2 in-memory DB
-./gradlew :backend:server:bootRun
-
-# Backend with specific profile
-./gradlew :backend:server:bootRun --args='--spring.profiles.active=dev'
-```
-
-### Backend (Gradle)
-
-```bash
-# Build specific module
-./gradlew :backend:server:build
-
-# All tests
-./gradlew test
-
-# Specific test class
-./gradlew test --tests PolicyTest
-
-# Single test method
-./gradlew test --tests PolicyTest.shouldCreatePolicyWithValidVersion
-
-# Exclude long-running tests
-./gradlew test -x longRunningTests
-
-# Coverage report
-./gradlew test jacocoTestReport
-open backend/server/build/reports/jacoco/test/html/index.html
-
-# Check dependencies
-./gradlew dependencies
-```
-
-### Frontend (Nuxt 4)
-
-```bash
-cd frontend
-
-# Development
-npm run dev              # Dev server (http://localhost:3000)
-npm run dev:open         # Dev + auto-open browser
-
-# Build & Preview
-npm run build            # Production build (SPA mode)
-npm run build:analyze    # Build with bundle analyzer
-npm run preview          # Preview production build
-
-# Code Quality
-npm run lint             # Check code quality
-npm run lint:fix         # Auto-fix linting issues
-npm run typecheck        # TypeScript type checking
-
-# Unit Testing (Vitest)
-npm test                 # Run unit tests
-npm run test:watch       # Watch mode
-npm run test:ui          # Vitest UI
-npm run test:coverage    # Coverage report
-
-# E2E Testing (Playwright)
-npm run test:e2e         # Headless E2E tests
-npm run test:e2e:ui      # Playwright UI (recommended)
-npm run test:e2e:headed  # With browser visible
-npm run test:e2e:debug   # Debug mode
-npm run test:e2e:report  # View test report
-
-# Maintenance
-npm run clean            # Clean build artifacts
-npm run clean:modules    # Clean & reinstall node_modules
-npm run audit            # Security audit (production)
-npm run outdated         # Check outdated packages
-```
+**See [Architecture Guide](./docs/architecture/DDD_DESIGN.md) for complete security design.**
 
 ## Important Implementation Notes
 
-1. **⚠️ SSR STRICTLY FORBIDDEN:** Frontend MUST use `ssr: false` in Nuxt config - NEVER enable SSR, NEVER use `/server` directory, NEVER use Nuxt Server API. Deploy as static resources only (Nginx/Apache). See "Frontend Critical Constraints" section for details.
-2. **🖥️ WEB BROWSER FOCUS:** UI targets desktop/laptop browsers (1366px+ resolutions). Mobile-specific design NOT required. Responsive design IS required for various desktop resolutions. Use desktop-class navigation, multi-column layouts, data grids. See "Web Browser Focus" section for details.
-3. **Tailwind Prefix:** Use `tw-` prefix to avoid conflicts with PrimeVue/RealGrid CSS
-4. **Field Naming:** Use snake_case for database columns, camelCase for Java/TypeScript
-5. **ID Strategy:** Use ULID or UUID for global identifiers, avoid sequential integers for security
-6. **MyBatis TypeHandlers:** Create custom handlers for LocalDateTime, JSON columns, encrypted fields
-7. **Cache Strategy:** Redis cache with Caffeine for local L1 cache
-8. **API Versioning:** Use `/api/v1/` prefix, prepare for future versions
-9. **Error Handling:** Unified exception handler with i18n error codes
-10. **Logging:** Structured JSON logs with trace IDs for distributed tracing
-11. **Testing:** Minimum 80% code coverage for business logic
-
-## MVP Scope (Priority)
-
-**Must-Have Features:**
-1. Policy & criteria management (snapshot-based, KYC/STR/CTR/WLF rules)
-2. Detection engine (STR/CTR/WLF with configurable rules)
-3. Investigation & workflow (case management, approval workflows)
-4. Reporting module (FIU-compliant report generation)
-5. User & access control (RBAC, SoD enforcement, approval lines)
-6. Audit logging (100% coverage)
-7. Basic dashboard (detection metrics, case status)
-
-**Future Enhancements:**
-- Risk simulation module (what-if analysis, backtesting)
-- Advanced WLF matching algorithms (fuzzy matching, ensemble scoring)
-- SMTP email system for product risk surveys
-- ML-based rule optimization
-- Regulatory change notifications
+1. **⚠️ SSR STRICTLY FORBIDDEN:** Frontend MUST use `ssr: false` - Deploy as static resources only
+2. **🖥️ WEB BROWSER FOCUS:** UI targets desktop/laptop browsers (1366px+)
+3. **🧪 TDD MANDATORY:** ALL features MUST have tests written FIRST
+4. **🚫 NO @Data:** Lombok `@Data` annotation is PROHIBITED
+5. **Tailwind Prefix:** Use `tw-` prefix to avoid conflicts
+6. **Field Naming:** snake_case (DB), camelCase (Java/TypeScript)
+7. **ID Strategy:** Use ULID or UUID for global identifiers
+8. **Cache Strategy:** Redis cache with Caffeine for local L1 cache
+9. **API Versioning:** Use `/api/v1/` prefix
+10. **Logging:** Structured JSON logs with trace IDs
 
 ## Reference
 
@@ -1763,17 +306,14 @@ npm run outdated         # Check outdated packages
 
 ### Core Documentation
 
-- **[Documentation Center](./docs/index.md)** - Start here, complete navigation guide
-- **[PRD Index](./docs/prd/index.md)** - Product requirements (15 documents, ~7,000 lines total)
-  - Original `PRD.md` (486 lines) split into structured documents
-- **[API Contract](./docs/api/CONTRACT.md)** ⭐ Frontend ↔ Backend API 계약 및 동기화 계획
+- **[Documentation Center](./docs/index.md)** - Start here
+- **[PRD Index](./docs/prd/index.md)** - Product requirements (15 documents)
+- **[API Contract](./docs/api/CONTRACT.md)** - Frontend ↔ Backend API
 
 ### Frontend
 
-- **[Frontend README](./docs/frontend/README.md)** - SPA constraints, coding rules, deployment (449 lines)
-- **[Components Roadmap](./docs/frontend/COMPONENTS_ROADMAP.md)** ⭐ Implementation progress (675 lines)
-  - Atomic Design structure, Phase 2 implementation guide
-- **[Frontend Agents](./docs/frontend/AGENTS.md)** - Mock API, Component Generator, Build Validator
+- **[Frontend README](./docs/frontend/README.md)** - SPA constraints, coding rules, deployment
+- **[Components Roadmap](./docs/frontend/COMPONENTS_ROADMAP.md)** - Implementation progress
 
 ### Backend
 
@@ -1782,10 +322,12 @@ npm run outdated         # Check outdated packages
 
 ### Architecture
 
-- **[DDD Design](./docs/architecture/DDD_DESIGN.md)** - Domain-Driven Design layers, testing strategy
+- **[DDD Design](./docs/architecture/DDD_DESIGN.md)** - Domain-Driven Design layers
 
 ### Development
 
+- **[Test Plan](./docs/development/plan.md)** ⭐ Current test checklist (check before "go")
+- **[TDD Workflow](./docs/development/TDD_DDD_WORKFLOW.md)** - Complete TDD guide
 - **[Development Guide](./docs/development/AGENTS.md)** - Coding style, testing, commit rules
 
 ### Timeline

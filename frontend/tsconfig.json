@@ -1,5 +1,5 @@
 {
-  "extends": "./.nuxt/tsconfig.json",
+  "extends": "./.nuxt/tsconfig.app.json",
   "compilerOptions": {
     "strict": true,
     "noUnusedLocals": true,
@@ -7,9 +7,16 @@
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true
   },
+  "include": [
+    ".nuxt/nuxt.d.ts",
+    ".nuxt/imports.d.ts",
+    "**/*"
+  ],
   "exclude": [
     "node_modules",
-    ".nuxt",
+    ".nuxt/dev",
+    ".nuxt/dist",
+    ".nuxt/schema",
     "dist",
     "coverage",
     "**/__tests__/**",

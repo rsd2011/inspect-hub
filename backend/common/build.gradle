@@ -1,13 +1,27 @@
 plugins {
     id 'java-library'
+    alias(libs.plugins.spring.dependency.management)
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.boot:spring-boot-dependencies:3.3.2"
+    }
 }
 
 dependencies {
+    // Spring Boot
+    implementation libs.spring.boot.starter
+    implementation libs.spring.boot.starter.web
+
     // Jackson
     implementation libs.bundles.jackson
 
     // Validation
     implementation libs.jakarta.validation.api
+
+    // ULID
+    implementation libs.ulid.creator
 
     // Lombok
     compileOnly libs.lombok
