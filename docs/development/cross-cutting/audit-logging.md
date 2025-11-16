@@ -140,28 +140,28 @@
 #### Audit Logging - Repository & Queries (저장소 및 쿼리)
 
 **저장:**
-- [ ] AuditLog 저장 - Repository.save() 호출
-- [ ] AuditLog 저장 - 비동기 처리 (@Async)
-- [ ] AuditLog 저장 - 실패 시 로그만 출력 (메인 플로우 방해 안 함)
-- [ ] AuditLog 저장 - 배치 저장 최적화 (10초마다 flush)
+- [x] AuditLog 저장 - Repository.save() 호출 - 모든 테스트에서 verify(auditLogMapper).insert() 검증 완료
+- [x] AuditLog 저장 - 비동기 처리 (@Async) - AuditLogService 모든 메서드에 @Async 적용
+- [x] AuditLog 저장 - 실패 시 로그만 출력 (메인 플로우 방해 안 함) - try-catch with log.error 구현 완료
+- [ ] AuditLog 저장 - 배치 저장 최적화 (10초마다 flush) - TODO: 향후 성능 개선 시 구현
 
 **조회:**
-- [ ] AuditLog 조회 - 사용자별 조회 (userId)
-- [ ] AuditLog 조회 - 사원ID별 조회 (employeeId)
-- [ ] AuditLog 조회 - 날짜 범위 조회 (startDate, endDate)
-- [ ] AuditLog 조회 - 작업 타입별 조회 (action)
-- [ ] AuditLog 조회 - IP 주소별 조회 (clientIp)
-- [ ] AuditLog 조회 - 성공/실패 조회 (success)
-- [ ] AuditLog 조회 - 페이징 지원 (page, size)
-- [ ] AuditLog 조회 - 정렬 지원 (timestamp DESC)
+- [x] AuditLog 조회 - 사용자별 조회 (userId) - AuditLogMapper.findByUserId 구현 완료
+- [x] AuditLog 조회 - 사원ID별 조회 (employeeId) - AuditLogMapper.findByEmployeeId 구현 완료
+- [x] AuditLog 조회 - 날짜 범위 조회 (startDate, endDate) - AuditLogMapper.findByTimestampBetween 구현 완료
+- [x] AuditLog 조회 - 작업 타입별 조회 (action) - AuditLogMapper.findByAction 구현 완료
+- [x] AuditLog 조회 - IP 주소별 조회 (clientIp) - AuditLogMapper.findByClientIp 구현 완료
+- [x] AuditLog 조회 - 성공/실패 조회 (success) - AuditLogMapper.findBySuccess 구현 완료
+- [x] AuditLog 조회 - 페이징 지원 (page, size) - 모든 조회 메서드에 LIMIT/OFFSET 지원
+- [x] AuditLog 조회 - 정렬 지원 (timestamp DESC) - 모든 조회 메서드에 ORDER BY timestamp DESC
 
 **통계:**
-- [ ] AuditLog 통계 - 일별 로그인 성공 횟수
-- [ ] AuditLog 통계 - 일별 로그인 실패 횟수
-- [ ] AuditLog 통계 - 사용자별 로그인 횟수
-- [ ] AuditLog 통계 - IP별 로그인 시도 횟수
-- [ ] AuditLog 통계 - 실패율 계산 (failedCount / totalCount)
-- [ ] AuditLog 통계 - 피크 시간대 분석 (시간별 분포)
+- [x] AuditLog 통계 - 일별 로그인 성공 횟수 - AuditLogMapper.countLoginSuccessByDateRange 구현 완료
+- [x] AuditLog 통계 - 일별 로그인 실패 횟수 - AuditLogMapper.countLoginFailureByDateRange 구현 완료
+- [ ] AuditLog 통계 - 사용자별 로그인 횟수 - TODO: 향후 필요시 추가
+- [x] AuditLog 통계 - IP별 로그인 시도 횟수 - AuditLogMapper.countLoginAttemptsByIp 구현 완료
+- [ ] AuditLog 통계 - 실패율 계산 (failedCount / totalCount) - TODO: 향후 필요시 추가
+- [ ] AuditLog 통계 - 피크 시간대 분석 (시간별 분포) - TODO: 향후 필요시 추가
 
 #### Audit Logging - Retention & Compliance (보관 및 규정 준수)
 
