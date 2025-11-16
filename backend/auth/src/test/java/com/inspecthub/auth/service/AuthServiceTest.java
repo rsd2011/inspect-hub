@@ -1,5 +1,6 @@
 package com.inspecthub.auth.service;
 
+import com.inspecthub.auth.domain.AccountLockPolicy;
 import com.inspecthub.auth.domain.User;
 import com.inspecthub.auth.domain.UserId;
 import com.inspecthub.auth.repository.UserRepository;
@@ -8,7 +9,6 @@ import com.inspecthub.auth.dto.RefreshTokenRequest;
 import com.inspecthub.auth.dto.TokenResponse;
 import com.inspecthub.common.config.AuthProperties;
 import com.inspecthub.common.exception.BusinessException;
-import com.inspecthub.common.service.AuditLogService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -57,6 +57,9 @@ class AuthServiceTest {
     @Mock
     private AuthProperties authProperties;
 
+    @Mock
+    private AccountLockPolicy accountLockPolicy;
+
     @InjectMocks
     private AuthService authService;
 
@@ -83,9 +86,14 @@ class AuthServiceTest {
                 .password("$2a$10$hashedPassword")  // BCrypt hashed
                 .name("홍길동")
                 .email("hong@example.com")
+                .loginMethod("LOCAL")
                 .active(true)
                 .failedAttempts(0)
                 .build();
+
+        // Given: userRepository.save() Mock 설정 (user를 그대로 반환)
+        org.mockito.Mockito.lenient().when(userRepository.save(any(User.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         validLoginRequest = LoginRequest.builder()
                 .employeeId("EMP001")
@@ -124,9 +132,9 @@ class AuthServiceTest {
             then(auditLogService).should(times(1))
                     .logLoginSuccess(validUser.getEmployeeId(), "LOCAL");
 
-            // And: 실패 횟수가 초기화되어야 함
+            // And: 로그인 성공 상태가 저장되어야 함 (도메인 메서드 호출 후 save)
             then(userRepository).should(times(1))
-                    .resetFailedAttempts(validUser.getId());
+                    .save(any(User.class));
         }
 
         @Test
@@ -142,9 +150,9 @@ class AuthServiceTest {
             // When
             authService.authenticate(validLoginRequest);
 
-            // Then: lastLoginAt이 업데이트되어야 함
+            // Then: 로그인 성공 상태가 저장되어야 함 (도메인 메서드 호출 후 save)
             then(userRepository).should(times(1))
-                    .updateLastLoginAt(validUser.getId());
+                    .save(any(User.class));
         }
     }
 
@@ -204,9 +212,9 @@ class AuthServiceTest {
                         assertThat(businessEx.getErrorCode()).isEqualTo("AUTH_002");
                     });
 
-            // And: 실패 횟수가 증가되어야 함
+            // And: 로그인 실패 상태가 저장되어야 함 (도메인 메서드 호출 후 save)
             then(userRepository).should(times(1))
-                    .incrementFailedAttempts(validUser.getId());
+                    .save(any(User.class));
 
             // And: 로그인 실패 감사 로그가 기록되어야 함
             then(auditLogService).should(times(1))
@@ -286,9 +294,11 @@ class AuthServiceTest {
             assertThatThrownBy(() -> authService.authenticate(request))
                     .isInstanceOf(BusinessException.class);
 
-            // Then: 계정이 5분 잠금되어야 함
+            // Then: 도메인 정책이 적용되고 저장되어야 함
+            then(accountLockPolicy).should(times(1))
+                    .applyLockPolicy(any(User.class), any(Integer.class));
             then(userRepository).should(times(1))
-                    .lockAccount(any(UserId.class), any(java.time.LocalDateTime.class)); // 5 minutes lock
+                    .save(any(User.class));
         }
 
         @Test
@@ -307,9 +317,11 @@ class AuthServiceTest {
                     .password("WrongPassword").build()))
                     .isInstanceOf(BusinessException.class);
 
-            // Then: 계정이 30분 잠금되어야 함
+            // Then: 도메인 정책이 적용되고 저장되어야 함
+            then(accountLockPolicy).should(times(1))
+                    .applyLockPolicy(any(User.class), any(Integer.class));
             then(userRepository).should(times(1))
-                    .lockAccount(any(UserId.class), any(java.time.LocalDateTime.class)); // 30 minutes lock
+                    .save(any(User.class));
         }
 
         @Test
@@ -328,9 +340,11 @@ class AuthServiceTest {
                     .password("WrongPassword").build()))
                     .isInstanceOf(BusinessException.class);
 
-            // Then: 계정이 영구 잠금되어야 함 (null = permanent)
+            // Then: 도메인 정책이 적용되고 저장되어야 함
+            then(accountLockPolicy).should(times(1))
+                    .applyLockPolicy(any(User.class), any(Integer.class));
             then(userRepository).should(times(1))
-                    .lockAccount(user.getId(), null); // permanent lock
+                    .save(any(User.class));
         }
     }
 

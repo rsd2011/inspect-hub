@@ -78,6 +78,10 @@ class AdAuthenticationServiceTest {
             .active(true)
             .loginMethod("AD")
             .build();
+
+        // Given: userRepository.save() Mock 설정 (user를 그대로 반환)
+        org.mockito.Mockito.lenient().when(userRepository.save(any(User.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Nested
@@ -132,8 +136,8 @@ class AdAuthenticationServiceTest {
             // When (실행)
             adAuthenticationService.authenticate(validRequest);
 
-            // Then (검증) - lastLoginAt 업데이트 확인
-            verify(userRepository).updateLastLoginAt(existingUser.getId());
+            // Then (검증) - 로그인 성공 상태가 저장되어야 함 (도메인 메서드 호출 후 save)
+            verify(userRepository).save(any(User.class));
         }
     }
 
@@ -223,6 +227,7 @@ class AdAuthenticationServiceTest {
                 .name("홍길동")
                 .active(true)
                 .locked(true)  // 잠김
+                .lockedUntil(java.time.LocalDateTime.now().plusMinutes(5))  // 잠금 기간 설정
                 .loginMethod("AD")
                 .build();
 
@@ -275,7 +280,8 @@ class AdAuthenticationServiceTest {
 
             // Then (검증)
             assertThat(result).isNotNull();
-            verify(userRepository).save(any(User.class));
+            // 사용자 생성 시 1번, recordLoginSuccess() 후 1번 = 총 2번 호출
+            verify(userRepository, times(2)).save(any(User.class));
             verify(auditLogService).logLoginSuccess(validRequest.getEmployeeId(), "AD");
         }
     }

@@ -36,13 +36,13 @@ public class AdAuthenticationService {
             com.inspecthub.auth.domain.User user = userRepository.findByEmployeeId(request.getEmployeeId())
                 .orElse(null);
 
-            // 2. 사용자 상태 검증 (조회된 경우)
-            if (user != null) {
+            // 2. 사용자 상태 검증 (도메인 로직)
+            if (user != null && !user.canLogin()) {
                 if (!user.isActive()) {
                     log.warn("비활성화된 사용자 로그인 시도: employeeId={}", request.getEmployeeId());
                     throw new com.inspecthub.common.exception.BusinessException("AUTH_003", "비활성화된 계정입니다");
                 }
-                if (user.isLocked()) {
+                if (user.isAccountLocked()) {
                     log.warn("잠긴 계정 로그인 시도: employeeId={}", request.getEmployeeId());
                     throw new com.inspecthub.common.exception.BusinessException("AUTH_004", "계정이 잠금되었습니다");
                 }
@@ -66,33 +66,24 @@ public class AdAuthenticationService {
                 throw new com.inspecthub.common.exception.BusinessException("AD_CONNECTION_ERROR", "AD 서버 연결 실패");
             }
 
-            // 4. 사용자가 없으면 자동 생성
+            // 4. 사용자가 없으면 자동 생성 (도메인 Factory Method)
             if (user == null) {
                 log.info("AD 인증 성공 - 신규 사용자 자동 생성: employeeId={}", request.getEmployeeId());
                 
                 // TODO: LDAP에서 사용자 정보 조회 (displayName, mail, department 등)
                 // 현재는 기본값으로 생성
-                user = com.inspecthub.auth.domain.User.builder()
-                    .id(com.inspecthub.auth.domain.UserId.generate())
-                    .employeeId(request.getEmployeeId())
-                    .name("신규사용자") // TODO: LDAP에서 조회
-                    .email("new@company.com") // TODO: LDAP에서 조회
-                    .password(null) // AD 사용자는 비밀번호 저장 안 함
-                    .loginMethod("AD")
-                    .active(true)
-                    .locked(false)
-                    .lockedUntil(null)
-                    .failedAttempts(0)
-                    .lastLoginAt(null)
-                    .createdAt(java.time.LocalDateTime.now())
-                    .updatedAt(java.time.LocalDateTime.now())
-                    .build();
+                user = com.inspecthub.auth.domain.User.createAdUser(
+                    request.getEmployeeId(),
+                    "신규사용자", // TODO: LDAP에서 조회
+                    "new@company.com" // TODO: LDAP에서 조회
+                );
                 
                 user = userRepository.save(user);
             }
 
-            // 5. 마지막 로그인 시간 업데이트
-            userRepository.updateLastLoginAt(user.getId());
+            // 5. 로그인 성공 처리 (도메인 로직)
+            user.recordLoginSuccess();
+            userRepository.save(user);
 
             // 6. JWT 토큰 생성
             String accessToken = jwtTokenProvider.generateAccessToken(user);

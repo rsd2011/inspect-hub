@@ -1,5 +1,6 @@
 package com.inspecthub.auth.service;
 
+import com.inspecthub.auth.domain.AccountLockPolicy;
 import com.inspecthub.auth.domain.User;
 import com.inspecthub.auth.domain.UserId;
 import com.inspecthub.auth.dto.LoginRequest;
@@ -8,14 +9,13 @@ import com.inspecthub.auth.dto.TokenResponse;
 import com.inspecthub.auth.repository.UserRepository;
 import com.inspecthub.common.config.AuthProperties;
 import com.inspecthub.common.exception.BusinessException;
-import com.inspecthub.common.service.AuditLogService;
+
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
 
 /**
  * 인증 서비스
@@ -32,6 +32,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final AuditLogService auditLogService;
     private final AuthProperties authProperties;
+    private final AccountLockPolicy accountLockPolicy;
 
     /**
      * LOCAL 로그인 인증
@@ -50,33 +51,35 @@ public class AuthService {
                     );
                 });
 
-        // 2. 계정 상태 확인 - 비활성화
-        if (!user.isActive()) {
-            throw new BusinessException(
-                    "AUTH_003",
-                    "비활성화된 계정입니다"
-            );
+        // 2. 계정 로그인 가능 여부 확인 (도메인 로직)
+        if (!user.canLogin()) {
+            if (!user.isActive()) {
+                throw new BusinessException(
+                        "AUTH_003",
+                        "비활성화된 계정입니다"
+                );
+            }
+            if (user.isAccountLocked()) {
+                throw new BusinessException(
+                        "AUTH_004",
+                        "계정이 잠금되었습니다. " +
+                                (user.getLockedUntil() != null
+                                        ? user.getLockedUntil().getMinute() - LocalDateTime.now().getMinute() + "분 후 다시 시도하세요."
+                                        : "관리자에게 문의하세요.")
+                );
+            }
         }
 
-        // 3. 계정 잠금 확인
-        if (user.isLocked()) {
-            throw new BusinessException(
-                    "AUTH_004",
-                    "계정이 잠금되었습니다. " +
-                            (user.getLockedUntil() != null
-                                    ? user.getLockedUntil().getMinute() - LocalDateTime.now().getMinute() + "분 후 다시 시도하세요."
-                                    : "관리자에게 문의하세요.")
-            );
-        }
-
-        // 4. 비밀번호 검증
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            // 실패 횟수 증가
-            userRepository.incrementFailedAttempts(user.getId());
-
-            // 계정 잠금 정책 적용
-            int newFailedAttempts = (user.getFailedAttempts() != null ? user.getFailedAttempts() : 0) + 1;
-            applyAccountLockPolicy(user.getId(), newFailedAttempts);
+        // 3. 비밀번호 검증 (도메인 로직)
+        if (!user.isPasswordMatch(request.getPassword(), passwordEncoder)) {
+            // 도메인: 로그인 실패 기록 (LOCAL만 failedAttempts 증가)
+            user.recordLoginFailure();
+            
+            // 도메인 서비스: 계정 잠금 정책 적용
+            accountLockPolicy.applyLockPolicy(user, user.getFailedAttempts());
+            
+            // 변경사항 저장
+            userRepository.save(user);
 
             auditLogService.logLoginFailure(
                     request.getEmployeeId(), "INVALID_PASSWORD", "LOCAL"
@@ -88,15 +91,15 @@ public class AuthService {
             );
         }
 
-        // 5. 로그인 성공 처리
-        userRepository.resetFailedAttempts(user.getId());
-        userRepository.updateLastLoginAt(user.getId());
+        // 4. 로그인 성공 처리 (도메인 로직)
+        user.recordLoginSuccess();
+        userRepository.save(user);
 
-        // 6. JWT 토큰 생성
+        // 5. JWT 토큰 생성
         String accessToken = jwtTokenProvider.generateAccessToken(user);
         String refreshToken = jwtTokenProvider.generateRefreshToken(user);
 
-        // 7. 감사 로그 기록
+        // 6. 감사 로그 기록
         auditLogService.logLoginSuccess(user.getEmployeeId(), "LOCAL");
 
         return TokenResponse.builder()
@@ -157,20 +160,4 @@ public class AuthService {
                 .build();
     }
 
-    /**
-     * 계정 잠금 정책 적용
-     *
-     * - 5회 실패: 5분 잠금
-     * - 10회 실패: 30분 잠금
-     * - 15회 실패: 영구 잠금
-     */
-    private void applyAccountLockPolicy(UserId userId, int failedAttempts) {
-        if (failedAttempts >= 15) {
-            userRepository.lockAccount(userId, null);  // 영구 잠금
-        } else if (failedAttempts >= 10) {
-            userRepository.lockAccount(userId, LocalDateTime.now().plusMinutes(30));  // 30분
-        } else if (failedAttempts >= 5) {
-            userRepository.lockAccount(userId, LocalDateTime.now().plusMinutes(5));   // 5분
-        }
-    }
 }
