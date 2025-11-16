@@ -1,6 +1,8 @@
 package com.inspecthub.auth.service;
 
 import com.inspecthub.auth.domain.AuditLog;
+import com.inspecthub.auth.domain.User;
+import com.inspecthub.auth.domain.UserId;
 import com.inspecthub.auth.mapper.AuditLogMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -11,6 +13,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -110,6 +114,52 @@ class AuditLogServiceTest {
             assertThat(savedLog.getEmployeeId()).isEqualTo(employeeId);
             assertThat(savedLog.getMethod()).isEqualTo("LOCAL");
             assertThat(savedLog.getSuccess()).isTrue();
+        }
+
+        @Test
+        @DisplayName("로그인 성공 감사 로그 - 필수 필드 포함 (userId, employeeId, username)")
+        void shouldIncludeAllRequiredFieldsWhenLoginSuccess() {
+            // Given (준비)
+            UserId userId = UserId.of("01HN3Z8Q6PXYZ9ABCD1234EFGH");
+            String employeeId = "202401001";
+            String username = "홍길동";
+            String email = "hong@example.com";
+            String loginMethod = "AD";
+
+            User user = User.builder()
+                .id(userId)
+                .employeeId(employeeId)
+                .name(username)
+                .email(email)
+                .loginMethod("AD")
+                .active(true)
+                .locked(false)
+                .failedAttempts(0)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            // When (실행)
+            auditLogService.logLoginSuccess(user, loginMethod);
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+            assertThat(savedLog).isNotNull();
+            assertThat(savedLog.getId()).isNotNull();
+            assertThat(savedLog.getAction()).isEqualTo("LOGIN_SUCCESS");
+
+            // 필수 필드 검증
+            assertThat(savedLog.getUserId()).isEqualTo(userId.getValue());
+            assertThat(savedLog.getEmployeeId()).isEqualTo(employeeId);
+            assertThat(savedLog.getUsername()).isEqualTo(username);
+
+            assertThat(savedLog.getMethod()).isEqualTo(loginMethod);
+            assertThat(savedLog.getSuccess()).isTrue();
+            assertThat(savedLog.getTimestamp()).isNotNull();
         }
     }
 

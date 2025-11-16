@@ -6,7 +6,7 @@
 - [x] AD 로그인 성공 - 감사 로그 생성 (action: LOGIN_SUCCESS, method: AD)
 - [x] SSO 로그인 성공 - 감사 로그 생성 (action: LOGIN_SUCCESS, method: SSO)
 - [x] 일반 로그인 성공 - 감사 로그 생성 (action: LOGIN_SUCCESS, method: LOCAL)
-- [ ] 로그인 성공 감사 로그 - 필수 필드 포함 (userId, employeeId, username, orgId)
+- [x] 로그인 성공 감사 로그 - 필수 필드 포함 (userId, employeeId, username, orgId)
 - [ ] 로그인 성공 감사 로그 - IP 주소 기록 (clientIp, X-Forwarded-For 헤더)
 - [ ] 로그인 성공 감사 로그 - User-Agent 기록 (브라우저, OS 정보)
 - [ ] 로그인 성공 감사 로그 - 세션 ID 기록 (sessionId)

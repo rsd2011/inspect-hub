@@ -115,7 +115,7 @@ public class AdAuthenticationService {
             String refreshToken = jwtTokenProvider.generateRefreshToken(user);
 
             // 7. 감사 로그 기록
-            auditLogService.logLoginSuccess(request.getEmployeeId(), "AD");
+            auditLogService.logLoginSuccess(user, "AD");
 
             log.info("AD 로그인 성공: employeeId={}, userId={}", request.getEmployeeId(), user.getId());
 

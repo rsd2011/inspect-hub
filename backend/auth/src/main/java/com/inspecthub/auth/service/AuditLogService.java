@@ -56,6 +56,38 @@ public class AuditLogService {
     }
 
     /**
+     * 로그인 성공 기록 (User 객체 버전)
+     *
+     * @param user User 도메인 객체 (userId, employeeId, username 포함)
+     * @param loginMethod 로그인 방법 (AD, SSO, LOCAL)
+     */
+    @Async
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void logLoginSuccess(com.inspecthub.auth.domain.User user, String loginMethod) {
+        try {
+            String id = UlidCreator.getUlid().toString();
+
+            AuditLog auditLog = AuditLog.createLoginSuccess(
+                id,
+                user.getEmployeeId(),
+                user.getId().getValue(),  // UserId value object에서 실제 값 추출
+                user.getName(),           // username
+                null,  // clientIp - 나중에 HttpServletRequest에서 추출
+                loginMethod
+            );
+
+            auditLogMapper.insert(auditLog);
+
+            log.info("로그인 성공 감사 로그 저장: id={}, userId={}, employeeId={}, username={}, method={}",
+                id, user.getId().getValue(), user.getEmployeeId(), user.getName(), loginMethod);
+        } catch (Exception e) {
+            // 감사 로그 저장 실패가 메인 플로우를 방해하지 않도록 로그만 출력
+            log.error("로그인 성공 감사 로그 저장 실패: employeeId={}, method={}",
+                user.getEmployeeId(), loginMethod, e);
+        }
+    }
+
+    /**
      * 로그인 실패 기록
      *
      * @param employeeId 사원ID

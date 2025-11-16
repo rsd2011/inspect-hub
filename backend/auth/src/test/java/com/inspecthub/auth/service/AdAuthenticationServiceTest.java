@@ -131,7 +131,7 @@ class AdAuthenticationServiceTest {
             assertThat(result.getRefreshToken()).isEqualTo(expectedRefreshToken);
             assertThat(result.getTokenType()).isEqualTo("Bearer");
 
-            verify(auditLogService).logLoginSuccess(validRequest.getEmployeeId(), "AD");
+            verify(auditLogService).logLoginSuccess(existingUser, "AD");
         }
 
         @Test
@@ -297,7 +297,7 @@ class AdAuthenticationServiceTest {
             assertThat(result).isNotNull();
             // 사용자 생성 시 1번, recordLoginSuccess() 후 1번 = 총 2번 호출
             verify(userRepository, times(2)).save(any(User.class));
-            verify(auditLogService).logLoginSuccess(validRequest.getEmployeeId(), "AD");
+            verify(auditLogService).logLoginSuccess(any(User.class), eq("AD"));
         }
     }
 
