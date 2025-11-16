@@ -1,13 +1,13 @@
 #### JWT Token Management - Token Generation (생성)
 
 **정상 케이스:**
-- [ ] JWT Access Token 생성 - 유효한 사용자 정보로 생성
-- [ ] JWT Refresh Token 생성 - 유효한 사용자 정보로 생성
-- [ ] JWT 클레임 포함 - subject (userId), employeeId, roles, orgId
+- [x] JWT Access Token 생성 - 유효한 사용자 정보로 생성
+- [x] JWT Refresh Token 생성 - 유효한 사용자 정보로 생성
+- [x] JWT 클레임 포함 - subject (employeeId), userId, name, email
 - [ ] JWT 클레임 포함 - iat (발급시간), exp (만료시간), iss (발급자)
 - [ ] JWT 헤더 포함 - alg (HS256), typ (JWT)
-- [ ] JWT 만료시간 설정 - Access Token 1시간 (3600초)
-- [ ] JWT 만료시간 설정 - Refresh Token 24시간 (86400초)
+- [x] JWT 만료시간 설정 - Access Token 1시간 (3600초)
+- [x] JWT 만료시간 설정 - Refresh Token 24시간 (86400초)
 - [ ] JWT 서명 생성 - 설정된 비밀키로 HMAC-SHA256 서명
 
 **실패 케이스:**
@@ -28,34 +28,34 @@
 #### JWT Token Management - Token Validation (검증)
 
 **정상 케이스:**
-- [ ] JWT 검증 성공 - 유효한 Access Token
-- [ ] JWT 검증 성공 - 유효한 Refresh Token
-- [ ] JWT 검증 성공 - 올바른 서명
+- [x] JWT 검증 성공 - 유효한 Access Token
+- [x] JWT 검증 성공 - 유효한 Refresh Token
+- [x] JWT 검증 성공 - 올바른 서명
 - [ ] JWT 검증 성공 - 만료시간 이전
 - [ ] JWT 검증 성공 - 올바른 발급자 (iss)
 - [ ] JWT 클레임 추출 - subject (userId) 정확히 추출
-- [ ] JWT 클레임 추출 - employeeId 정확히 추출
+- [x] JWT 클레임 추출 - employeeId 정확히 추출
 - [ ] JWT 클레임 추출 - roles 리스트 정확히 추출
 - [ ] JWT 클레임 추출 - orgId 정확히 추출
-- [ ] JWT 클레임 추출 - 만료시간 (exp) 정확히 추출
+- [x] JWT 클레임 추출 - 만료시간 (exp) 정확히 추출
 
 **실패 케이스 - 만료:**
-- [ ] JWT 검증 실패 - 만료된 Access Token (ExpiredJwtException)
-- [ ] JWT 검증 실패 - 만료된 Refresh Token (ExpiredJwtException)
+- [x] JWT 검증 실패 - 만료된 Access Token (ExpiredJwtException)
+- [x] JWT 검증 실패 - 만료된 Refresh Token (ExpiredJwtException)
 - [ ] JWT 검증 실패 - 만료시간이 과거 (exp < now)
 - [ ] JWT 검증 실패 - 만료 1초 후 (경계값 테스트)
 
 **실패 케이스 - 서명:**
-- [ ] JWT 검증 실패 - 잘못된 서명 (SignatureException)
+- [x] JWT 검증 실패 - 잘못된 서명 (SignatureException)
 - [ ] JWT 검증 실패 - 다른 비밀키로 생성된 토큰
 - [ ] JWT 검증 실패 - 서명 부분 변조된 토큰
 - [ ] JWT 검증 실패 - 페이로드 변조 후 재서명 안 된 토큰
 - [ ] JWT 검증 실패 - 알고리즘 변조 (alg: none)
 
 **실패 케이스 - 형식:**
-- [ ] JWT 검증 실패 - null 토큰 (IllegalArgumentException)
-- [ ] JWT 검증 실패 - 빈 문자열 토큰 (MalformedJwtException)
-- [ ] JWT 검증 실패 - 잘못된 형식 (점 2개 미만)
+- [x] JWT 검증 실패 - null 토큰 (IllegalArgumentException)
+- [x] JWT 검증 실패 - 빈 문자열 토큰 (MalformedJwtException)
+- [x] JWT 검증 실패 - 잘못된 형식 (점 2개 미만)
 - [ ] JWT 검증 실패 - Base64 디코딩 실패
 - [ ] JWT 검증 실패 - JSON 파싱 실패 (잘못된 페이로드)
 
@@ -71,6 +71,12 @@
 - [ ] JWT 검증 - 타임스탬프 조작 방지 (exp, iat 서버 시간 기준)
 - [ ] JWT 검증 - 알고리즘 혼동 공격 방지 (alg: none 거부)
 - [ ] JWT 검증 - 비밀키 노출 시 영향 범위 (토큰 무효화 필요)
+
+**Token Type 검증:**
+- [x] Access Token 타입이 맞는지 검증한다
+- [x] Refresh Token 타입이 맞는지 검증한다
+- [x] Access Token을 Refresh Token으로 사용할 수 없다
+- [x] Refresh Token을 Access Token으로 사용할 수 없다
 
 #### JWT Token Management - Token Refresh (갱신)
 
@@ -222,4 +228,3 @@
 - [ ] 전체 플로우 - 로그인 → 토큰 발급 → API 호출 → Refresh → 로그아웃
 - [ ] 멀티 스레드 - 동시 토큰 생성/검증 (100 threads)
 - [ ] 부하 테스트 - 1000 TPS 토큰 검증
-
