@@ -108,24 +108,24 @@
 #### Audit Logging - Data Structure (데이터 구조)
 
 **필수 필드:**
-- [ ] AuditLog.id - ULID (고유 식별자)
-- [ ] AuditLog.action - 작업 타입 (LOGIN_SUCCESS, LOGIN_FAILURE, etc.)
-- [ ] AuditLog.userId - 사용자 ID (로그인 성공 시, nullable)
-- [ ] AuditLog.employeeId - 사원ID (항상 기록)
-- [ ] AuditLog.username - 사용자명 (nullable)
-- [ ] AuditLog.timestamp - UTC 타임스탬프
-- [ ] AuditLog.clientIp - 클라이언트 IP 주소
-- [ ] AuditLog.success - 성공 여부 (true/false)
+- [x] AuditLog.id - ULID (고유 식별자) - ULID 형식 검증 테스트 완료
+- [x] AuditLog.action - 작업 타입 (LOGIN_SUCCESS, LOGIN_FAILURE, etc.) - 기존 테스트에서 검증 완료
+- [x] AuditLog.userId - 사용자 ID (로그인 성공 시, nullable) - 기존 테스트에서 검증 완료
+- [x] AuditLog.employeeId - 사원ID (항상 기록) - 기존 테스트에서 검증 완료
+- [x] AuditLog.username - 사용자명 (nullable) - 기존 테스트에서 검증 완료
+- [x] AuditLog.timestamp - UTC 타임스탬프 - 기존 테스트에서 검증 완료
+- [x] AuditLog.clientIp - 클라이언트 IP 주소 - 기존 테스트에서 검증 완료
+- [x] AuditLog.success - 성공 여부 (true/false) - 기존 테스트에서 검증 완료
 
 **선택 필드:**
-- [ ] AuditLog.method - 인증 방법 (AD, SSO, LOCAL)
-- [ ] AuditLog.sessionId - 세션 ID
-- [ ] AuditLog.userAgent - User-Agent 문자열
-- [ ] AuditLog.referer - Referer 헤더
-- [ ] AuditLog.reason - 실패/특이 사유
-- [ ] AuditLog.details - JSON 상세 정보
-- [ ] AuditLog.orgId - 조직 ID
-- [ ] AuditLog.orgName - 조직명
+- [x] AuditLog.method - 인증 방법 (AD, SSO, LOCAL) - 기존 테스트에서 검증 완료
+- [x] AuditLog.sessionId - 세션 ID - 기존 테스트에서 검증 완료
+- [x] AuditLog.userAgent - User-Agent 문자열 - 기존 테스트에서 검증 완료
+- [x] AuditLog.referer - Referer 헤더 - 기존 테스트에서 검증 완료
+- [x] AuditLog.reason - 실패/특이 사유 - 기존 테스트에서 검증 완료
+- [ ] AuditLog.details - JSON 상세 정보 - TODO: User 서비스 확장 필요
+- [ ] AuditLog.orgId - 조직 ID - TODO: 조직 정보 연동 필요
+- [ ] AuditLog.orgName - 조직명 - TODO: 조직 정보 연동 필요
 
 **Details JSON 구조:**
 - [ ] details.roles - 역할 리스트

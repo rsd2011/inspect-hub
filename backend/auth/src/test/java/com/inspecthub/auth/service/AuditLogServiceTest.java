@@ -1119,4 +1119,118 @@ class AuditLogServiceTest {
             assertThat(savedLog.getSuccess()).isFalse();
         }
     }
+
+    @Nested
+    @DisplayName("감사 로그 데이터 구조 검증")
+    class AuditLogDataStructure {
+
+        @Test
+        @DisplayName("로그인 성공 - ID는 ULID 형식 (26자, Base32)")
+        void shouldGenerateUlidFormatIdOnLoginSuccess() {
+            // Given (준비)
+            String employeeId = "202401001";
+            String loginMethod = "AD";
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            // When (실행)
+            auditLogService.logLoginSuccess(employeeId, loginMethod);
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+            String id = savedLog.getId();
+
+            // ULID 형식 검증
+            assertThat(id).isNotNull();
+            assertThat(id).hasSize(26);  // ULID는 26자
+            assertThat(id).matches("[0-9A-HJKMNP-TV-Z]{26}");  // Crockford's Base32
+            assertThat(id).isUpperCase();  // 모두 대문자
+        }
+
+        @Test
+        @DisplayName("로그인 실패 - ID는 ULID 형식 (26자, Base32)")
+        void shouldGenerateUlidFormatIdOnLoginFailure() {
+            // Given (준비)
+            String employeeId = "202401001";
+            String reason = "INVALID_CREDENTIALS";
+            String loginMethod = "AD";
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            // When (실행)
+            auditLogService.logLoginFailure(employeeId, reason, loginMethod);
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+            String id = savedLog.getId();
+
+            // ULID 형식 검증
+            assertThat(id).isNotNull();
+            assertThat(id).hasSize(26);
+            assertThat(id).matches("[0-9A-HJKMNP-TV-Z]{26}");
+            assertThat(id).isUpperCase();
+        }
+
+        @Test
+        @DisplayName("필수 필드는 항상 non-null (action, employeeId, timestamp, success)")
+        void shouldAlwaysHaveRequiredFields() {
+            // Given (준비)
+            String employeeId = "202401001";
+            String loginMethod = "AD";
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            // When (실행)
+            auditLogService.logLoginSuccess(employeeId, loginMethod);
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+
+            // 필수 필드 검증
+            assertThat(savedLog.getId()).isNotNull();
+            assertThat(savedLog.getAction()).isNotNull();
+            assertThat(savedLog.getEmployeeId()).isNotNull();
+            assertThat(savedLog.getTimestamp()).isNotNull();
+            assertThat(savedLog.getSuccess()).isNotNull();
+            assertThat(savedLog.getCreatedAt()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("로그인 실패 시 userId와 username은 null 가능")
+        void shouldAllowNullUserIdAndUsernameOnLoginFailure() {
+            // Given (준비)
+            String employeeId = "202401001";
+            String reason = "INVALID_CREDENTIALS";
+            String loginMethod = "AD";
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            // When (실행)
+            auditLogService.logLoginFailure(employeeId, reason, loginMethod);
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+
+            // nullable 필드 검증 (로그인 실패 시 userId, username은 null)
+            assertThat(savedLog.getUserId()).isNull();
+            assertThat(savedLog.getUsername()).isNull();
+
+            // 필수 필드는 존재
+            assertThat(savedLog.getId()).isNotNull();
+            assertThat(savedLog.getEmployeeId()).isNotNull();
+            assertThat(savedLog.getReason()).isNotNull();
+        }
+    }
 }
