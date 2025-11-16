@@ -52,7 +52,7 @@
 - [x] AD 로그인 실패 - AD 서버 연결 불가 (Connection Timeout)
 - [x] AD 로그인 실패 - AD 서버 응답 없음 (Read Timeout 3초)
 - [x] AD 로그인 실패 - AD 서버 DNS 해석 실패
-- [ ] AD 로그인 실패 - AD 서버 인증서 오류 (TLS/SSL)
+- [x] AD 로그인 실패 - AD 서버 인증서 오류 (TLS/SSL)
 - [ ] AD 로그인 실패 - AD 서버 5xx 에러 응답
 
 **실패 케이스 - 입력 검증:**

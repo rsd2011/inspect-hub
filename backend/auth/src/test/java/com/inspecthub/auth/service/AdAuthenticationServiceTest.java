@@ -379,6 +379,31 @@ class AdAuthenticationServiceTest {
                 "AD"
             );
         }
+
+        @Test
+        @DisplayName("AD 서버 인증서 오류 (TLS/SSL) 시 예외 발생")
+        void shouldThrowExceptionWhenAdServerCertificateError() {
+            // Given (준비)
+            given(userRepository.findByEmployeeId(validRequest.getEmployeeId()))
+                .willReturn(Optional.of(existingUser));
+
+            // TLS/SSL 인증서 오류 시뮬레이션 (CertificateException)
+            doThrow(new CommunicationException(
+                new javax.naming.CommunicationException("simple bind failed: unknown.ad.server:636")))
+                .when(ldapTemplate).authenticate(any(LdapQuery.class), eq(validRequest.getPassword()));
+
+            // When & Then (실행 & 검증)
+            assertThatThrownBy(() -> adAuthenticationService.authenticate(validRequest))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "AD_CONNECTION_ERROR")
+                .hasMessageContaining("AD 서버 연결 실패");
+
+            verify(auditLogService).logLoginFailure(
+                validRequest.getEmployeeId(),
+                "AD_CONNECTION_ERROR",
+                "AD"
+            );
+        }
     }
 
     @Nested
