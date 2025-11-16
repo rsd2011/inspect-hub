@@ -199,4 +199,37 @@ public class AuditLogService {
                 employeeId, reason, loginMethod, e);
         }
     }
+
+    /**
+     * 로그인 실패 기록 (HttpServletRequest 버전)
+     *
+     * @param employeeId 사원ID
+     * @param reason 실패 사유
+     * @param loginMethod 로그인 방법 (AD, SSO, LOCAL)
+     * @param request HTTP 요청 (clientIp 추출용)
+     */
+    @Async
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void logLoginFailure(String employeeId, String reason, String loginMethod, HttpServletRequest request) {
+        try {
+            String id = UlidCreator.getUlid().toString();
+            String clientIp = extractClientIp(request);
+
+            AuditLog auditLog = AuditLog.createLoginFailure(
+                id,
+                employeeId,
+                clientIp,
+                loginMethod,
+                reason
+            );
+
+            auditLogMapper.insert(auditLog);
+
+            log.warn("로그인 실패 감사 로그 저장: id={}, employeeId={}, clientIp={}, reason={}, method={}",
+                id, employeeId, clientIp, reason, loginMethod);
+        } catch (Exception e) {
+            log.error("로그인 실패 감사 로그 저장 실패: employeeId={}, reason={}, method={}",
+                employeeId, reason, loginMethod, e);
+        }
+    }
 }

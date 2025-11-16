@@ -11,8 +11,8 @@
 - [x] 로그인 성공 감사 로그 - User-Agent 기록 (브라우저, OS 정보)
 - [x] 로그인 성공 감사 로그 - 세션 ID 기록 (sessionId)
 - [x] 로그인 성공 감사 로그 - 타임스탬프 기록 (loginAt, UTC)
-- [ ] 로그인 성공 감사 로그 - 발급된 토큰 ID 기록 (accessTokenId, refreshTokenId)
-- [ ] 로그인 성공 감사 로그 - Repository save 호출 확인
+- [ ] 로그인 성공 감사 로그 - 발급된 토큰 ID 기록 (accessTokenId, refreshTokenId) - TODO: JWT 토큰 발급 기능 구현 후
+- [x] 로그인 성공 감사 로그 - Repository save 호출 확인 (모든 테스트에서 verify(auditLogMapper).insert() 검증 완료)
 
 **로그 상세 정보:**
 - [ ] 로그인 성공 - details JSON 포함 (roles, permissions, orgName)
@@ -34,13 +34,13 @@
 - [x] AD 로그인 실패 - 감사 로그 생성 (action: LOGIN_FAILURE, method: AD)
 - [x] SSO 로그인 실패 - 감사 로그 생성 (action: LOGIN_FAILURE, method: SSO)
 - [x] 일반 로그인 실패 - 감사 로그 생성 (action: LOGIN_FAILURE, method: LOCAL)
-- [ ] 로그인 실패 감사 로그 - 실패 사유 기록 (reason: INVALID_CREDENTIALS)
-- [ ] 로그인 실패 감사 로그 - 입력된 사원ID 기록 (attemptedEmployeeId)
-- [ ] 로그인 실패 감사 로그 - IP 주소 기록
+- [x] 로그인 실패 감사 로그 - 실패 사유 기록 (reason: INVALID_CREDENTIALS) - 기존 테스트에서 검증 완료
+- [x] 로그인 실패 감사 로그 - 입력된 사원ID 기록 (attemptedEmployeeId) - 기존 테스트에서 검증 완료
+- [x] 로그인 실패 감사 로그 - IP 주소 기록
 - [ ] 로그인 실패 감사 로그 - User-Agent 기록
-- [ ] 로그인 실패 감사 로그 - 타임스탬프 기록
-- [ ] 로그인 실패 감사 로그 - 실패 횟수 증가 (failedAttempts++)
-- [ ] 로그인 실패 감사 로그 - Repository save 호출 확인
+- [x] 로그인 실패 감사 로그 - 타임스탬프 기록 - 기존 테스트에서 검증 완료
+- [ ] 로그인 실패 감사 로그 - 실패 횟수 증가 (failedAttempts++) - TODO: UserService 책임
+- [x] 로그인 실패 감사 로그 - Repository save 호출 확인 - 기존 테스트에서 검증 완료
 
 **실패 사유 분류:**
 - [ ] 로그인 실패 - INVALID_CREDENTIALS (잘못된 사원ID 또는 비밀번호)
