@@ -91,8 +91,8 @@ public class GlobalExceptionHandler {
     private HttpStatus mapErrorCodeToHttpStatus(String errorCode) {
         return switch (errorCode) {
             // Authentication errors
-            case "AUTH_001", "AUTH_002", "AUTH_005", "AUTH_006" -> HttpStatus.UNAUTHORIZED;
-            case "AUTH_003" -> HttpStatus.FORBIDDEN;
+            case "AUTH_001", "AUTH_002", "AUTH_005", "AUTH_006", "AUTH_008" -> HttpStatus.UNAUTHORIZED;
+            case "AUTH_003", "AUTH_007" -> HttpStatus.FORBIDDEN;
             case "AUTH_004" -> HttpStatus.LOCKED;
             
             // Login Policy errors

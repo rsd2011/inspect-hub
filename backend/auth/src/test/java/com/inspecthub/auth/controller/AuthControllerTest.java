@@ -228,5 +228,53 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
         }
+
+        @Test
+        @DisplayName("POST /api/v1/auth/login/ad - 만료된 계정으로 로그인 실패")
+        void shouldFailWithExpiredAccount() throws Exception {
+            // Given (준비)
+            given(adAuthenticationService.authenticate(any()))
+                .willThrow(new BusinessException("AUTH_007", "계정이 만료되었습니다"));
+
+            String requestBody = """
+                {
+                    "employeeId": "202401001",
+                    "password": "ValidPass123!"
+                }
+                """;
+
+            // When & Then (실행 & 검증)
+            mockMvc.perform(post("/api/v1/auth/login/ad")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(requestBody))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("AUTH_007"))
+                .andExpect(jsonPath("$.error.message").value("계정이 만료되었습니다"));
+        }
+
+        @Test
+        @DisplayName("POST /api/v1/auth/login/ad - 비밀번호 만료로 로그인 실패")
+        void shouldFailWithExpiredCredentials() throws Exception {
+            // Given (준비)
+            given(adAuthenticationService.authenticate(any()))
+                .willThrow(new BusinessException("AUTH_008", "비밀번호가 만료되었습니다. 비밀번호를 변경해주세요"));
+
+            String requestBody = """
+                {
+                    "employeeId": "202401001",
+                    "password": "ExpiredPass123!"
+                }
+                """;
+
+            // When & Then (실행 & 검증)
+            mockMvc.perform(post("/api/v1/auth/login/ad")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(requestBody))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("AUTH_008"))
+                .andExpect(jsonPath("$.error.message").value("비밀번호가 만료되었습니다. 비밀번호를 변경해주세요"));
+        }
     }
 }

@@ -45,8 +45,8 @@
 - [x] AD 로그인 실패 - null 비밀번호 (InvalidCredentialsException)
 - [x] AD 로그인 실패 - 비활성화된 사용자 (AccountDisabledException)
 - [x] AD 로그인 실패 - 잠긴 계정 (AccountLockedException)
-- [ ] AD 로그인 실패 - 만료된 계정 (AccountExpiredException)
-- [ ] AD 로그인 실패 - 비밀번호 만료 (CredentialsExpiredException)
+- [x] AD 로그인 실패 - 만료된 계정 (AccountExpiredException)
+- [x] AD 로그인 실패 - 비밀번호 만료 (CredentialsExpiredException)
 
 **실패 케이스 - 서버 오류:**
 - [ ] AD 로그인 실패 - AD 서버 연결 불가 (Connection Timeout)
