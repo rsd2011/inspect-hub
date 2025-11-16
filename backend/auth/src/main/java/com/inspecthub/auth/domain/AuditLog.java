@@ -147,7 +147,10 @@ public class AuditLog {
         String employeeId,
         String clientIp,
         String method,
-        String reason
+        String reason,
+        String userAgent,
+        String sessionId,
+        String referer
     ) {
         LocalDateTime now = LocalDateTime.now();
         return AuditLog.builder()
@@ -157,6 +160,9 @@ public class AuditLog {
             .clientIp(clientIp)
             .method(method)
             .reason(reason)
+            .userAgent(userAgent)
+            .sessionId(sessionId)
+            .referer(referer)
             .success(false)
             .timestamp(now)
             .createdAt(now)

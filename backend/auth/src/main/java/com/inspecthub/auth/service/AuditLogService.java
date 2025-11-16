@@ -186,7 +186,10 @@ public class AuditLogService {
                 employeeId,
                 null,  // clientIp - 나중에 HttpServletRequest에서 추출
                 loginMethod,
-                reason
+                reason,
+                null,  // userAgent - 나중에 HttpServletRequest에서 추출
+                null,  // sessionId - 나중에 HttpServletRequest에서 추출
+                null   // referer - 나중에 HttpServletRequest에서 추출
             );
 
             auditLogMapper.insert(auditLog);
@@ -206,7 +209,7 @@ public class AuditLogService {
      * @param employeeId 사원ID
      * @param reason 실패 사유
      * @param loginMethod 로그인 방법 (AD, SSO, LOCAL)
-     * @param request HTTP 요청 (clientIp 추출용)
+     * @param request HTTP 요청 (clientIp, userAgent, sessionId, referer 추출용)
      */
     @Async
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -214,13 +217,19 @@ public class AuditLogService {
         try {
             String id = UlidCreator.getUlid().toString();
             String clientIp = extractClientIp(request);
+            String userAgent = request.getHeader("User-Agent");
+            String sessionId = extractSessionId(request);
+            String referer = request.getHeader("Referer");
 
             AuditLog auditLog = AuditLog.createLoginFailure(
                 id,
                 employeeId,
                 clientIp,
                 loginMethod,
-                reason
+                reason,
+                userAgent,
+                sessionId,
+                referer
             );
 
             auditLogMapper.insert(auditLog);

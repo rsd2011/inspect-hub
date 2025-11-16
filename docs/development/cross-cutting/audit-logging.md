@@ -37,7 +37,7 @@
 - [x] 로그인 실패 감사 로그 - 실패 사유 기록 (reason: INVALID_CREDENTIALS) - 기존 테스트에서 검증 완료
 - [x] 로그인 실패 감사 로그 - 입력된 사원ID 기록 (attemptedEmployeeId) - 기존 테스트에서 검증 완료
 - [x] 로그인 실패 감사 로그 - IP 주소 기록
-- [ ] 로그인 실패 감사 로그 - User-Agent 기록
+- [x] 로그인 실패 감사 로그 - User-Agent 기록
 - [x] 로그인 실패 감사 로그 - 타임스탬프 기록 - 기존 테스트에서 검증 완료
 - [ ] 로그인 실패 감사 로그 - 실패 횟수 증가 (failedAttempts++) - TODO: UserService 책임
 - [x] 로그인 실패 감사 로그 - Repository save 호출 확인 - 기존 테스트에서 검증 완료
