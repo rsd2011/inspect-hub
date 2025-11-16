@@ -3,6 +3,7 @@ package com.inspecthub.auth.service;
 import com.github.f4b6a3.ulid.UlidCreator;
 import com.inspecthub.auth.domain.AuditLog;
 import com.inspecthub.auth.mapper.AuditLogMapper;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -85,6 +86,60 @@ public class AuditLogService {
             log.error("로그인 성공 감사 로그 저장 실패: employeeId={}, method={}",
                 user.getEmployeeId(), loginMethod, e);
         }
+    }
+
+    /**
+     * 로그인 성공 기록 (User + HttpServletRequest 버전)
+     *
+     * @param user User 도메인 객체
+     * @param request HTTP 요청 (clientIp 추출용)
+     * @param loginMethod 로그인 방법 (AD, SSO, LOCAL)
+     */
+    @Async
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void logLoginSuccess(com.inspecthub.auth.domain.User user, HttpServletRequest request, String loginMethod) {
+        try {
+            String id = UlidCreator.getUlid().toString();
+            String clientIp = extractClientIp(request);
+
+            AuditLog auditLog = AuditLog.createLoginSuccess(
+                id,
+                user.getEmployeeId(),
+                user.getId().getValue(),
+                user.getName(),
+                clientIp,
+                loginMethod
+            );
+
+            auditLogMapper.insert(auditLog);
+
+            log.info("로그인 성공 감사 로그 저장: id={}, userId={}, employeeId={}, clientIp={}, method={}",
+                id, user.getId().getValue(), user.getEmployeeId(), clientIp, loginMethod);
+        } catch (Exception e) {
+            log.error("로그인 성공 감사 로그 저장 실패: employeeId={}, method={}",
+                user.getEmployeeId(), loginMethod, e);
+        }
+    }
+
+    /**
+     * 클라이언트 IP 주소 추출
+     *
+     * X-Forwarded-For 헤더 우선 (프록시/로드밸런서를 통한 요청)
+     * 없으면 RemoteAddr 사용
+     * 여러 IP가 있는 경우 첫 번째 IP 반환 (원본 클라이언트 IP)
+     *
+     * @param request HTTP 요청
+     * @return 클라이언트 IP 주소
+     */
+    private String extractClientIp(HttpServletRequest request) {
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        
+        if (xForwardedFor != null && !xForwardedFor.isBlank()) {
+            // 여러 IP가 콤마로 구분된 경우 첫 번째 IP 사용
+            return xForwardedFor.split(",")[0].trim();
+        }
+        
+        return request.getRemoteAddr();
     }
 
     /**

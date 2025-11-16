@@ -4,6 +4,7 @@ import com.inspecthub.auth.domain.AuditLog;
 import com.inspecthub.auth.domain.User;
 import com.inspecthub.auth.domain.UserId;
 import com.inspecthub.auth.mapper.AuditLogMapper;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -160,6 +161,127 @@ class AuditLogServiceTest {
             assertThat(savedLog.getMethod()).isEqualTo(loginMethod);
             assertThat(savedLog.getSuccess()).isTrue();
             assertThat(savedLog.getTimestamp()).isNotNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("로그인 성공 감사 로그 - IP 주소 기록")
+    class ClientIpRecording {
+
+        @Mock
+        private HttpServletRequest request;
+
+        @Test
+        @DisplayName("X-Forwarded-For 헤더가 있는 경우 해당 IP 사용")
+        void shouldUseXForwardedForWhenPresent() {
+            // Given (준비)
+            UserId userId = UserId.of("01HN3Z8Q6PXYZ9ABCD1234EFGH");
+            String employeeId = "202401001";
+            String username = "홍길동";
+            String loginMethod = "AD";
+            String expectedIp = "203.0.113.195";
+
+            User user = User.builder()
+                .id(userId)
+                .employeeId(employeeId)
+                .name(username)
+                .email("hong@example.com")
+                .loginMethod("AD")
+                .active(true)
+                .locked(false)
+                .failedAttempts(0)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+            given(request.getHeader("X-Forwarded-For")).willReturn(expectedIp);
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            // When (실행)
+            auditLogService.logLoginSuccess(user, request, loginMethod);
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+            assertThat(savedLog.getClientIp()).isEqualTo(expectedIp);
+        }
+
+        @Test
+        @DisplayName("X-Forwarded-For가 없으면 RemoteAddr 사용")
+        void shouldUseRemoteAddrWhenNoXForwardedFor() {
+            // Given (준비)
+            UserId userId = UserId.of("01HN3Z8Q6PXYZ9ABCD1234EFGH");
+            String employeeId = "202401001";
+            String username = "홍길동";
+            String loginMethod = "AD";
+            String expectedIp = "192.168.1.100";
+
+            User user = User.builder()
+                .id(userId)
+                .employeeId(employeeId)
+                .name(username)
+                .email("hong@example.com")
+                .loginMethod("AD")
+                .active(true)
+                .locked(false)
+                .failedAttempts(0)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+            given(request.getHeader("X-Forwarded-For")).willReturn(null);
+            given(request.getRemoteAddr()).willReturn(expectedIp);
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            // When (실행)
+            auditLogService.logLoginSuccess(user, request, loginMethod);
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+            assertThat(savedLog.getClientIp()).isEqualTo(expectedIp);
+        }
+
+        @Test
+        @DisplayName("여러 IP가 있는 X-Forwarded-For 헤더는 첫 번째 IP 사용")
+        void shouldUseFirstIpWhenMultipleXForwardedFor() {
+            // Given (준비)
+            UserId userId = UserId.of("01HN3Z8Q6PXYZ9ABCD1234EFGH");
+            String employeeId = "202401001";
+            String username = "홍길동";
+            String loginMethod = "AD";
+            String multipleIps = "203.0.113.195, 70.41.3.18, 150.172.238.178";
+            String expectedIp = "203.0.113.195";
+
+            User user = User.builder()
+                .id(userId)
+                .employeeId(employeeId)
+                .name(username)
+                .email("hong@example.com")
+                .loginMethod("AD")
+                .active(true)
+                .locked(false)
+                .failedAttempts(0)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+            given(request.getHeader("X-Forwarded-For")).willReturn(multipleIps);
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            // When (실행)
+            auditLogService.logLoginSuccess(user, request, loginMethod);
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+            assertThat(savedLog.getClientIp()).isEqualTo(expectedIp);
         }
     }
 
