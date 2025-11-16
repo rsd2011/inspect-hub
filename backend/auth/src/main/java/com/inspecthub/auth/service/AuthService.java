@@ -2,7 +2,6 @@ package com.inspecthub.auth.service;
 
 import com.inspecthub.auth.domain.AccountLockPolicy;
 import com.inspecthub.auth.domain.User;
-import com.inspecthub.auth.domain.UserId;
 import com.inspecthub.auth.dto.LoginRequest;
 import com.inspecthub.auth.dto.RefreshTokenRequest;
 import com.inspecthub.auth.dto.TokenResponse;

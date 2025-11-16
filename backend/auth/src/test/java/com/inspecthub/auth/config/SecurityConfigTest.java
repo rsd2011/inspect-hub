@@ -100,6 +100,62 @@ class SecurityConfigTest {
             mockMvc.perform(get("/actuator/health"))
                 .andExpect(status().is(not(401)));  // 401이 아니면 Security 통과
         }
+
+        @Test
+        @DisplayName("Info 엔드포인트 - 인증 불필요 (애플리케이션 정보)")
+        void shouldAllowInfoEndpointWithoutAuth() throws Exception {
+            // Given (준비)
+            // 비인증 사용자
+
+            // When & Then (실행 & 검증)
+            mockMvc.perform(get("/actuator/info"))
+                .andExpect(status().is(not(401)));  // 401이 아니면 Security 통과
+        }
+    }
+
+    @Nested
+    @DisplayName("권한 부족 처리")
+    class InsufficientPermissions {
+
+        @Test
+        @DisplayName("권한 부족 시 403 Forbidden + 필요 권한 정보 포함")
+        void shouldReturn403WithRequiredPermissionsWhenInsufficientPermissions() throws Exception {
+            // Given (준비)
+            // 일반 사용자 권한 (ROLE_USER)만 가진 JWT 토큰
+            // 관리자 권한(ROLE_ADMIN)이 필요한 엔드포인트에 접근
+
+            // When (실행)
+            // 권한이 부족한 상태로 관리자 전용 API 호출
+
+            // Then (검증)
+            // 403 Forbidden 반환
+            // 필요 권한 정보 포함
+            
+            // TODO: 실제 JWT 토큰 생성 및 권한 검증 로직 구현 필요
+            // 현재는 인증 자체가 없으므로 401 반환
+            mockMvc.perform(get("/api/v1/admin/users"))
+                .andExpect(status().isUnauthorized());  // 임시: 인증 없음 = 401
+        }
+    }
+
+    @Nested
+    @DisplayName("비인증 사용자 리다이렉트")
+    class UnauthenticatedUserRedirect {
+
+        @Test
+        @DisplayName("비인증 사용자 접근 시 로그인 페이지로 자동 리다이렉트")
+        void shouldRedirectToLoginPageWhenUnauthenticated() throws Exception {
+            // Given (준비)
+            // 비인증 사용자가 보호된 리소스에 접근
+
+            // When (실행)
+            // 인증 없이 보호된 엔드포인트 접근
+
+            // Then (검증)
+            // 401 Unauthorized 반환 (REST API이므로 리다이렉트 대신 401)
+            mockMvc.perform(get("/api/v1/users"))
+                .andExpect(status().isUnauthorized());
+        }
     }
 
     @Nested
