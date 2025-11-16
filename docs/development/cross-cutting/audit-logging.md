@@ -9,7 +9,7 @@
 - [x] 로그인 성공 감사 로그 - 필수 필드 포함 (userId, employeeId, username, orgId)
 - [x] 로그인 성공 감사 로그 - IP 주소 기록 (clientIp, X-Forwarded-For 헤더)
 - [x] 로그인 성공 감사 로그 - User-Agent 기록 (브라우저, OS 정보)
-- [ ] 로그인 성공 감사 로그 - 세션 ID 기록 (sessionId)
+- [x] 로그인 성공 감사 로그 - 세션 ID 기록 (sessionId)
 - [ ] 로그인 성공 감사 로그 - 타임스탬프 기록 (loginAt, UTC)
 - [ ] 로그인 성공 감사 로그 - 발급된 토큰 ID 기록 (accessTokenId, refreshTokenId)
 - [ ] 로그인 성공 감사 로그 - Repository save 호출 확인

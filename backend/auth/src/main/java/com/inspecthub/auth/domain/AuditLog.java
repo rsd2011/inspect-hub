@@ -117,7 +117,8 @@ public class AuditLog {
         String username,
         String clientIp,
         String method,
-        String userAgent
+        String userAgent,
+        String sessionId
     ) {
         return AuditLog.builder()
             .id(id)
@@ -128,6 +129,7 @@ public class AuditLog {
             .clientIp(clientIp)
             .method(method)
             .userAgent(userAgent)
+            .sessionId(sessionId)
             .success(true)
             .timestamp(LocalDateTime.now())
             .createdAt(LocalDateTime.now())

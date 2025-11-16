@@ -43,7 +43,8 @@ public class AuditLogService {
                 null,  // username - 나중에 User 정보 추가 시 설정
                 null,  // clientIp - 나중에 HttpServletRequest에서 추출
                 loginMethod,
-                null   // userAgent - 나중에 HttpServletRequest에서 추출
+                null,  // userAgent - 나중에 HttpServletRequest에서 추출
+                null   // sessionId - 나중에 HttpServletRequest에서 추출
             );
 
             auditLogMapper.insert(auditLog);
@@ -76,7 +77,8 @@ public class AuditLogService {
                 user.getName(),           // username
                 null,  // clientIp - 나중에 HttpServletRequest에서 추출
                 loginMethod,
-                null   // userAgent - 나중에 HttpServletRequest에서 추출
+                null,  // userAgent - 나중에 HttpServletRequest에서 추출
+                null   // sessionId - 나중에 HttpServletRequest에서 추출
             );
 
             auditLogMapper.insert(auditLog);
@@ -104,6 +106,7 @@ public class AuditLogService {
             String id = UlidCreator.getUlid().toString();
             String clientIp = extractClientIp(request);
             String userAgent = request.getHeader("User-Agent");
+            String sessionId = extractSessionId(request);
 
             AuditLog auditLog = AuditLog.createLoginSuccess(
                 id,
@@ -112,7 +115,8 @@ public class AuditLogService {
                 user.getName(),
                 clientIp,
                 loginMethod,
-                userAgent
+                userAgent,
+                sessionId
             );
 
             auditLogMapper.insert(auditLog);
@@ -144,6 +148,20 @@ public class AuditLogService {
         }
         
         return request.getRemoteAddr();
+    }
+
+    /**
+     * 세션 ID 추출
+     *
+     * 기존 세션이 있으면 세션 ID 반환
+     * 없으면 null 반환 (세션 생성하지 않음)
+     *
+     * @param request HTTP 요청
+     * @return 세션 ID (없으면 null)
+     */
+    private String extractSessionId(HttpServletRequest request) {
+        jakarta.servlet.http.HttpSession session = request.getSession(false);
+        return session != null ? session.getId() : null;
     }
 
     /**

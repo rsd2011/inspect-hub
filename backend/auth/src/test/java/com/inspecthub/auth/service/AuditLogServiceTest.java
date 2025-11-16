@@ -5,6 +5,7 @@ import com.inspecthub.auth.domain.User;
 import com.inspecthub.auth.domain.UserId;
 import com.inspecthub.auth.mapper.AuditLogMapper;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -407,6 +408,97 @@ class AuditLogServiceTest {
             AuditLog savedLog = auditLogCaptor.getValue();
             assertThat(savedLog.getUserAgent()).isEqualTo(chromeUserAgent);
             assertThat(savedLog.getUserAgent()).contains("Chrome/120.0.0.0");
+        }
+    }
+
+    @Nested
+    @DisplayName("로그인 성공 감사 로그 - 세션 ID 기록")
+    class SessionIdRecording {
+
+        @Mock
+        private HttpServletRequest request;
+
+        @Mock
+        private HttpSession session;
+
+        @Test
+        @DisplayName("세션이 존재하는 경우 세션 ID 기록")
+        void shouldRecordSessionIdWhenSessionExists() {
+            // Given (준비)
+            UserId userId = UserId.of("01HN3Z8Q6PXYZ9ABCD1234EFGH");
+            String employeeId = "202401001";
+            String username = "홍길동";
+            String loginMethod = "AD";
+            String sessionId = "E6B9A3F2-1D4C-4E8F-9A2B-C3D4E5F6A7B8";
+
+            User user = User.builder()
+                .id(userId)
+                .employeeId(employeeId)
+                .name(username)
+                .email("hong@example.com")
+                .loginMethod("AD")
+                .active(true)
+                .locked(false)
+                .failedAttempts(0)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+            given(request.getHeader("X-Forwarded-For")).willReturn(null);
+            given(request.getRemoteAddr()).willReturn("192.168.1.100");
+            given(request.getHeader("User-Agent")).willReturn("Mozilla/5.0");
+            given(request.getSession(false)).willReturn(session);
+            given(session.getId()).willReturn(sessionId);
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            // When (실행)
+            auditLogService.logLoginSuccess(user, request, loginMethod);
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+            assertThat(savedLog.getSessionId()).isEqualTo(sessionId);
+        }
+
+        @Test
+        @DisplayName("세션이 없는 경우 null로 기록")
+        void shouldRecordNullWhenNoSession() {
+            // Given (준비)
+            UserId userId = UserId.of("01HN3Z8Q6PXYZ9ABCD1234EFGH");
+            String employeeId = "202401001";
+            String username = "홍길동";
+            String loginMethod = "AD";
+
+            User user = User.builder()
+                .id(userId)
+                .employeeId(employeeId)
+                .name(username)
+                .email("hong@example.com")
+                .loginMethod("AD")
+                .active(true)
+                .locked(false)
+                .failedAttempts(0)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+            given(request.getHeader("X-Forwarded-For")).willReturn(null);
+            given(request.getRemoteAddr()).willReturn("192.168.1.100");
+            given(request.getHeader("User-Agent")).willReturn("Mozilla/5.0");
+            given(request.getSession(false)).willReturn(null);
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            // When (실행)
+            auditLogService.logLoginSuccess(user, request, loginMethod);
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+            assertThat(savedLog.getSessionId()).isNull();
         }
     }
 
