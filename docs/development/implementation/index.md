@@ -53,6 +53,88 @@ SSO_CLIENT_SECRET=******
 
 ---
 
+### 🚨 Exception Handling Guide
+**📄 [exception-handling.md](./exception-handling.md)**
+
+**주요 내용:**
+
+#### 1. 예외 처리 설계 철학
+- 엔터프라이즈급 백엔드 애플리케이션 예외 처리 원칙
+- 레이어별 책임 분리 (Controller, Service, Domain, Repository)
+- 예외 vs 결과 객체 사용 기준
+
+#### 2. ErrorCode + BusinessException 설계
+```java
+@Getter
+@RequiredArgsConstructor
+public enum ErrorCode {
+    AUTH_001(HttpStatus.UNAUTHORIZED, "AUTH_001", "사용자를 찾을 수 없습니다"),
+    // ... 카테고리별 에러 코드
+}
+
+@Getter
+public class BusinessException extends RuntimeException {
+    private final String errorCode;
+    private final String message;
+    
+    public BusinessException(ErrorCode errorCode) {
+        super(errorCode.getMessage());
+        this.errorCode = errorCode.getCode();
+        this.message = errorCode.getMessage();
+    }
+}
+```
+
+#### 3. 전역 예외 핸들러
+```java
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e) {
+        ErrorCode errorCode = ErrorCode.fromCode(e.getErrorCode());
+        return ResponseEntity.status(errorCode.getHttpStatus())
+            .body(ApiResponse.error(e.getErrorCode(), e.getMessage()));
+    }
+}
+```
+
+#### 4. Service 레이어 예외 처리 패턴
+- **BusinessException 던지기**: 트랜잭션 롤백이 필요한 경우
+- **Result<T> 반환**: 실패도 정상 분기로 간주되는 경우
+- **도메인 규칙 위반**: DomainException 사용
+
+#### 5. 재시도/회로 차단 패턴
+- Spring Retry with @Retryable
+- Resilience4j Circuit Breaker
+- Fallback 전략
+
+#### 6. 보안 고려사항
+- Stack trace 노출 방지 (환경별 응답 분기)
+- 민감 정보 마스킹
+- SQL Injection 방지
+
+#### 7. 로깅 전략
+- MDC (Mapped Diagnostic Context) 활용
+- Trace ID 기반 분산 추적
+- 구조화된 JSON 로깅
+
+#### 8. 테스트 전략
+- MockMvc를 사용한 예외 핸들러 테스트
+- BDD 스타일 테스트 작성 (Given-When-Then)
+
+#### 9. 예외 처리 안티패턴
+- Exception swallowing
+- 과도한 try-catch 사용
+- 제네릭 Exception 사용
+- 흐름 제어용 예외 사용
+
+#### 10. 성능 고려사항
+- 예외 생성 비용 최소화
+- Stack trace 비활성화 (고성능 시나리오)
+- 지연 로깅 (Lazy evaluation)
+
+---
+
 ### 🎨 Frontend UI Design
 **📄 [frontend-guide.md](./frontend-guide.md)** (298줄)
 

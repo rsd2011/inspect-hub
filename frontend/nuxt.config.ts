@@ -3,10 +3,10 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: true },
 
-  // Set srcDir to root to avoid conflicts with our 'app' directory
-  srcDir: '.',
+  // ⚠️ CRITICAL: Set srcDir to 'app/' for Nuxt 4 official structure
+  srcDir: 'app/',
 
-  // SPA mode only - no SSR
+  // ⚠️ CRITICAL: SPA mode only - SSR STRICTLY FORBIDDEN
   ssr: false,
 
   modules: [
@@ -16,19 +16,13 @@ export default defineNuxtConfig({
     '@nuxt/eslint'
   ],
 
-  // Plugins configuration
-  plugins: [
-    '~/app/providers/primevue.ts',
-    '~/app/providers/auth.ts',
-  ],
-
   // Tailwind CSS configuration
   tailwindcss: {
-    cssPath: '~/app/styles/tailwind.css',
+    cssPath: '~/assets/styles/tailwind.css',
     configPath: 'tailwind.config.js',
     exposeConfig: false,
     viewer: true,
-    // Prefix to avoid conflicts with PrimeVue/RealGrid
+    // ⚠️ CRITICAL: Prefix to avoid conflicts with PrimeVue/RealGrid
     config: {
       prefix: 'tw-'
     }
@@ -42,6 +36,7 @@ export default defineNuxtConfig({
     ],
     defaultLocale: 'ko',
     strategy: 'no_prefix',
+    langDir: '../i18n/locales',
     detectBrowserLanguage: {
       useCookie: true,
       cookieKey: 'i18n_locale',
@@ -51,28 +46,9 @@ export default defineNuxtConfig({
 
   // CSS
   css: [
-    '~/app/styles/fonts.css',
-    '~/app/styles/main.css'
+    '~/assets/styles/fonts.css',
+    '~/assets/styles/main.css'
   ],
-
-  // Auto-import components (FSD + Atomic Design structure)
-  components: [
-    { path: '~/app/layouts', pathPrefix: false },
-    { path: '~/widgets', pathPrefix: false, extensions: ['.vue'] },
-    { path: '~/shared/ui/atoms', pathPrefix: false },
-    { path: '~/shared/ui/molecules', pathPrefix: false },
-    { path: '~/shared/ui/organisms', pathPrefix: false }
-  ],
-
-  // Auto-import composables, stores, and utilities
-  imports: {
-    dirs: [
-      'shared/lib/composables',
-      'shared/lib/utils',
-      'features/*/model',
-      'entities/*/model'
-    ]
-  },
 
   // Vite configuration
   vite: {
@@ -85,7 +61,7 @@ export default defineNuxtConfig({
     css: {
       preprocessorOptions: {
         scss: {
-          additionalData: '@use "@/app/styles/_variables.scss" as *;'
+          additionalData: '@use "~/assets/styles/_variables.scss" as *;'
         }
       }
     },
@@ -132,7 +108,7 @@ export default defineNuxtConfig({
   // TypeScript
   typescript: {
     strict: true,
-    typeCheck: false // Disable build-time type checking to avoid import issues
+    typeCheck: false // Disable build-time type checking
   },
 
   // Build configuration

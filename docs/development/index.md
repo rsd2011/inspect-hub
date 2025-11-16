@@ -32,15 +32,8 @@ Inspect-Hub 프로젝트의 **개발 방법론**, **테스트 계획**, **구현
 - 실행 방법 및 커버리지 리포트
 
 **하위 문서:**
-- [Layer 1: Domain Layer](./layers/layer-1-domain.md) - Value Objects, Aggregate Roots, Domain Services
-- [Layer 2: Application Layer](./layers/layer-2-application.md) - Commands, Application Services, Query Services
-- [Layer 3: Infrastructure Layer](./layers/layer-3-infrastructure.md) - Repository Implementations
-- [Layer 4: Interface Layer](./layers/layer-4-interface.md) - Controller Tests (MockMvc)
-- [Cross-Cutting: Login Policy](./cross-cutting/login-policy.md)
-- [Cross-Cutting: Authentication](./cross-cutting/authentication.md) - AD, SSO, Local Login
-- [Cross-Cutting: JWT](./cross-cutting/jwt.md) - Token Management
-- [Cross-Cutting: Audit Logging](./cross-cutting/audit-logging.md)
-- [Cross-Cutting: Misc](./cross-cutting/misc.md) - Password, Exception Handling
+- [DDD Layers Center](./layers/index.md) - 아키텍처 레이어별 상세 테스트 케이스
+- [Cross-Cutting Concerns Center](./cross-cutting/index.md) - 횡단 관심사 (인증, 감사 로깅, 예외 처리)
 
 #### [TDD + DDD Workflow](./TDD_DDD_WORKFLOW.md)
 **상세 워크플로우 가이드 (1298줄)**
@@ -52,6 +45,16 @@ Inspect-Hub 프로젝트의 **개발 방법론**, **테스트 계획**, **구현
 - Commit 규칙
 - 리팩토링 가이드라인
 - 실전 워크플로우 예제
+
+#### [AI Guidelines](./ai-guidelines.md)
+**AI Skills + MCP 최대 활용 지침**
+
+**주요 내용:**
+- LLM Skills 활용 원칙 (코드 생성, 분석, 테스트)
+- MCP 도구 활용 (Web, File, Database, Workflow)
+- Inspect-Hub 프로젝트 컨텍스트 템플릿
+- TDD + DDD 기반 코드 생성 예시
+- Copy & Paste 가능한 AI 세션 템플릿
 
 #### [Development Workflow](./WORKFLOW.md)
 **일반 개발 가이드**

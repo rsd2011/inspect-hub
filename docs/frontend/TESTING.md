@@ -16,12 +16,14 @@
 4. [컴포넌트 테스트](#컴포넌트-테스트)
 5. [통합 테스트](#통합-테스트)
 6. [E2E 테스트 (Playwright)](#e2e-테스트-playwright)
-7. [Pinia Store 테스트](#pinia-store-테스트)
-8. [Composables 테스트](#composables-테스트)
-9. [API 모킹](#api-모킹)
-10. [테스트 커버리지](#테스트-커버리지)
-11. [CI/CD 통합](#cicd-통합)
-12. [베스트 프랙티스](#베스트-프랙티스)
+7. [Skills 활용 (Playwright Skill)](#skills-활용-playwright-skill)
+8. [MCP Playwright Server 활용](#mcp-playwright-server-활용)
+9. [Pinia Store 테스트](#pinia-store-테스트)
+10. [Composables 테스트](#composables-테스트)
+11. [API 모킹](#api-모킹)
+12. [테스트 커버리지](#테스트-커버리지)
+13. [CI/CD 통합](#cicd-통합)
+14. [베스트 프랙티스](#베스트-프랙티스)
 
 ---
 
@@ -60,20 +62,121 @@
 
 ### 핵심 원칙
 
-1. **테스트 우선순위**
-   - **High**: 비즈니스 로직, 데이터 변환, 보안 관련
-   - **Medium**: UI 컴포넌트, 사용자 인터랙션
-   - **Low**: 스타일, 애니메이션
+#### 1. TDD (Test-Driven Development) - 테스트 설계 기준 ⭐
 
-2. **Given-When-Then 패턴**
-   - Given: 초기 상태 설정
-   - When: 사용자 액션 또는 이벤트
-   - Then: 기대 결과 검증
+**새로운 기능 구현 시 반드시 TDD 사이클을 준수한다:**
 
-3. **사용자 중심 테스트**
-   - 구현 세부사항이 아닌 사용자 관점에서 테스트
-   - 접근성 우선 (role, label 기반 쿼리)
-   - 실제 사용자 행동 시뮬레이션
+- **Red (실패하는 테스트 작성)**: 기능 구현 전 먼저 실패하는 테스트를 작성
+- **Green (최소 코드로 통과)**: 테스트가 통과할 수 있는 최소한의 프로덕션 코드 작성
+- **Refactor (리팩터링)**: 테스트가 통과한 상태에서 코드 개선
+
+```typescript
+// 1. Red: 실패하는 테스트 먼저 작성
+describe('할인 계산기', () => {
+  it('VIP 고객에게 20% 할인율을 적용한다', () => {
+    // Given
+    const vipUser = { membershipLevel: 'VIP' }
+
+    // When
+    const discount = calculateDiscount(vipUser)
+
+    // Then
+    expect(discount.rate).toBe(0.20)  // 아직 구현 안됨 → 테스트 실패
+  })
+})
+
+// 2. Green: 최소 코드로 통과
+export function calculateDiscount(user) {
+  if (user.membershipLevel === 'VIP') {
+    return { rate: 0.20 }  // 하드코딩도 OK
+  }
+  return { rate: 0.0 }
+}
+
+// 3. Refactor: 개선 (테스트는 계속 통과)
+const DISCOUNT_RATES = {
+  VIP: 0.20,
+  GOLD: 0.15,
+  SILVER: 0.10
+}
+
+export function calculateDiscount(user) {
+  const rate = DISCOUNT_RATES[user.membershipLevel] || 0.0
+  return { rate }
+}
+```
+
+#### 2. BDD (Behavior-Driven Development) - 테스트 표현 방식 ⭐
+
+**각 테스트는 하나의 행동(Behavior)을 검증하도록 설계한다:**
+
+**Given / When / Then 구조:**
+- **Given (준비)**: 테스트 전제 조건 및 데이터 준비
+- **When (실행)**: 테스트 대상 메서드/컴포넌트 실행
+- **Then (검증)**: 예상 결과 검증
+
+**테스트 명명 규칙:**
+- ✅ **시나리오 문장 형태**로 작성
+- ✅ `it()` 또는 `test()` 설명은 **한글 비즈니스 시나리오**로 작성
+- ✅ 함수명은 `should_[예상결과]_when_[조건]()` 형식 (선택사항)
+
+```typescript
+// ✅ Good: BDD 스타일
+describe('로그인 폼', () => {
+  it('유효한 자격증명으로 로그인 시 대시보드로 이동한다', async () => {
+    // Given (준비): 로그인 폼 렌더링
+    const { getByLabel, getByRole } = render(LoginForm)
+    const user = userEvent.setup()
+
+    // When (실행): 사용자 입력 및 제출
+    await user.type(getByLabel('사용자명'), 'admin')
+    await user.type(getByLabel('비밀번호'), 'admin123')
+    await user.click(getByRole('button', { name: '로그인' }))
+
+    // Then (검증): 대시보드로 리다이렉트
+    expect(mockRouter.push).toHaveBeenCalledWith('/dashboard')
+  })
+
+  it('비밀번호가 5회 이상 틀리면 계정이 잠긴다', async () => {
+    // Given, When, Then...
+  })
+})
+
+// ❌ Bad: 기술적 용어, 불명확한 시나리오
+describe('LoginForm', () => {
+  it('should work', () => {
+    const wrapper = mount(LoginForm)
+    expect(wrapper.exists()).toBe(true)
+  })
+})
+```
+
+**추가 예시:**
+```typescript
+it('만료된 토큰으로 API 호출 시 401 에러를 반환한다', () => {})
+it('중복된 이메일로 가입 시 검증 에러를 표시한다', () => {})
+it('파일 업로드 진행률이 실시간으로 업데이트된다', () => {})
+```
+
+#### 3. F.I.R.S.T 원칙
+
+- **Fast**: 빠른 실행 (<1초/테스트)
+- **Independent**: 독립적 실행 가능
+- **Repeatable**: 반복 가능
+- **Self-validating**: 자동 검증
+- **Timely**: 적시 작성 (TDD - 코드 작성 전!)
+
+#### 4. 테스트 우선순위
+
+- **High**: 비즈니스 로직, 데이터 변환, 보안 관련
+- **Medium**: UI 컴포넌트, 사용자 인터랙션
+- **Low**: 스타일, 애니메이션
+
+#### 5. 사용자 중심 테스트
+
+- 구현 세부사항이 아닌 사용자 관점에서 테스트
+- 접근성 우선 (role, label 기반 쿼리)
+- 실제 사용자 행동 시뮬레이션
 
 ---
 
@@ -1112,6 +1215,334 @@ test.describe('사용자 관리', () => {
 
 ---
 
+## Skills 활용 (Playwright Skill)
+
+### Playwright Skill 소개
+
+Playwright Skill은 AI 기반 E2E 테스트 코드 생성 도구입니다. 자연어 시나리오를 입력하면 BDD 스타일의 Playwright 테스트 코드를 자동 생성합니다.
+
+### Skill 활성화
+
+```bash
+# Claude Code에서 Playwright Skill 활성화
+/skill playwright
+```
+
+### 사용 시나리오
+
+#### 1. 새로운 E2E 테스트 생성
+
+**입력:**
+```
+Playwright Skill을 사용하여 사용자 관리 페이지 E2E 테스트를 작성해주세요.
+
+시나리오:
+1. 관리자로 로그인
+2. 사용자 관리 페이지 이동
+3. 새 사용자 추가 버튼 클릭
+4. 사용자 정보 입력 (사용자명, 이메일, 이름, 조직)
+5. 저장 버튼 클릭
+6. 성공 메시지 확인
+7. 목록에서 생성된 사용자 확인
+```
+
+**출력 (자동 생성):**
+```typescript
+// tests/e2e/admin/user-create.spec.ts
+import { test, expect } from '@playwright/test'
+
+test.describe('사용자 관리 - 생성', () => {
+  test.beforeEach(async ({ page }) => {
+    // 관리자 로그인
+    await page.goto('/login')
+    await page.getByLabel('사용자명').fill('admin')
+    await page.getByLabel('비밀번호').fill('admin123')
+    await page.getByRole('button', { name: '로그인' }).click()
+    await expect(page).toHaveURL('/dashboard')
+
+    // 사용자 관리 페이지 이동
+    await page.goto('/admin/users')
+  })
+
+  test('새 사용자를 성공적으로 생성한다', async ({ page }) => {
+    // Given: 사용자 관리 페이지
+    await expect(page.getByRole('heading', { name: '사용자 관리' })).toBeVisible()
+
+    // When: 새 사용자 추가
+    await page.getByRole('button', { name: '사용자 추가' }).click()
+    await expect(page.getByRole('dialog')).toBeVisible()
+
+    await page.getByLabel('사용자명').fill('newuser')
+    await page.getByLabel('이메일').fill('newuser@example.com')
+    await page.getByLabel('이름').fill('신규 사용자')
+    await page.getByLabel('조직').selectOption({ label: '본사' })
+
+    await page.getByRole('button', { name: '저장' }).click()
+
+    // Then: 성공 메시지 및 목록 확인
+    await expect(page.getByText('사용자가 생성되었습니다')).toBeVisible()
+    await expect(page.getByRole('cell', { name: 'newuser' })).toBeVisible()
+  })
+})
+```
+
+#### 2. 복잡한 사용자 플로우 테스트
+
+**입력:**
+```
+사례 처리 워크플로우 E2E 테스트를 작성해주세요:
+- 새로운 STR 사례 생성
+- 담당자 배정
+- 조사 내용 입력
+- 증빙 파일 첨부
+- 승인 요청
+- 승인자로 로그인하여 승인
+- 상태가 '승인됨'으로 변경 확인
+```
+
+**출력:** BDD 스타일의 완전한 E2E 테스트 코드 생성
+
+#### 3. 데이터 기반 테스트 생성
+
+**입력:**
+```
+로그인 실패 시나리오를 다양한 케이스로 테스트하고 싶습니다:
+- 빈 사용자명
+- 빈 비밀번호
+- 잘못된 사용자명
+- 잘못된 비밀번호
+- 계정 잠금 (5회 실패)
+```
+
+**출력:** `test.each()` 또는 개별 테스트 케이스로 구성된 데이터 기반 테스트
+
+### Skill 활용 Best Practices
+
+**✅ DO:**
+- 명확한 시나리오를 한글로 작성
+- Given-When-Then 구조로 설명
+- 페이지별, 기능별로 분리하여 요청
+- 생성된 코드 검토 및 프로젝트에 맞게 수정
+
+**❌ DON'T:**
+- 모든 테스트를 한 번에 요청 (너무 복잡)
+- 구현 세부사항 포함 (예: "클릭 이벤트 핸들러 호출")
+- 기술적 용어만 나열 (비즈니스 관점 우선)
+
+---
+
+## MCP Playwright Server 활용
+
+### MCP Playwright Server 소개
+
+MCP (Model Context Protocol) Playwright Server는 실시간 브라우저 자동화 도구로, Claude Code가 직접 브라우저를 제어하여 웹 애플리케이션을 테스트하고 검증할 수 있습니다.
+
+### 사용 가능한 MCP 도구
+
+#### 1. 브라우저 탐색
+
+```javascript
+// 페이지 이동
+mcp__playwright__browser_navigate({
+  url: 'http://localhost:3000/login'
+})
+
+// 뒤로 가기
+mcp__playwright__browser_navigate_back()
+```
+
+#### 2. 페이지 스냅샷 (구조 분석)
+
+```javascript
+// 현재 페이지의 접근성 트리 캡처 (권장)
+mcp__playwright__browser_snapshot()
+
+// 결과: 페이지의 구조화된 텍스트 표현
+// - 모든 클릭 가능한 요소
+// - 입력 필드
+// - 텍스트 콘텐츠
+// - ARIA 정보
+```
+
+**사용 사례:**
+- 페이지 구조 이해
+- 테스트 작성 전 요소 확인
+- 동적 콘텐츠 검증
+
+#### 3. 요소 상호작용
+
+```javascript
+// 클릭
+mcp__playwright__browser_click({
+  element: '로그인 버튼',  // 사람이 읽을 수 있는 설명
+  ref: 'button[name="login"]'  // 실제 선택자 (snapshot에서 가져옴)
+})
+
+// 텍스트 입력
+mcp__playwright__browser_type({
+  element: '사용자명 입력',
+  ref: 'input[name="username"]',
+  text: 'admin',
+  submit: false  // Enter 키 누르지 않음
+})
+
+// 드래그 앤 드롭
+mcp__playwright__browser_drag({
+  startElement: '작업 카드',
+  startRef: '[data-task-id="123"]',
+  endElement: '완료 컬럼',
+  endRef: '[data-column="done"]'
+})
+
+// 호버
+mcp__playwright__browser_hover({
+  element: '도움말 아이콘',
+  ref: '.help-icon'
+})
+```
+
+#### 4. 스크린샷 캡처
+
+```javascript
+// 전체 페이지 스크린샷
+mcp__playwright__browser_take_screenshot({
+  filename: 'dashboard-overview.png',
+  fullPage: true,
+  type: 'png'
+})
+
+// 특정 요소만 스크린샷
+mcp__playwright__browser_take_screenshot({
+  element: '통계 차트',
+  ref: '[data-testid="statistics-chart"]',
+  filename: 'chart.png'
+})
+```
+
+#### 5. 디버깅 도구
+
+```javascript
+// 콘솔 메시지 확인
+mcp__playwright__browser_console_messages({
+  onlyErrors: true  // 에러만 표시
+})
+
+// 네트워크 요청 확인
+mcp__playwright__browser_network_requests()
+
+// JavaScript 실행
+mcp__playwright__browser_evaluate({
+  function: `() => {
+    return {
+      userCount: document.querySelectorAll('.user-item').length,
+      appVersion: window.__APP_VERSION__
+    }
+  }`
+})
+```
+
+### 실전 활용 사례
+
+#### 사례 1: 수동 UI 검증
+
+```typescript
+// 시나리오: 새로운 대시보드 위젯 배치 확인
+
+// 1. 페이지 이동
+mcp__playwright__browser_navigate({ url: 'http://localhost:3000/dashboard' })
+
+// 2. 페이지 구조 분석
+const snapshot = mcp__playwright__browser_snapshot()
+// → 모든 위젯의 위치와 내용 확인
+
+// 3. 특정 위젯 스크린샷
+mcp__playwright__browser_take_screenshot({
+  element: '매출 차트 위젯',
+  ref: '[data-widget="revenue-chart"]',
+  filename: 'revenue-widget.png'
+})
+
+// 4. 콘솔 에러 확인
+const errors = mcp__playwright__browser_console_messages({ onlyErrors: true })
+// → React 에러, API 에러 등 확인
+```
+
+#### 사례 2: 인터랙티브 디버깅
+
+```typescript
+// 시나리오: 폼 제출 시 에러 재현
+
+// 1. 로그인
+mcp__playwright__browser_navigate({ url: 'http://localhost:3000/login' })
+mcp__playwright__browser_type({
+  element: '사용자명',
+  ref: 'input[name="username"]',
+  text: 'testuser'
+})
+mcp__playwright__browser_type({
+  element: '비밀번호',
+  ref: 'input[name="password"]',
+  text: 'password123',
+  submit: true  // Enter 키 자동 입력
+})
+
+// 2. 사용자 생성 페이지 이동
+mcp__playwright__browser_navigate({ url: 'http://localhost:3000/admin/users/new' })
+
+// 3. 스냅샷으로 폼 구조 확인
+mcp__playwright__browser_snapshot()
+
+// 4. 폼 입력
+mcp__playwright__browser_click({
+  element: '조직 선택',
+  ref: 'select[name="organization"]'
+})
+
+// 5. 네트워크 요청 모니터링
+const requests = mcp__playwright__browser_network_requests()
+// → API 호출 실패 원인 파악
+```
+
+#### 사례 3: 시각적 회귀 테스트
+
+```typescript
+// 시나리오: UI 변경 전후 비교
+
+// Before 스크린샷
+mcp__playwright__browser_navigate({ url: 'http://localhost:3000/reports' })
+mcp__playwright__browser_take_screenshot({
+  filename: 'reports-before.png',
+  fullPage: true
+})
+
+// ... 코드 변경 후 재시작 ...
+
+// After 스크린샷
+mcp__playwright__browser_take_screenshot({
+  filename: 'reports-after.png',
+  fullPage: true
+})
+
+// → 수동으로 이미지 비교 또는 픽셀 diff 도구 사용
+```
+
+### MCP vs Playwright Skill 비교
+
+| 기능 | MCP Playwright Server | Playwright Skill |
+|------|----------------------|------------------|
+| **실시간 브라우저 제어** | ✅ 가능 | ❌ 코드만 생성 |
+| **디버깅** | ✅ 즉시 확인 | ❌ 테스트 실행 필요 |
+| **테스트 코드 생성** | ❌ 수동 작성 | ✅ 자동 생성 |
+| **자동화** | ❌ 수동 조작 | ✅ CI/CD 통합 |
+| **사용 시점** | 개발/디버깅 중 | 테스트 작성 시 |
+
+**권장 워크플로우:**
+1. **MCP로 탐색** → 페이지 구조 파악, 버그 재현
+2. **Skill로 테스트 생성** → E2E 테스트 자동 작성
+3. **CI/CD에서 실행** → 지속적 검증
+
+---
+
 ## Pinia Store 테스트
 
 ### Auth Store 테스트
@@ -1664,7 +2095,288 @@ jobs:
 
 ## 베스트 프랙티스
 
-### 1. 테스트 작성 원칙
+### 필수 준수 사항 (MUST)
+
+#### TDD + BDD 필수 준수 체크리스트
+
+**모든 새로운 기능은 다음을 따라야 합니다:**
+
+- [ ] **Red**: 실패하는 테스트를 먼저 작성했는가?
+- [ ] **Green**: 최소한의 코드로 테스트를 통과시켰는가?
+- [ ] **Refactor**: 테스트가 통과한 상태에서 코드를 개선했는가?
+- [ ] **Given-When-Then**: 각 테스트가 명확한 3단계 구조를 따르는가?
+- [ ] **한글 시나리오**: 테스트 설명이 비즈니스 요구사항을 반영하는가?
+- [ ] **사용자 관점**: 구현이 아닌 행동을 검증하는가?
+
+### 10가지 실용적인 가이드라인
+
+#### 1. 테스트 이름은 시나리오로 작성
+
+**✅ Good:**
+```typescript
+it('사용자가 잘못된 비밀번호를 5회 입력하면 계정이 잠긴다', () => {})
+it('VIP 고객에게 20% 할인이 자동으로 적용된다', () => {})
+it('만료된 세션으로 API 호출 시 로그인 페이지로 리다이렉트된다', () => {})
+```
+
+**❌ Bad:**
+```typescript
+it('should work', () => {})
+it('test login', () => {})
+it('password validation', () => {})
+```
+
+#### 2. Given-When-Then 주석 활용
+
+**✅ Good:**
+```typescript
+it('장바구니에 상품 추가 시 총액이 업데이트된다', () => {
+  // Given: 빈 장바구니
+  const cart = useCartStore()
+  expect(cart.items).toHaveLength(0)
+
+  // When: 상품 추가
+  cart.addItem({ id: '123', name: '노트북', price: 1000000 })
+
+  // Then: 총액 확인
+  expect(cart.total).toBe(1000000)
+  expect(cart.items).toHaveLength(1)
+})
+```
+
+**❌ Bad:**
+```typescript
+it('cart test', () => {
+  const cart = useCartStore()
+  cart.addItem({ id: '123', name: '노트북', price: 1000000 })
+  expect(cart.total).toBe(1000000)
+})
+```
+
+#### 3. 접근성 쿼리 우선 사용
+
+**✅ Good (사용자 관점):**
+```typescript
+// 역할 기반
+screen.getByRole('button', { name: '저장' })
+screen.getByRole('textbox', { name: '이메일' })
+screen.getByRole('heading', { name: '대시보드' })
+
+// 레이블 기반
+screen.getByLabelText('비밀번호')
+screen.getByLabelText('생년월일')
+
+// 텍스트 기반
+screen.getByText('로그인 성공')
+```
+
+**❌ Bad (구현 세부사항):**
+```typescript
+wrapper.find('.btn-primary')
+wrapper.find('#email-input')
+wrapper.vm.$refs.saveButton
+```
+
+#### 4. 비동기 처리는 waitFor 사용
+
+**✅ Good:**
+```typescript
+it('API 응답 후 사용자 목록을 표시한다', async () => {
+  render(UserList)
+
+  await waitFor(() => {
+    expect(screen.getByText('홍길동')).toBeInTheDocument()
+    expect(screen.getByText('김철수')).toBeInTheDocument()
+  })
+})
+```
+
+**❌ Bad (플래키 테스트):**
+```typescript
+it('user list test', async () => {
+  render(UserList)
+  await new Promise(resolve => setTimeout(resolve, 1000))  // ❌ 고정 딜레이
+  expect(screen.getByText('홍길동')).toBeInTheDocument()
+})
+```
+
+#### 5. 테스트 데이터는 명확하고 의미 있게
+
+**✅ Good:**
+```typescript
+const validUser = {
+  username: 'testuser',
+  email: 'test@example.com',
+  password: 'ValidPass123!'
+}
+
+const invalidEmail = 'not-an-email'
+const expiredToken = 'eyJhbGciOiJIUzI1NiJ9.expired.signature'
+```
+
+**❌ Bad:**
+```typescript
+const user = { u: 'a', e: 'b', p: 'c' }
+const data = 'test'
+const val = 123
+```
+
+#### 6. 모킹은 최소화, 필요한 경우만 사용
+
+**✅ Good (실제 컴포넌트 테스트):**
+```typescript
+it('버튼 클릭 시 카운터가 증가한다', async () => {
+  const { getByRole, getByText } = render(Counter)
+  const button = getByRole('button', { name: '증가' })
+
+  await userEvent.click(button)
+
+  expect(getByText('카운트: 1')).toBeInTheDocument()
+})
+```
+
+**❌ Bad (과도한 모킹):**
+```typescript
+it('counter test', () => {
+  const mockIncrement = vi.fn()
+  const wrapper = mount(Counter, {
+    props: { onIncrement: mockIncrement }
+  })
+  wrapper.vm.increment()
+  expect(mockIncrement).toHaveBeenCalled()
+})
+```
+
+#### 7. E2E 테스트는 명시적 대기 사용
+
+**✅ Good:**
+```typescript
+test('로그인 후 대시보드 표시', async ({ page }) => {
+  await page.goto('/login')
+  await page.getByLabel('사용자명').fill('admin')
+  await page.getByLabel('비밀번호').fill('admin123')
+  await page.getByRole('button', { name: '로그인' }).click()
+
+  // 명시적 대기
+  await expect(page).toHaveURL('/dashboard')
+  await expect(page.getByRole('heading', { name: '대시보드' })).toBeVisible()
+})
+```
+
+**❌ Bad:**
+```typescript
+test('login', async ({ page }) => {
+  await page.goto('/login')
+  await page.fill('#username', 'admin')
+  await page.fill('#password', 'admin123')
+  await page.click('.submit')
+  await page.waitForTimeout(2000)  // ❌ 임의의 대기
+  expect(page.url()).toContain('dashboard')
+})
+```
+
+#### 8. 테스트 격리 보장
+
+**✅ Good:**
+```typescript
+describe('UserStore', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())  // 매 테스트마다 새로운 Pinia
+  })
+
+  it('사용자 추가', () => {
+    const store = useUserStore()
+    store.addUser({ id: '1', name: '홍길동' })
+    expect(store.users).toHaveLength(1)
+  })
+
+  it('사용자 삭제', () => {
+    const store = useUserStore()
+    // 이전 테스트와 독립적
+    expect(store.users).toHaveLength(0)
+  })
+})
+```
+
+**❌ Bad:**
+```typescript
+const sharedStore = useUserStore()  // ❌ 전역 상태
+
+it('test 1', () => {
+  sharedStore.addUser({ id: '1', name: '홍길동' })
+})
+
+it('test 2', () => {
+  // test 1의 영향을 받음
+  expect(sharedStore.users).toHaveLength(1)
+})
+```
+
+#### 9. 예외 처리 검증
+
+**✅ Good:**
+```typescript
+it('중복된 이메일로 가입 시 에러를 표시한다', async () => {
+  const { getByLabel, getByRole, getByText } = render(SignupForm)
+
+  // Given: 기존 사용자와 동일한 이메일
+  await userEvent.type(getByLabel('이메일'), 'existing@example.com')
+
+  // When: 가입 시도
+  await userEvent.click(getByRole('button', { name: '가입' }))
+
+  // Then: 에러 메시지 표시
+  await waitFor(() => {
+    expect(getByText('이미 사용 중인 이메일입니다')).toBeInTheDocument()
+  })
+})
+```
+
+**❌ Bad:**
+```typescript
+it('error test', async () => {
+  render(SignupForm)
+  // 에러 시나리오 미검증
+  expect(wrapper.exists()).toBe(true)
+})
+```
+
+#### 10. 테스트 가독성 우선
+
+**✅ Good:**
+```typescript
+describe('할인 계산', () => {
+  const createVIPUser = () => ({ level: 'VIP', purchases: 100 })
+  const createNormalUser = () => ({ level: 'NORMAL', purchases: 10 })
+
+  it('VIP 고객은 20% 할인을 받는다', () => {
+    const user = createVIPUser()
+    const discount = calculateDiscount(user)
+    expect(discount).toBe(0.20)
+  })
+
+  it('일반 고객은 할인이 없다', () => {
+    const user = createNormalUser()
+    const discount = calculateDiscount(user)
+    expect(discount).toBe(0.0)
+  })
+})
+```
+
+**❌ Bad:**
+```typescript
+describe('discount', () => {
+  it('test1', () => {
+    expect(calc({ l: 'V', p: 100 })).toBe(0.2)
+  })
+
+  it('test2', () => {
+    expect(calc({ l: 'N', p: 10 })).toBe(0)
+  })
+})
+```
+
+### 추가 권장 사항
 
 **✅ DO:**
 - 사용자 관점에서 테스트 작성
@@ -1672,6 +2384,7 @@ jobs:
 - Given-When-Then 패턴 적용
 - 접근성 우선 쿼리 사용 (`getByRole`, `getByLabel`)
 - 모킹은 최소화, 실제 구현 우선
+- 테스트 실패 시 원인을 명확히 파악할 수 있도록 작성
 
 **❌ DON'T:**
 - 구현 세부사항 테스트 (내부 state, private method)
@@ -1679,6 +2392,7 @@ jobs:
 - 여러 테스트 간 상태 공유
 - 하드코딩된 타임아웃 사용
 - 플래키(Flaky) 테스트 방치
+- 한 테스트에서 여러 개념 검증
 
 ### 2. 컴포넌트 테스트 팁
 
@@ -1788,6 +2502,7 @@ test('관리자 권한 확인', () => {
 
 | 날짜 | 변경 내용 | 작성자 |
 |------|-----------|--------|
+| 2025-01-16 | TDD+BDD 핵심 원칙 추가, Skills & MCP 활용 섹션 추가, 베스트 프랙티스 강화 | 개발팀 |
 | 2025-01-13 | 최초 작성 | 개발팀 |
 
 ---

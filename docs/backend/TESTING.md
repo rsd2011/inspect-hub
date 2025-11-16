@@ -57,19 +57,117 @@
 
 ### 핵심 원칙
 
-1. **F.I.R.S.T 원칙**
-   - **Fast**: 빠른 실행 (<1초/테스트)
-   - **Independent**: 독립적 실행 가능
-   - **Repeatable**: 반복 가능
-   - **Self-validating**: 자동 검증
-   - **Timely**: 적시 작성 (코드 작성 전후)
+#### 1. TDD (Test-Driven Development) - 테스트 설계 기준 ⭐
 
-2. **Given-When-Then 패턴**
-   - Given: 테스트 전제 조건
-   - When: 테스트 실행
-   - Then: 결과 검증
+**새로운 기능 구현 시 반드시 TDD 사이클을 준수한다:**
 
-3. **테스트 격리**
+- **Red (실패하는 테스트 작성)**: 기능 구현 전 먼저 실패하는 테스트를 작성
+- **Green (최소 코드로 통과)**: 테스트가 통과할 수 있는 최소한의 프로덕션 코드 작성
+- **Refactor (리팩터링)**: 테스트가 통과한 상태에서 코드 개선
+
+```java
+// 1. Red: 실패하는 테스트 먼저 작성
+@Test
+@DisplayName("VIP 고객에게 할인율을 적용한다")
+void should_apply_discount_when_user_is_vip() {
+    // Given
+    User vipUser = User.builder().membershipLevel("VIP").build();
+    
+    // When
+    Discount discount = discountService.calculateDiscount(vipUser);
+    
+    // Then
+    assertThat(discount.getRate()).isEqualTo(0.20);  // 20% 할인
+}
+
+// 2. Green: 최소 코드로 통과
+public class DiscountService {
+    public Discount calculateDiscount(User user) {
+        if ("VIP".equals(user.getMembershipLevel())) {
+            return new Discount(0.20);  // 하드코딩도 OK
+        }
+        return new Discount(0.0);
+    }
+}
+
+// 3. Refactor: 개선 (테스트는 계속 통과)
+public class DiscountService {
+    private static final Map<String, Double> DISCOUNT_RATES = Map.of(
+        "VIP", 0.20,
+        "GOLD", 0.15,
+        "SILVER", 0.10
+    );
+    
+    public Discount calculateDiscount(User user) {
+        double rate = DISCOUNT_RATES.getOrDefault(user.getMembershipLevel(), 0.0);
+        return new Discount(rate);
+    }
+}
+```
+
+#### 2. BDD (Behavior-Driven Development) - 테스트 표현 방식 ⭐
+
+**각 테스트는 하나의 행동(Behavior)을 검증하도록 설계한다:**
+
+**Given / When / Then 구조:**
+- **Given (준비)**: 테스트 전제 조건 및 데이터 준비
+- **When (실행)**: 테스트 대상 메서드 실행
+- **Then (검증)**: 예상 결과 검증
+
+**테스트 명명 규칙:**
+- ✅ **시나리오 문장 형태**로 작성
+- ✅ `@DisplayName`은 **한글 비즈니스 시나리오**로 작성
+- ✅ 메서드명은 `should_[예상결과]_when_[조건]()`  형식 (선택사항)
+
+```java
+// ✅ Good: BDD 스타일
+@Test
+@DisplayName("VIP 고객에게 할인율을 적용한다")
+void should_apply_discount_when_user_is_vip() {
+    // Given (준비): VIP 고객 데이터
+    User vipUser = User.builder()
+        .membershipLevel("VIP")
+        .build();
+    
+    // When (실행): 할인 계산
+    Discount discount = discountService.calculateDiscount(vipUser);
+    
+    // Then (검증): 20% 할인 적용
+    assertThat(discount.getRate()).isEqualTo(0.20);
+}
+
+// ❌ Bad: 기술적 용어, 불명확한 시나리오
+@Test
+void testCalculate() {
+    User user = new User();
+    assertThat(service.calc(user)).isNotNull();
+}
+```
+
+**추가 예시:**
+```java
+@Test
+@DisplayName("비밀번호가 5회 이상 틀리면 계정이 잠긴다")
+void should_lock_account_when_password_fails_five_times() { }
+
+@Test
+@DisplayName("만료된 토큰으로 인증 시 401 에러를 반환한다")
+void should_return_401_when_token_is_expired() { }
+
+@Test
+@DisplayName("중복된 이메일로 가입 시 예외가 발생한다")
+void should_throw_exception_when_email_already_exists() { }
+```
+
+#### 3. F.I.R.S.T 원칙
+
+- **Fast**: 빠른 실행 (<1초/테스트)
+- **Independent**: 독립적 실행 가능
+- **Repeatable**: 반복 가능
+- **Self-validating**: 자동 검증
+- **Timely**: 적시 작성 (TDD - 코드 작성 전!)
+
+#### 4. 테스트 격리
    - 각 테스트는 독립적
    - 데이터베이스 롤백 (@Transactional)
    - 외부 의존성 모킹

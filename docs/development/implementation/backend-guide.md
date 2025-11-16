@@ -1,5 +1,18 @@
 ## 🔧 Backend Implementation Guide
 
+> **⚠️ Java 코드 Import 규칙**
+>
+> 본 문서의 모든 Java 코드 예시는 가독성을 위해 import 구문을 생략하거나 축약했습니다.  
+> 실제 사용 시 다음 규칙을 준수하여 필요한 import 구문을 추가하세요:
+>
+> - ✅ 모든 클래스는 `import` 구문 사용
+> - ❌ 코드 내에서 패키지 전체 경로(`com.xxx.Yyy`) 직접 작성 금지
+> - ✅ 충돌이 없는 경우 항상 간단 클래스명만 사용
+>
+> 자세한 내용은 **[Development Workflow](../WORKFLOW.md#코딩-스타일--명명-규칙)** 참조
+
+---
+
 ### 환경 변수 설정 (Environment Variables)
 
 **필수 환경 변수:**
@@ -569,6 +582,9 @@ ON CONFLICT (config_key) DO NOTHING;
 
 
 ## 🚨 Exception Handling Design Guide
+
+> **📚 완전한 가이드**: 예외 처리에 대한 상세하고 체계적인 내용은 **[Exception Handling 완전 가이드](./exception-handling.md)** 문서를 참조하세요.  
+> 해당 문서에는 보안 고려사항, 로깅 전략, 테스트 패턴, 성능 최적화 등 실무 베스트 프랙티스가 포함되어 있습니다.
 
 > **본 섹션은 Java/Spring 예외 처리 설계를 위한 LLM 지시문 템플릿 기반으로 작성되었습니다.**
 

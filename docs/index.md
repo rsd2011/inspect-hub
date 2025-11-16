@@ -33,13 +33,16 @@
 프론트엔드 개발 가이드 및 컴포넌트 로드맵
 
 - **[README.md](./frontend/README.md)** - 전체 가이드, SSR 제약사항, 코딩 규칙
+- **[NUXT4_STRUCTURE.md](./frontend/NUXT4_STRUCTURE.md)** - ⭐ Nuxt 4 공식 구조 가이드 (Auto-Import, 디렉토리 구조)
+- **[REFACTORING_PLAN.md](./frontend/REFACTORING_PLAN.md)** - 리팩터링 계획서 (FSD → Nuxt 4 전환)
+- **[UI-UX-BEST-PRACTICES.md](./frontend/UI-UX-BEST-PRACTICES.md)** - 사내 업무 시스템 UI·UX 디자인 베스트 프랙티스
 - **[COMPONENTS_ROADMAP.md](./frontend/COMPONENTS_ROADMAP.md)** - 공통 컴포넌트, 시스템 클래스, 구현 계획
 - **[TOOLS.md](./frontend/TOOLS.md)** - Mock API Server (MSW), Component Generator, Build Validator
 - **[TESTING.md](./frontend/TESTING.md)** - Vitest, Testing Library, Playwright E2E, MSW 모킹
 - **[STATE_MANAGEMENT.md](./frontend/STATE_MANAGEMENT.md)** - Pinia Store 패턴, SSE 알림, 상태 영속화
 
 **핵심 주제:**
-- FSD (Feature-Sliced Design) + Atomic Design 아키텍처
+- **Nuxt 4 + FSD (Feature-Sliced Design) + Atomic Design 아키텍처**
 - SPA 모드 전용 (SSR 금지)
 - RealGrid2 통합 가이드
 - 페이지 템플릿 구조 (BasePage, ListPage, FormPage, DetailPage)
@@ -61,19 +64,21 @@
 - Spring Security (JWT, OAuth2)
 - Swagger (springdoc-openapi)
 
-### [🔗 API](./api/)
+### [🔗 API](./api/index.md)
 
 API 계약 및 명세
 
+- **[API Center](./api/index.md)** - 📚 API 문서 센터 (시작점)
 - **[CONTRACT.md](./api/CONTRACT.md)** - Frontend ↔ Backend API 계약 및 동기화 계획
 - **[DESIGN.md](./api/DESIGN.md)** - RESTful API 설계 원칙, URL 구조, 에러 처리
 - **[AUTHENTICATION.md](./api/AUTHENTICATION.md)** - 인증 API 설계 (AD, SSO, 일반 로그인)
 - **[ENDPOINTS.md](./api/ENDPOINTS.md)** - 전체 API 엔드포인트 명세 및 Request/Response 예제
 
-### [🏗️ Architecture](./architecture/)
+### [🏗️ Architecture](./architecture/index.md)
 
 시스템 아키텍처 문서
 
+- **[Architecture Center](./architecture/index.md)** - 📚 아키텍처 문서 센터 (시작점)
 - **[OVERVIEW.md](./architecture/OVERVIEW.md)** - 전체 시스템 아키텍처, 모듈 구조, 기술 스택, 성능 목표
 - **[DDD_DESIGN.md](./architecture/DDD_DESIGN.md)** - DDD 레이어 구조, 도메인 모델, 테스트 전략
 - **[DATABASE.md](./architecture/DATABASE.md)** - ERD, 테이블 스키마, 인덱스 전략, 파티셔닝, 백업/복구
@@ -84,14 +89,15 @@ API 계약 및 명세
 개발 방법론 및 테스트 계획
 
 - **[Development Guide](./development/index.md)** - 전체 개발 가이드 (TDD + BDD + DDD)
+- **[AI Guidelines](./development/ai-guidelines.md)** - AI Skills + MCP 최대 활용 지침
 - **[Test Plan](./development/plan.md)** - TDD + BDD 테스트 계획서 (Progressive Disclosure 적용)
 - **[TDD + DDD Workflow](./development/TDD_DDD_WORKFLOW.md)** - 상세 워크플로우 가이드
 - **[Development Workflow](./development/WORKFLOW.md)** - 일반 개발 가이드, 코딩 스타일, 커밋 규칙
 
 **하위 문서:**
-- **DDD Layers** - [Layer 1 (Domain)](./development/layers/layer-1-domain.md) | [Layer 2 (Application)](./development/layers/layer-2-application.md) | [Layer 3 (Infrastructure)](./development/layers/layer-3-infrastructure.md) | [Layer 4 (Interface)](./development/layers/layer-4-interface.md)
-- **Cross-Cutting** - [Login Policy](./development/cross-cutting/login-policy.md) | [Authentication](./development/cross-cutting/authentication.md) | [JWT](./development/cross-cutting/jwt.md) | [Audit Logging](./development/cross-cutting/audit-logging.md)
-- **Implementation** - [Backend Guide](./development/implementation/backend-guide.md) | [Frontend Guide](./development/implementation/frontend-guide.md) | [Checklist](./development/implementation/checklist.md) | [Considerations](./development/implementation/considerations.md)
+- **[DDD Layers Center](./development/layers/index.md)** - 아키텍처 레이어별 상세 테스트 케이스 (Domain, Application, Infrastructure, Interface)
+- **[Cross-Cutting Concerns Center](./development/cross-cutting/index.md)** - 횡단 관심사 (Login Policy, Authentication, JWT, Audit Logging)
+- **[Implementation Guide Center](./development/implementation/index.md)** - 구현 가이드 (Backend, Frontend, Checklist, Considerations, Exception Handling)
 
 ### [🚀 Deployment](./DEPLOYMENT.md)
 
@@ -195,6 +201,10 @@ API 계약 및 명세
 
 | 날짜 | 변경 내용 | 작성자 |
 |------|-----------|--------|
+| 2025-01-16 | **Nuxt 4 + FSD 호환성 가이드** - NUXT4_FSD_COMPATIBILITY.md 생성 (nuxt.config.ts 설정 방법) | PM |
+| 2025-01-16 | **Progressive Disclosure 완성** - cross-cutting/index.md 생성, 모든 문서 계층 통합 | PM |
+| 2025-01-15 | **Progressive Disclosure 완료** - architecture/index.md, api/index.md 생성 | PM |
+| 2025-01-15 | frontend/ARCHITECTURE.md 생성 - Nuxt 4 + FSD 아키텍처 가이드 | PM |
 | 2025-01-15 | **Progressive Disclosure 전면 적용** - development/ 구조화 (13개 파일 → 체계적 계층 구조) | PM |
 | 2025-01-15 | development/plan.md Progressive Disclosure 적용 (3259줄 → 228줄 메인 + 13개 하위 파일) | PM |
 | 2025-01-15 | 파일명 정리: AGENTS.md → TOOLS.md (backend/frontend), WORKFLOW.md (development) | PM |

@@ -128,6 +128,21 @@ npm run test:e2e
 ### Backend (Java)
 
 - **Java 21** 사용, 4-space 들여쓰기
+- **Import 규칙** (필수):
+  - ✅ 모든 클래스는 `import` 구문 사용
+  - ❌ 코드 내에서 패키지 전체 경로(`com.xxx.Yyy`) 직접 작성 금지
+  - ✅ 충돌이 없는 경우 항상 간단 클래스명만 사용
+  - 예:
+    ```java
+    // ✅ Good
+    import com.inspecthub.policy.domain.Policy;
+    import com.inspecthub.policy.domain.PolicyId;
+    
+    Policy policy = new Policy();
+    
+    // ❌ Bad
+    com.inspecthub.policy.domain.Policy policy = new com.inspecthub.policy.domain.Policy();
+    ```
 - **Package 구조**: `com.inspecthub.aml.server.<layer>`
   - `domain` - 도메인 레이어 (Aggregate, Value Object, Domain Service)
   - `application` - 애플리케이션 레이어 (Application Service, Command, Query)
@@ -173,6 +188,15 @@ npm run test:e2e
 #### 테스트 예제
 
 ```java
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.*;
+
+import com.inspecthub.policy.domain.Policy;
+import com.inspecthub.policy.domain.PolicyId;
+import com.inspecthub.policy.domain.PolicyType;
+import com.inspecthub.policy.domain.DuplicatePolicyException;
+
 @Test
 @DisplayName("중복된 이름의 Policy 생성 시 예외 발생")
 void shouldRejectDuplicatePolicyName() {

@@ -161,44 +161,69 @@ module.exports = {
 ### Internationalization
 - **@nuxtjs/i18n**: 다국어 지원 (한국어/영어)
 
-## 프로젝트 구조 (Feature-Sliced Design)
+## 프로젝트 구조 (Nuxt 4 Official Structure)
+
+**📖 자세한 구조 가이드는 [NUXT4_STRUCTURE.md](./NUXT4_STRUCTURE.md)를 참고하세요.**
+
+**📋 리팩터링 계획은 [REFACTORING_PLAN.md](./REFACTORING_PLAN.md)를 참고하세요.**
+
+### 디렉토리 구조
 
 ```
 frontend/
-├── app/                    # 애플리케이션 레이어
-│   ├── layouts/           # 레이아웃 컴포넌트
-│   ├── providers/         # 글로벌 프로바이더 (PrimeVue, Auth)
-│   └── styles/            # 글로벌 스타일, 폰트
-├── pages/                  # 페이지 라우트 (Nuxt auto-routing)
-├── widgets/                # 위젯 (대형 페이지 블록)
-│   ├── header/            # AppHeader
-│   ├── sidebar/           # AppSidebar
-│   └── menu-navigation/   # MenuNavigation
-├── features/               # 사용자 기능 (비즈니스 기능)
-│   ├── attachment/
-│   ├── memo/
-│   └── notification/
-├── entities/               # 비즈니스 엔티티
-│   ├── user/
-│   ├── case/
-│   └── report/
-├── shared/                 # 공유 리소스
-│   ├── ui/                # UI 컴포넌트
-│   │   ├── atoms/         # 기본 요소 (Button, Input, Label)
-│   │   ├── molecules/     # 조합 컴포넌트 (FormField, SearchBox)
-│   │   └── organisms/     # 복잡한 컴포넌트 (Modal, DataTable)
-│   ├── api/               # API 클라이언트
-│   ├── lib/               # 유틸리티, 시스템 클래스
-│   │   ├── session-manager/
-│   │   ├── permission-manager/
-│   │   └── loading-manager/
-│   └── types/             # TypeScript 타입 정의
-├── public/                 # 정적 파일
-├── i18n/                   # 다국어 번역 파일
-├── nuxt.config.ts         # Nuxt 설정 (ssr: false 필수)
-├── tailwind.config.js     # Tailwind 설정
-└── package.json           # 의존성
+└── app/
+    ├── components/        # 📦 모든 Vue 컴포넌트 (Auto-Import)
+    │   ├── auth/         # Feature별 폴더 정리
+    │   ├── user/
+    │   ├── policy/
+    │   ├── common/       # 공통 컴포넌트
+    │   └── layout/       # 레이아웃 관련
+    │
+    ├── composables/       # 🧩 모든 Composables (Auto-Import)
+    │   ├── auth/
+    │   ├── user/
+    │   └── api/
+    │
+    ├── pages/             # 📄 페이지 라우트 (File-based Routing)
+    │   ├── index.vue     # /
+    │   ├── login.vue     # /login
+    │   └── policy/
+    │
+    ├── layouts/           # 🎨 레이아웃 컴포넌트
+    │   ├── default.vue
+    │   └── auth.vue
+    │
+    ├── middleware/        # 🛡️ 라우트 미들웨어
+    │   ├── auth.ts
+    │   └── permission.ts
+    │
+    ├── plugins/           # 🔌 Nuxt 플러그인
+    │   ├── primevue.ts
+    │   └── pinia.ts
+    │
+    ├── utils/             # 🛠️ 유틸리티 함수 (Auto-Import)
+    │   ├── format.ts
+    │   └── validation.ts
+    │
+    ├── assets/            # 🎭 정적 리소스
+    │   ├── styles/
+    │   └── images/
+    │
+    ├── stores/            # 📊 Pinia Stores
+    │   ├── auth.ts
+    │   └── user.ts
+    │
+    ├── types/             # 📝 TypeScript 타입
+    │   └── models.ts
+    │
+    └── app.vue            # 🎯 루트 컴포넌트
 ```
+
+**📌 주요 특징:**
+- **Nuxt 4 공식 구조**: 공식 베스트 프랙티스 준수
+- **Auto-Import**: 컴포넌트, Composables, Utils 자동 임포트
+- **간결한 구조**: Feature별 폴더로 정리
+- **TypeScript**: 타입 안전성 보장
 
 ## 개발 환경 설정
 
@@ -437,8 +462,17 @@ server {
 
 ## 참고 문서
 
-- [COMPONENTS_ROADMAP.md](./COMPONENTS_ROADMAP.md) - 컴포넌트 구현 로드맵
-- [Nuxt 4 Documentation](https://nuxt.com/docs)
+### 프로젝트 문서
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Frontend 아키텍처 가이드 (FSD + Atomic Design) ⭐ 필독
+- **[UI-UX-BEST-PRACTICES.md](./UI-UX-BEST-PRACTICES.md)** - 사내 업무 시스템 UI·UX 디자인 베스트 프랙티스
+- **[COMPONENTS_ROADMAP.md](./COMPONENTS_ROADMAP.md)** - 컴포넌트 구현 로드맵
+- **[TESTING.md](./TESTING.md)** - 테스트 가이드 (Vitest, Playwright)
+- **[STATE_MANAGEMENT.md](./STATE_MANAGEMENT.md)** - 상태 관리 패턴 (Pinia)
+- **[TOOLS.md](./TOOLS.md)** - 개발 도구 (Mock Server, Component Generator)
+
+### 외부 문서
+- [Nuxt 4 Documentation](https://nuxt.com/docs/4.x)
+- [Feature-Sliced Design](https://feature-sliced.design/)
 - [PrimeVue Documentation](https://primevue.org/)
 - [Tailwind CSS Documentation](https://tailwindcss.com/)
 - [Pinia Documentation](https://pinia.vuejs.org/)
