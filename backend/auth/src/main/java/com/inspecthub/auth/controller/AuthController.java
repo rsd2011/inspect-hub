@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final com.inspecthub.auth.service.AdAuthenticationService adAuthenticationService;
 
     /**
      * LOCAL 로그인
@@ -68,6 +69,51 @@ public class AuthController {
         log.info("Login attempt: employeeId={}", request.getEmployeeId());
 
         TokenResponse tokenResponse = authService.authenticate(request);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(tokenResponse)
+        );
+    }
+
+    /**
+     * AD 로그인
+     *
+     * POST /api/v1/auth/login/ad
+     */
+    @Operation(
+            summary = "AD 로그인",
+            description = "Active Directory 인증을 통해 로그인하여 JWT Access Token과 Refresh Token을 발급받습니다."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "AD 로그인 성공",
+                    content = @Content(schema = @Schema(implementation = TokenResponse.class))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "AD 인증 실패 - 사용자를 찾을 수 없거나 비밀번호가 일치하지 않음"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403",
+                    description = "계정 비활성화"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "423",
+                    description = "계정 잠금"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "500",
+                    description = "AD 서버 연결 실패"
+            )
+    })
+    @PostMapping("/login/ad")
+    public ResponseEntity<ApiResponse<TokenResponse>> loginWithAd(
+            @Valid @RequestBody LoginRequest request
+    ) {
+        log.info("AD login attempt: employeeId={}", request.getEmployeeId());
+
+        TokenResponse tokenResponse = adAuthenticationService.authenticate(request);
 
         return ResponseEntity.ok(
                 ApiResponse.success(tokenResponse)
