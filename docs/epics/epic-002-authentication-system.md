@@ -145,53 +145,52 @@
 
 ---
 
-### ⏳ Story 4: SSO Login Implementation
-**Status**: ⏳ TODO (0% of Epic)  
-**Effort**: 10 SP  
+### 📄 Story 4: SSO Login Implementation
+**Status**: 📄 DOCUMENTED (베스트 프랙티스 완료)
+**Effort**: 10 SP
 **Dependencies**: Story 2 (LOCAL Login)
 
-**Tasks**:
-- [ ] OAuth2 Client 설정 (Azure AD, Google, Okta 지원)
-- [ ] Authorization Code Flow 구현
-- [ ] Redirect URL 생성 (returnUrl 파라미터 포함)
-- [ ] Callback 처리 (SSO 토큰 → JWT 발급)
-- [ ] State 파라미터 검증 (CSRF 방지)
-- [ ] SSO 사용자 정보 매핑 (UserInfo → User)
-- [ ] SLO (Single Logout) 구현
-- [ ] Health Check (SSO 서버 연결 상태)
-- [ ] 단위 테스트 (Mock OAuth2 Server)
-- [ ] 통합 테스트
+**Scope**:
+- Spring Security OAuth2 Client 사용
+- Azure AD / Okta 연동 설정
+- Authorization Code Flow 구현
+- Custom OAuth2UserService (OAuth2User → User 변환)
+- JWT 발급 통합
+- SLO (Single Logout) 구현
+- CSRF 방지 (State 파라미터)
 
-**Acceptance Criteria**:
-- [ ] SSO Redirect URL 생성 성공 (returnUrl 포함)
-- [ ] Callback 처리 후 JWT 발급 성공
-- [ ] State 파라미터 변조 시 CSRF 공격 차단
-- [ ] SSO 서버 장애 시 AD로 Fallback
-- [ ] 로그아웃 시 SSO 로그아웃도 호출 (SLO)
-- [ ] returnUrl 없을 때 기본 경로(/)로 리다이렉트
+**File**: [Story 2.4 - SSO Login Implementation](../stories/story-2.4-sso-login-implementation.md)
+
+**Design Highlights**:
+- ✅ Spring Security 6.5+ 공식 OAuth2 Login 패턴
+- ✅ application.yml 기반 ClientRegistration 관리
+- ✅ Health Check 통합 (SSO 서버 장애 감지)
+- ✅ returnUrl 처리 (Authorization Request Cookie)
+- ✅ TDD (Unit + Integration Tests)
 
 ---
 
-### ⏳ Story 5: Login Policy Integration
-**Status**: ⏳ TODO (0% of Epic)  
-**Effort**: 3 SP  
+### 📄 Story 5: Login Policy Integration
+**Status**: 📄 DOCUMENTED (베스트 프랙티스 완료)
+**Effort**: 3 SP
 **Dependencies**: Story 2, 3, 4 (모든 로그인 방식 구현 완료)
 
-**Tasks**:
-- [ ] LoginPolicyService 연동
-- [ ] 우선순위 기반 Fallback 로직 (SSO > AD > LOCAL)
-- [ ] Health Check 기반 자동 전환
-- [ ] 사용자 명시적 선택 시 Fallback 무시
-- [ ] 비인증 사용자 최우선 방식으로 리다이렉트
-- [ ] Fallback 시도 감사 로그 기록
-- [ ] 통합 테스트
+**Scope**:
+- AuthenticationProviderManager (우선순위 기반)
+- Conditional AuthenticationProvider (Health Check 통합)
+- 자동 Fallback (SSO → AD → LOCAL)
+- 명시적 선택 시 Fallback 무시
+- 비인증 사용자 자동 리다이렉트
+- 정책 변경 즉시 반영 (캐시 무효화)
 
-**Acceptance Criteria**:
-- [ ] SSO 활성화 시 SSO로 먼저 시도
-- [ ] SSO 장애 시 자동 AD로 전환
-- [ ] SSO, AD 모두 장애 시 LOCAL로 전환
-- [ ] 사용자가 "LOCAL 로그인" 버튼 클릭 시 Fallback 무시
-- [ ] 정책 변경 즉시 반영 (캐시 무효화)
+**File**: [Story 2.5 - Login Policy Integration](../stories/story-2.5-login-policy-integration.md)
+
+**Design Highlights**:
+- ✅ Spring Security ProviderManager 활용
+- ✅ Health Check 기반 자동 장애 감지
+- ✅ Frontend Login Config API 제공
+- ✅ AuthenticationEntryPoint 커스터마이징
+- ✅ 감사 로그 100% 기록
 
 ---
 
@@ -281,13 +280,13 @@
 |-------|--------|--------|-----------|-----------|
 | 1. JWT Token Provider | ✅ COMPLETED | 5 SP | 5 SP | 0 SP |
 | 2. LOCAL Login | ✅ COMPLETED | 5 SP | 5 SP | 0 SP |
-| 3. AD Login | ⏳ TODO | 8 SP | 0 SP | 8 SP |
-| 4. SSO Login | ⏳ TODO | 10 SP | 0 SP | 10 SP |
-| 5. Login Policy Integration | ⏳ TODO | 3 SP | 0 SP | 3 SP |
+| 3. AD Login | ✅ COMPLETED | 8 SP | 8 SP | 0 SP |
+| 4. SSO Login | 📄 DOCUMENTED | 10 SP | 0 SP | 10 SP |
+| 5. Login Policy Integration | 📄 DOCUMENTED | 3 SP | 0 SP | 3 SP |
 | 6. Password Management | ⏳ TODO | 5 SP | 0 SP | 5 SP |
 | 7. Account Security (LOCAL) | ⏳ TODO | 5 SP | 0 SP | 5 SP |
 | 8. Session Management | ⏳ TODO | 4 SP | 0 SP | 4 SP |
-| **TOTAL** | **22%** | **45 SP** | **10 SP** | **35 SP** |
+| **TOTAL** | **40%** | **45 SP** | **18 SP** | **27 SP** |
 
 ---
 
