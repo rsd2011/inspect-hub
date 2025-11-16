@@ -1,12 +1,12 @@
 ### Security
 
 **⚠️ 전체 시스템 인증 정책:**
-- [ ] 모든 기능 로그인 필수 - 사내 업무시스템으로 공개 API 없음
+- [x] 모든 기능 로그인 필수 - 사내 업무시스템으로 공개 API 없음
 - [ ] 비인증 사용자 접근 시 로그인 페이지로 자동 리다이렉트
 - [ ] 로그인 리다이렉트 우선순위 - SSO > AD > LOCAL (모든 로그인 방식 사용 가정)
 - [ ] 세션 만료 시 자동 로그아웃 후 최우선 로그인 방식으로 리다이렉트
-- [ ] 공개 API 예외 - 비밀번호 리셋 요청/검증 API만 인증 불필요
-- [ ] Health Check 엔드포인트 - 인증 불필요 (모니터링 목적)
+- [x] 공개 API 예외 - 비밀번호 리셋 요청/검증 API만 인증 불필요
+- [x] Health Check 엔드포인트 - 인증 불필요 (모니터링 목적)
 
 **로그인 흐름 (Login Flow):**
 - [ ] 비인증 사용자 → 정책 조회 → 최우선 방식으로 리다이렉트 (기본: SSO)
@@ -17,15 +17,15 @@
 - [ ] 로그인 성공 → 원래 접근하려던 페이지로 리다이렉트 (returnUrl 파라미터)
 
 **인증 필수 API:**
-- [ ] 모든 /api/v1/** 엔드포인트 - JWT Access Token 필수
-- [ ] 인증 실패 시 401 Unauthorized + WWW-Authenticate 헤더
+- [x] 모든 /api/v1/** 엔드포인트 - JWT Access Token 필수
+- [x] 인증 실패 시 401 Unauthorized + WWW-Authenticate 헤더
 - [ ] 권한 부족 시 403 Forbidden + 필요 권한 정보 포함
 
 **인증 불필요 API (예외):**
-- [ ] POST /api/v1/auth/request-reset - 비밀번호 리셋 요청 (이메일 기반)
-- [ ] GET /api/v1/auth/validate-reset-token - 리셋 토큰 검증
-- [ ] POST /api/v1/auth/reset-password - 비밀번호 리셋 실행
-- [ ] GET /actuator/health - Spring Boot Health Check
+- [x] POST /api/v1/auth/request-reset - 비밀번호 리셋 요청 (이메일 기반)
+- [x] GET /api/v1/auth/validate-reset-token - 리셋 토큰 검증
+- [x] POST /api/v1/auth/reset-password - 비밀번호 리셋 실행
+- [x] GET /actuator/health - Spring Boot Health Check
 - [ ] GET /actuator/info - 애플리케이션 정보
 
 #### Authentication - AD Login (Active Directory)
