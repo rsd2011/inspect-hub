@@ -354,6 +354,31 @@ class AdAuthenticationServiceTest {
                 "AD"
             );
         }
+
+        @Test
+        @DisplayName("AD 서버 DNS 해석 실패 시 예외 발생")
+        void shouldThrowExceptionWhenAdServerDnsResolutionFails() {
+            // Given (준비)
+            given(userRepository.findByEmployeeId(validRequest.getEmployeeId()))
+                .willReturn(Optional.of(existingUser));
+
+            // DNS 해석 실패 시뮬레이션 (UnknownHostException)
+            doThrow(new CommunicationException(
+                new javax.naming.CommunicationException("unknown.ad.server:389")))
+                .when(ldapTemplate).authenticate(any(LdapQuery.class), eq(validRequest.getPassword()));
+
+            // When & Then (실행 & 검증)
+            assertThatThrownBy(() -> adAuthenticationService.authenticate(validRequest))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "AD_CONNECTION_ERROR")
+                .hasMessageContaining("AD 서버 연결 실패");
+
+            verify(auditLogService).logLoginFailure(
+                validRequest.getEmployeeId(),
+                "AD_CONNECTION_ERROR",
+                "AD"
+            );
+        }
     }
 
     @Nested
