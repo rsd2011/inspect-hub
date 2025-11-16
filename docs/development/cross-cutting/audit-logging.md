@@ -43,15 +43,15 @@
 - [x] 로그인 실패 감사 로그 - Repository save 호출 확인 - 기존 테스트에서 검증 완료
 
 **실패 사유 분류:**
-- [ ] 로그인 실패 - INVALID_CREDENTIALS (잘못된 사원ID 또는 비밀번호)
-- [ ] 로그인 실패 - ACCOUNT_DISABLED (비활성화된 계정)
-- [ ] 로그인 실패 - ACCOUNT_LOCKED (잠긴 계정)
-- [ ] 로그인 실패 - ACCOUNT_EXPIRED (만료된 계정)
-- [ ] 로그인 실패 - CREDENTIALS_EXPIRED (비밀번호 만료)
-- [ ] 로그인 실패 - AD_SERVER_UNAVAILABLE (AD 서버 장애)
-- [ ] 로그인 실패 - SSO_SERVER_UNAVAILABLE (SSO 서버 장애)
-- [ ] 로그인 실패 - INVALID_SSO_TOKEN (잘못된 SSO 토큰)
-- [ ] 로그인 실패 - BRUTE_FORCE_DETECTED (무차별 대입 공격 감지)
+- [x] 로그인 실패 - INVALID_CREDENTIALS (잘못된 사원ID 또는 비밀번호) - 기존 테스트에서 검증 완료
+- [x] 로그인 실패 - ACCOUNT_DISABLED (비활성화된 계정)
+- [x] 로그인 실패 - ACCOUNT_LOCKED (잠긴 계정)
+- [x] 로그인 실패 - ACCOUNT_EXPIRED (만료된 계정)
+- [x] 로그인 실패 - CREDENTIALS_EXPIRED (비밀번호 만료)
+- [x] 로그인 실패 - AD_SERVER_UNAVAILABLE (AD 서버 장애)
+- [x] 로그인 실패 - SSO_SERVER_UNAVAILABLE (SSO 서버 장애)
+- [x] 로그인 실패 - INVALID_SSO_TOKEN (잘못된 SSO 토큰) - 기존 테스트에서 검증 완료
+- [x] 로그인 실패 - BRUTE_FORCE_DETECTED (무차별 대입 공격 감지)
 
 **보안 알림:**
 - [ ] 로그인 실패 - 5회 실패 시 경고 로그 (WARNING level)

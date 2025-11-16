@@ -960,4 +960,163 @@ class AuditLogServiceTest {
             assertThat(savedLog.getUserAgent()).isNull();
         }
     }
+
+    @Nested
+    @DisplayName("로그인 실패 감사 로그 - 다양한 실패 사유")
+    class LoginFailureReasons {
+
+        @Test
+        @DisplayName("ACCOUNT_DISABLED - 비활성화된 계정")
+        void shouldRecordAccountDisabledReason() {
+            // Given (준비)
+            String employeeId = "202401001";
+            String reason = "ACCOUNT_DISABLED";
+            String loginMethod = "AD";
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            // When (실행)
+            auditLogService.logLoginFailure(employeeId, reason, loginMethod);
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+            assertThat(savedLog.getReason()).isEqualTo("ACCOUNT_DISABLED");
+            assertThat(savedLog.getSuccess()).isFalse();
+        }
+
+        @Test
+        @DisplayName("ACCOUNT_LOCKED - 잠긴 계정")
+        void shouldRecordAccountLockedReason() {
+            // Given (준비)
+            String employeeId = "202401001";
+            String reason = "ACCOUNT_LOCKED";
+            String loginMethod = "AD";
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            // When (실행)
+            auditLogService.logLoginFailure(employeeId, reason, loginMethod);
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+            assertThat(savedLog.getReason()).isEqualTo("ACCOUNT_LOCKED");
+            assertThat(savedLog.getSuccess()).isFalse();
+        }
+
+        @Test
+        @DisplayName("ACCOUNT_EXPIRED - 만료된 계정")
+        void shouldRecordAccountExpiredReason() {
+            // Given (준비)
+            String employeeId = "202401001";
+            String reason = "ACCOUNT_EXPIRED";
+            String loginMethod = "AD";
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            // When (실행)
+            auditLogService.logLoginFailure(employeeId, reason, loginMethod);
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+            assertThat(savedLog.getReason()).isEqualTo("ACCOUNT_EXPIRED");
+            assertThat(savedLog.getSuccess()).isFalse();
+        }
+
+        @Test
+        @DisplayName("CREDENTIALS_EXPIRED - 비밀번호 만료")
+        void shouldRecordCredentialsExpiredReason() {
+            // Given (준비)
+            String employeeId = "202401001";
+            String reason = "CREDENTIALS_EXPIRED";
+            String loginMethod = "AD";
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            // When (실행)
+            auditLogService.logLoginFailure(employeeId, reason, loginMethod);
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+            assertThat(savedLog.getReason()).isEqualTo("CREDENTIALS_EXPIRED");
+            assertThat(savedLog.getSuccess()).isFalse();
+        }
+
+        @Test
+        @DisplayName("AD_SERVER_UNAVAILABLE - AD 서버 장애")
+        void shouldRecordAdServerUnavailableReason() {
+            // Given (준비)
+            String employeeId = "202401001";
+            String reason = "AD_SERVER_UNAVAILABLE";
+            String loginMethod = "AD";
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            // When (실행)
+            auditLogService.logLoginFailure(employeeId, reason, loginMethod);
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+            assertThat(savedLog.getReason()).isEqualTo("AD_SERVER_UNAVAILABLE");
+            assertThat(savedLog.getSuccess()).isFalse();
+        }
+
+        @Test
+        @DisplayName("SSO_SERVER_UNAVAILABLE - SSO 서버 장애")
+        void shouldRecordSsoServerUnavailableReason() {
+            // Given (준비)
+            String employeeId = "202401001";
+            String reason = "SSO_SERVER_UNAVAILABLE";
+            String loginMethod = "SSO";
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            // When (실행)
+            auditLogService.logLoginFailure(employeeId, reason, loginMethod);
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+            assertThat(savedLog.getReason()).isEqualTo("SSO_SERVER_UNAVAILABLE");
+            assertThat(savedLog.getSuccess()).isFalse();
+        }
+
+        @Test
+        @DisplayName("BRUTE_FORCE_DETECTED - 무차별 대입 공격 감지")
+        void shouldRecordBruteForceDetectedReason() {
+            // Given (준비)
+            String employeeId = "202401001";
+            String reason = "BRUTE_FORCE_DETECTED";
+            String loginMethod = "LOCAL";
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            // When (실행)
+            auditLogService.logLoginFailure(employeeId, reason, loginMethod);
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+            assertThat(savedLog.getReason()).isEqualTo("BRUTE_FORCE_DETECTED");
+            assertThat(savedLog.getSuccess()).isFalse();
+        }
+    }
 }
