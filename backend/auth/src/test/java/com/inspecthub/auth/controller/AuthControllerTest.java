@@ -5,6 +5,7 @@ import com.inspecthub.auth.dto.TokenResponse;
 import com.inspecthub.auth.service.AdAuthenticationService;
 import com.inspecthub.auth.service.AuthService;
 import com.inspecthub.common.exception.BusinessException;
+import com.inspecthub.common.exception.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -84,7 +85,7 @@ class AuthControllerTest {
         void shouldFailWithInvalidAdPassword() throws Exception {
             // Given (준비)
             given(adAuthenticationService.authenticate(any()))
-                .willThrow(new BusinessException("AUTH_002", "비밀번호가 일치하지 않습니다"));
+                .willThrow(new BusinessException(ErrorCode.AUTH_002));
 
             String requestBody = """
                 {
@@ -108,7 +109,7 @@ class AuthControllerTest {
         void shouldFailWithInactiveAccount() throws Exception {
             // Given (준비)
             given(adAuthenticationService.authenticate(any()))
-                .willThrow(new BusinessException("AUTH_003", "비활성화된 계정입니다"));
+                .willThrow(new BusinessException(ErrorCode.AUTH_003));
 
             String requestBody = """
                 {
@@ -131,7 +132,7 @@ class AuthControllerTest {
         void shouldFailWithLockedAccount() throws Exception {
             // Given (준비)
             given(adAuthenticationService.authenticate(any()))
-                .willThrow(new BusinessException("AUTH_004", "계정이 잠금되었습니다"));
+                .willThrow(new BusinessException(ErrorCode.AUTH_004));
 
             String requestBody = """
                 {
@@ -234,7 +235,7 @@ class AuthControllerTest {
         void shouldFailWithExpiredAccount() throws Exception {
             // Given (준비)
             given(adAuthenticationService.authenticate(any()))
-                .willThrow(new BusinessException("AUTH_007", "계정이 만료되었습니다"));
+                .willThrow(new BusinessException(ErrorCode.AUTH_007));
 
             String requestBody = """
                 {
@@ -258,7 +259,7 @@ class AuthControllerTest {
         void shouldFailWithExpiredCredentials() throws Exception {
             // Given (준비)
             given(adAuthenticationService.authenticate(any()))
-                .willThrow(new BusinessException("AUTH_008", "비밀번호가 만료되었습니다. 비밀번호를 변경해주세요"));
+                .willThrow(new BusinessException(ErrorCode.AUTH_008, "비밀번호가 만료되었습니다. 비밀번호를 변경해주세요"));
 
             String requestBody = """
                 {
