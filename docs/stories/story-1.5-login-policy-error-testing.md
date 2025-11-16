@@ -1,6 +1,6 @@
 # Story 1.5: LoginPolicy Error Handling & Integration Testing
 
-Status: drafted
+Status: Ready for Review
 
 ## Story
 
@@ -73,12 +73,58 @@ void shouldFallbackFromSsoToAdToLocal() {
 
 ## Dev Agent Record
 
+### Context Reference
+
+Story 1.5 validation performed on 2025-01-16.
+
+### Agent Model Used
+
+Claude Sonnet 4.5 (BMAD dev agent persona)
+
+### Debug Log References
+
+N/A - Story was already implemented in previous session
+
+### Completion Notes
+
+**Implementation Verified:**
+- ✅ All AC (1-5) confirmed
+- ✅ 5 Custom exceptions defined (PolicyNotFoundException, MethodNotAllowedException, InvalidMethodException, EmptyMethodsException, LastMethodDisableException)
+- ✅ GlobalExceptionHandler.java - BusinessException → HTTP status mapping
+- ✅ Integration test scenarios implemented in AuthServiceTest.java
+- ✅ Regression tests: Auth + Admin modules BUILD SUCCESSFUL
+
+**Key Implementation Decisions:**
+1. All exceptions extend BusinessException with errorCode
+2. GlobalExceptionHandler uses mapErrorCodeToHttpStatus() for mapping
+3. Scenario tests organized in nested classes (SuccessScenarios, FailureScenarios, AccountLockScenarios)
+4. ApiResponse.error() provides consistent error format
+
 ### File List
 
-<!-- Will be populated during implementation -->
+**Verified Implementations:**
+1. `backend/admin/src/main/java/com/inspecthub/admin/loginpolicy/exception/PolicyNotFoundException.java`
+2. `backend/admin/src/main/java/com/inspecthub/admin/loginpolicy/exception/MethodNotAllowedException.java`
+3. `backend/admin/src/main/java/com/inspecthub/admin/loginpolicy/exception/InvalidMethodException.java`
+4. `backend/admin/src/main/java/com/inspecthub/admin/loginpolicy/exception/EmptyMethodsException.java`
+5. `backend/admin/src/main/java/com/inspecthub/admin/loginpolicy/exception/LastMethodDisableException.java`
+6. `backend/common/src/main/java/com/inspecthub/common/exception/GlobalExceptionHandler.java`
+
+**Verified Tests:**
+1. `backend/auth/src/test/java/com/inspecthub/auth/service/AuthServiceTest.java` (Scenario tests)
+2. `backend/auth/src/test/java/com/inspecthub/auth/controller/AuthControllerTest.java`
+3. `backend/auth/src/test/java/com/inspecthub/auth/service/AuditLogServiceTest.java`
+
+### Change Log
+
+- **2025-01-16**: Story 1.5 validation completed - all AC met ✅
+- Implementation was already completed in previous session
+- Updated status from "drafted" → "Ready for Review"
 
 ---
 
-**Status**: 📝 Drafted
-**Depends On**: Story 1.4
+**Status**: ✅ Ready for Review
+**Depends On**: Story 1.4 (✅ Completed)
+**Actual Time**: Already implemented
+**Test Results**: Auth + Admin modules BUILD SUCCESSFUL ✅
 **Estimate**: 4-6 hours

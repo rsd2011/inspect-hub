@@ -1,6 +1,6 @@
 # Story 1.2: LoginPolicy Repository Implementation
 
-Status: drafted
+Status: Ready for Review
 
 ## Story
 
