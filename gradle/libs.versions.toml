@@ -32,6 +32,7 @@ pdfbox = "3.0.1"
 junit = "5.10.3"
 assertj = "3.26.0"
 testcontainers = "1.19.8"
+unboundid-ldapsdk = "7.0.1"
 
 [libraries]
 # Spring Boot Starters
@@ -43,6 +44,7 @@ spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-
 spring-boot-starter-data-redis = { module = "org.springframework.boot:spring-boot-starter-data-redis" }
 spring-boot-starter-mail = { module = "org.springframework.boot:spring-boot-starter-mail" }
 spring-boot-starter-batch = { module = "org.springframework.boot:spring-boot-starter-batch" }
+spring-boot-starter-data-ldap = { module = "org.springframework.boot:spring-boot-starter-data-ldap" }
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
 
 # MyBatis
@@ -104,6 +106,9 @@ assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers" }
 testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
 testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers" }
+
+# LDAP Test
+unboundid-ldapsdk = { module = "com.unboundid:unboundid-ldapsdk", version.ref = "unboundid-ldapsdk" }
 
 [bundles]
 # Common bundles for reusability

@@ -20,6 +20,7 @@ dependencies {
     implementation libs.bundles.spring.boot.basic
     implementation libs.spring.boot.starter.web
     implementation libs.spring.boot.starter.security
+    implementation libs.spring.boot.starter.data.ldap
 
     // MyBatis
     implementation libs.mybatis.spring.boot.starter
@@ -47,6 +48,7 @@ dependencies {
     testImplementation libs.testcontainers
     testImplementation libs.testcontainers.postgresql
     testImplementation libs.testcontainers.junit.jupiter
+    testImplementation libs.unboundid.ldapsdk
     testRuntimeOnly libs.h2
     testRuntimeOnly libs.postgresql
 }

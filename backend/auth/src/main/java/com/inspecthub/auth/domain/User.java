@@ -19,6 +19,7 @@ public class User {
     private String name;
     private String email;
     private String password;
+    private String loginMethod;  // AD, SSO, LOCAL
     private boolean active;
     private boolean locked;
     private LocalDateTime lockedUntil;
@@ -34,6 +35,7 @@ public class User {
             String name,
             String email,
             String password,
+            String loginMethod,
             boolean active,
             boolean locked,
             LocalDateTime lockedUntil,
@@ -47,6 +49,7 @@ public class User {
         this.name = name;
         this.email = email;
         this.password = password;
+        this.loginMethod = loginMethod;
         this.active = active;
         this.locked = locked;
         this.lockedUntil = lockedUntil;

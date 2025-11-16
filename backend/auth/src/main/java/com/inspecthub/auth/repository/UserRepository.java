@@ -37,4 +37,9 @@ public interface UserRepository {
      * 계정 잠금 설정
      */
     void lockAccount(@Param("id") UserId id, @Param("lockedUntil") java.time.LocalDateTime lockedUntil);
+
+    /**
+     * 사용자 저장 (신규 또는 업데이트)
+     */
+    User save(@Param("user") User user);
 }

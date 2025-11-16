@@ -1,5 +1,6 @@
 package com.inspecthub.auth.domain;
 
+import com.github.f4b6a3.ulid.UlidCreator;
 import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -24,6 +25,10 @@ public class UserId {
 
     public static UserId of(String value) {
         return new UserId(value);
+    }
+
+    public static UserId generate() {
+        return new UserId(UlidCreator.getUlid().toString());
     }
 
     @Override
