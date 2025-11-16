@@ -31,20 +31,20 @@
 #### Authentication - AD Login (Active Directory)
 
 **정상 케이스:**
-- [ ] AD 로그인 성공 - 유효한 사원ID + 비밀번호 → JWT 토큰 발급
-- [ ] AD 로그인 성공 - 사용자 정보 포함 (id, employeeId, fullName, orgId, roles)
-- [ ] AD 로그인 성공 - Access Token + Refresh Token 모두 발급
-- [ ] AD 로그인 성공 - Token 만료시간 정확히 설정 (Access: 1시간, Refresh: 24시간)
+- [x] AD 로그인 성공 - 유효한 사원ID + 비밀번호 → JWT 토큰 발급
+- [x] AD 로그인 성공 - 사용자 정보 포함 (id, employeeId, fullName, orgId, roles)
+- [x] AD 로그인 성공 - Access Token + Refresh Token 모두 발급
+- [x] AD 로그인 성공 - Token 만료시간 정확히 설정 (Access: 1시간, Refresh: 24시간)
 
 **실패 케이스 - 인증 오류:**
-- [ ] AD 로그인 실패 - 존재하지 않는 사원ID
-- [ ] AD 로그인 실패 - 잘못된 비밀번호
-- [ ] AD 로그인 실패 - 빈 사원ID (InvalidCredentialsException)
-- [ ] AD 로그인 실패 - 빈 비밀번호 (InvalidCredentialsException)
+- [x] AD 로그인 실패 - 존재하지 않는 사원ID
+- [x] AD 로그인 실패 - 잘못된 비밀번호
+- [x] AD 로그인 실패 - 빈 사원ID (InvalidCredentialsException)
+- [x] AD 로그인 실패 - 빈 비밀번호 (InvalidCredentialsException)
 - [ ] AD 로그인 실패 - null 사원ID (InvalidCredentialsException)
 - [ ] AD 로그인 실패 - null 비밀번호 (InvalidCredentialsException)
-- [ ] AD 로그인 실패 - 비활성화된 사용자 (AccountDisabledException)
-- [ ] AD 로그인 실패 - 잠긴 계정 (AccountLockedException)
+- [x] AD 로그인 실패 - 비활성화된 사용자 (AccountDisabledException)
+- [x] AD 로그인 실패 - 잠긴 계정 (AccountLockedException)
 - [ ] AD 로그인 실패 - 만료된 계정 (AccountExpiredException)
 - [ ] AD 로그인 실패 - 비밀번호 만료 (CredentialsExpiredException)
 
