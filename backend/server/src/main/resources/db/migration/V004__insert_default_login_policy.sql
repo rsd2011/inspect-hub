@@ -19,17 +19,12 @@ INSERT INTO login_policy (
 ) VALUES (
     '01JCXYZ1234567890ABCDEF002',                         -- Fixed ULID for global policy
     '시스템 로그인 정책',                                    -- Global policy name
-    '["SSO", "AD", "LOCAL"]'::jsonb,                      -- All methods enabled by default
-    '["SSO", "AD", "LOCAL"]'::jsonb,                      -- Default priority: SSO > AD > LOCAL
+    '["SSO", "AD", "LOCAL"]',                             -- All methods enabled by default (JSON string)
+    '["SSO", "AD", "LOCAL"]',                             -- Default priority: SSO > AD > LOCAL (JSON string)
     true,                                                  -- Active
     'SYSTEM',                                              -- Created by system
     NOW()                                                  -- Current timestamp
 );
 
--- Verify insertion
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM login_policy WHERE name = '시스템 로그인 정책') THEN
-        RAISE EXCEPTION 'Default login policy was not inserted correctly';
-    END IF;
-END $$;
+-- Note: Verification block (DO $$) is PostgreSQL-specific and not supported in H2
+-- Insertion verification is handled by foreign key constraints and application-level validation

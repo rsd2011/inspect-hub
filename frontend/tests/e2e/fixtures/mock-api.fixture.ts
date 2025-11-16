@@ -172,6 +172,69 @@ async function setupMockApi(page: Page) {
     })
   })
 
+  // Login Policy - GET
+  await page.route(`${API_BASE}/system/login-policy`, async (route) => {
+    const request = route.request()
+    
+    if (request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: {
+            id: '01JCXYZ1234567890ABCDEF002',
+            name: '시스템 로그인 정책',
+            enabledMethods: ['SSO', 'AD', 'LOCAL'],
+            priority: ['SSO', 'AD', 'LOCAL'],
+            active: true,
+            createdBy: 'SYSTEM',
+            createdAt: '2025-01-15T00:00:00Z',
+            updatedBy: null,
+            updatedAt: null,
+          },
+        }),
+      })
+    } else if (request.method() === 'PUT') {
+      const body = request.postDataJSON()
+      
+      // Validation: at least one method must be enabled
+      if (body.enabledMethods && body.enabledMethods.length === 0) {
+        await route.fulfill({
+          status: 400,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: false,
+            error: {
+              code: 'POLICY_VALIDATION_ERROR',
+              message: '최소 하나의 로그인 방식은 활성화되어야 합니다',
+            },
+          }),
+        })
+        return
+      }
+      
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: {
+            id: '01JCXYZ1234567890ABCDEF002',
+            name: body.name || '시스템 로그인 정책',
+            enabledMethods: body.enabledMethods || ['SSO', 'AD', 'LOCAL'],
+            priority: body.priority || ['SSO', 'AD', 'LOCAL'],
+            active: true,
+            createdBy: 'SYSTEM',
+            createdAt: '2025-01-15T00:00:00Z',
+            updatedBy: 'admin',
+            updatedAt: new Date().toISOString(),
+          },
+        }),
+      })
+    }
+  })
+
   console.log('[Mock API] Routes configured')
 }
 

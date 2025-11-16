@@ -183,4 +183,60 @@ export const handlers = [
       },
     })
   }),
+
+  // Login Policy - GET
+  http.get(`${API_BASE}/system/login-policy`, () => {
+    return HttpResponse.json({
+      success: true,
+      data: {
+        id: '01JCXYZ1234567890ABCDEF002',
+        name: '시스템 로그인 정책',
+        enabledMethods: ['SSO', 'AD', 'LOCAL'],
+        priority: ['SSO', 'AD', 'LOCAL'],
+        active: true,
+        createdBy: 'SYSTEM',
+        createdAt: '2025-01-15T00:00:00Z',
+        updatedBy: null,
+        updatedAt: null,
+      },
+    })
+  }),
+
+  // Login Policy - PUT
+  http.put(`${API_BASE}/system/login-policy`, async ({ request }) => {
+    const body = await request.json() as {
+      name?: string
+      enabledMethods?: string[]
+      priority?: string[]
+    }
+
+    // Validation: at least one method must be enabled
+    if (body.enabledMethods && body.enabledMethods.length === 0) {
+      return HttpResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'POLICY_VALIDATION_ERROR',
+            message: '최소 하나의 로그인 방식은 활성화되어야 합니다',
+          },
+        },
+        { status: 400 }
+      )
+    }
+
+    return HttpResponse.json({
+      success: true,
+      data: {
+        id: '01JCXYZ1234567890ABCDEF002',
+        name: body.name || '시스템 로그인 정책',
+        enabledMethods: body.enabledMethods || ['SSO', 'AD', 'LOCAL'],
+        priority: body.priority || ['SSO', 'AD', 'LOCAL'],
+        active: true,
+        createdBy: 'SYSTEM',
+        createdAt: '2025-01-15T00:00:00Z',
+        updatedBy: 'admin',
+        updatedAt: new Date().toISOString(),
+      },
+    })
+  }),
 ]
