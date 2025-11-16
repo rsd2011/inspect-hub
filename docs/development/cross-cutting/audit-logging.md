@@ -3,9 +3,9 @@
 #### Audit Logging - Login Success (로그인 성공)
 
 **정상 케이스:**
-- [ ] AD 로그인 성공 - 감사 로그 생성 (action: LOGIN_SUCCESS, method: AD)
-- [ ] SSO 로그인 성공 - 감사 로그 생성 (action: LOGIN_SUCCESS, method: SSO)
-- [ ] 일반 로그인 성공 - 감사 로그 생성 (action: LOGIN_SUCCESS, method: LOCAL)
+- [x] AD 로그인 성공 - 감사 로그 생성 (action: LOGIN_SUCCESS, method: AD)
+- [x] SSO 로그인 성공 - 감사 로그 생성 (action: LOGIN_SUCCESS, method: SSO)
+- [x] 일반 로그인 성공 - 감사 로그 생성 (action: LOGIN_SUCCESS, method: LOCAL)
 - [ ] 로그인 성공 감사 로그 - 필수 필드 포함 (userId, employeeId, username, orgId)
 - [ ] 로그인 성공 감사 로그 - IP 주소 기록 (clientIp, X-Forwarded-For 헤더)
 - [ ] 로그인 성공 감사 로그 - User-Agent 기록 (브라우저, OS 정보)
@@ -31,9 +31,9 @@
 #### Audit Logging - Login Failure (로그인 실패)
 
 **정상 케이스:**
-- [ ] AD 로그인 실패 - 감사 로그 생성 (action: LOGIN_FAILURE, method: AD)
-- [ ] SSO 로그인 실패 - 감사 로그 생성 (action: LOGIN_FAILURE, method: SSO)
-- [ ] 일반 로그인 실패 - 감사 로그 생성 (action: LOGIN_FAILURE, method: LOCAL)
+- [x] AD 로그인 실패 - 감사 로그 생성 (action: LOGIN_FAILURE, method: AD)
+- [x] SSO 로그인 실패 - 감사 로그 생성 (action: LOGIN_FAILURE, method: SSO)
+- [x] 일반 로그인 실패 - 감사 로그 생성 (action: LOGIN_FAILURE, method: LOCAL)
 - [ ] 로그인 실패 감사 로그 - 실패 사유 기록 (reason: INVALID_CREDENTIALS)
 - [ ] 로그인 실패 감사 로그 - 입력된 사원ID 기록 (attemptedEmployeeId)
 - [ ] 로그인 실패 감사 로그 - IP 주소 기록
