@@ -503,6 +503,147 @@ class AuditLogServiceTest {
     }
 
     @Nested
+    @DisplayName("로그인 성공 감사 로그 - 타임스탬프 기록")
+    class TimestampRecording {
+
+        @Mock
+        private HttpServletRequest request;
+
+        @Test
+        @DisplayName("로그인 성공 시 타임스탬프가 자동으로 기록됨")
+        void shouldRecordTimestampWhenLoginSuccess() {
+            // Given (준비)
+            UserId userId = UserId.of("01HN3Z8Q6PXYZ9ABCD1234EFGH");
+            String employeeId = "202401001";
+            String username = "홍길동";
+            String loginMethod = "AD";
+
+            User user = User.builder()
+                .id(userId)
+                .employeeId(employeeId)
+                .name(username)
+                .email("hong@example.com")
+                .loginMethod("AD")
+                .active(true)
+                .locked(false)
+                .failedAttempts(0)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+            given(request.getHeader("X-Forwarded-For")).willReturn(null);
+            given(request.getRemoteAddr()).willReturn("192.168.1.100");
+            given(request.getHeader("User-Agent")).willReturn("Mozilla/5.0");
+            given(request.getSession(false)).willReturn(null);
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            LocalDateTime beforeLog = LocalDateTime.now();
+
+            // When (실행)
+            auditLogService.logLoginSuccess(user, request, loginMethod);
+
+            LocalDateTime afterLog = LocalDateTime.now();
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+            assertThat(savedLog.getTimestamp()).isNotNull();
+            assertThat(savedLog.getTimestamp()).isAfterOrEqualTo(beforeLog);
+            assertThat(savedLog.getTimestamp()).isBeforeOrEqualTo(afterLog);
+        }
+
+        @Test
+        @DisplayName("타임스탬프가 현재 시간과 가까움 (1초 이내)")
+        void shouldRecordTimestampCloseToCurrentTime() {
+            // Given (준비)
+            UserId userId = UserId.of("01HN3Z8Q6PXYZ9ABCD1234EFGH");
+            String employeeId = "202401001";
+            String username = "홍길동";
+            String loginMethod = "AD";
+
+            User user = User.builder()
+                .id(userId)
+                .employeeId(employeeId)
+                .name(username)
+                .email("hong@example.com")
+                .loginMethod("AD")
+                .active(true)
+                .locked(false)
+                .failedAttempts(0)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+            given(request.getHeader("X-Forwarded-For")).willReturn(null);
+            given(request.getRemoteAddr()).willReturn("192.168.1.100");
+            given(request.getHeader("User-Agent")).willReturn("Mozilla/5.0");
+            given(request.getSession(false)).willReturn(null);
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            LocalDateTime now = LocalDateTime.now();
+
+            // When (실행)
+            auditLogService.logLoginSuccess(user, request, loginMethod);
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+            assertThat(savedLog.getTimestamp()).isNotNull();
+            
+            // 타임스탬프가 테스트 시작 시간 기준 1초 이내여야 함
+            long secondsDiff = java.time.Duration.between(now, savedLog.getTimestamp()).abs().getSeconds();
+            assertThat(secondsDiff).isLessThanOrEqualTo(1L);
+        }
+
+        @Test
+        @DisplayName("createdAt도 함께 기록됨")
+        void shouldAlsoRecordCreatedAt() {
+            // Given (준비)
+            UserId userId = UserId.of("01HN3Z8Q6PXYZ9ABCD1234EFGH");
+            String employeeId = "202401001";
+            String username = "홍길동";
+            String loginMethod = "AD";
+
+            User user = User.builder()
+                .id(userId)
+                .employeeId(employeeId)
+                .name(username)
+                .email("hong@example.com")
+                .loginMethod("AD")
+                .active(true)
+                .locked(false)
+                .failedAttempts(0)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+            given(request.getHeader("X-Forwarded-For")).willReturn(null);
+            given(request.getRemoteAddr()).willReturn("192.168.1.100");
+            given(request.getHeader("User-Agent")).willReturn("Mozilla/5.0");
+            given(request.getSession(false)).willReturn(null);
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            // When (실행)
+            auditLogService.logLoginSuccess(user, request, loginMethod);
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+            assertThat(savedLog.getTimestamp()).isNotNull();
+            assertThat(savedLog.getCreatedAt()).isNotNull();
+            
+            // timestamp와 createdAt은 거의 같은 시간이어야 함 (비동기 저장 시에만 차이 발생 가능)
+            assertThat(savedLog.getTimestamp()).isEqualTo(savedLog.getCreatedAt());
+        }
+    }
+
+    @Nested
     @DisplayName("로그인 실패 감사 로그")
     class LoginFailureAuditLog {
 

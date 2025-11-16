@@ -120,6 +120,7 @@ public class AuditLog {
         String userAgent,
         String sessionId
     ) {
+        LocalDateTime now = LocalDateTime.now();
         return AuditLog.builder()
             .id(id)
             .action("LOGIN_SUCCESS")
@@ -131,8 +132,8 @@ public class AuditLog {
             .userAgent(userAgent)
             .sessionId(sessionId)
             .success(true)
-            .timestamp(LocalDateTime.now())
-            .createdAt(LocalDateTime.now())
+            .timestamp(now)
+            .createdAt(now)
             .build();
     }
 
@@ -146,6 +147,7 @@ public class AuditLog {
         String method,
         String reason
     ) {
+        LocalDateTime now = LocalDateTime.now();
         return AuditLog.builder()
             .id(id)
             .action("LOGIN_FAILURE")
@@ -154,8 +156,8 @@ public class AuditLog {
             .method(method)
             .reason(reason)
             .success(false)
-            .timestamp(LocalDateTime.now())
-            .createdAt(LocalDateTime.now())
+            .timestamp(now)
+            .createdAt(now)
             .build();
     }
 }
