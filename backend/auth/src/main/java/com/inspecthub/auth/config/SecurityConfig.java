@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -54,12 +55,23 @@ public class SecurityConfig {
                 // 엔드포인트 접근 권한 설정
                 .authorizeHttpRequests(auth -> auth
                         // 공개 엔드포인트 (인증 불필요)
-                        .requestMatchers("/api/v1/auth/login").permitAll()
-                        .requestMatchers("/api/v1/auth/refresh").permitAll()
-                        .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()          // LOCAL 로그인
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login/ad").permitAll()        // AD 로그인
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh").permitAll()         // 토큰 갱신
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/request-reset").permitAll()   // 비밀번호 리셋 요청
+                        .requestMatchers(HttpMethod.GET, "/api/v1/auth/validate-reset-token").permitAll()  // 리셋 토큰 검증
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/reset-password").permitAll()  // 비밀번호 리셋 실행
+                        .requestMatchers("/actuator/**").permitAll()                 // Health Check
 
                         // 나머지 모든 요청은 인증 필요
                         .anyRequest().authenticated()
+                )
+
+                // 인증 실패 시 401 Unauthorized 반환
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.sendError(401, "Unauthorized");
+                        })
                 )
 
                 // JWT 인증 필터 추가

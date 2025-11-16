@@ -40,6 +40,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
 
+    /**
+     * 특정 경로는 JWT 필터를 건너뛰기
+     *
+     * 로그인, 토큰 갱신 등 인증이 필요 없는 엔드포인트는 필터 적용 제외
+     */
+    @Override
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
+        String path = request.getRequestURI();
+        
+        // /api/v1/auth/** 경로는 필터 건너뛰기 (SecurityConfig에서 접근 제어)
+        return path.startsWith("/api/v1/auth/") ||  
+               path.startsWith("/actuator/");
+    }
+
     @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
