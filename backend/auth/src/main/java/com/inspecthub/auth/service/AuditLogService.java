@@ -44,7 +44,8 @@ public class AuditLogService {
                 null,  // clientIp - 나중에 HttpServletRequest에서 추출
                 loginMethod,
                 null,  // userAgent - 나중에 HttpServletRequest에서 추출
-                null   // sessionId - 나중에 HttpServletRequest에서 추출
+                null,  // sessionId - 나중에 HttpServletRequest에서 추출
+                null   // referer - 나중에 HttpServletRequest에서 추출
             );
 
             auditLogMapper.insert(auditLog);
@@ -78,7 +79,8 @@ public class AuditLogService {
                 null,  // clientIp - 나중에 HttpServletRequest에서 추출
                 loginMethod,
                 null,  // userAgent - 나중에 HttpServletRequest에서 추출
-                null   // sessionId - 나중에 HttpServletRequest에서 추출
+                null,  // sessionId - 나중에 HttpServletRequest에서 추출
+                null   // referer - 나중에 HttpServletRequest에서 추출
             );
 
             auditLogMapper.insert(auditLog);
@@ -107,6 +109,7 @@ public class AuditLogService {
             String clientIp = extractClientIp(request);
             String userAgent = request.getHeader("User-Agent");
             String sessionId = extractSessionId(request);
+            String referer = request.getHeader("Referer");
 
             AuditLog auditLog = AuditLog.createLoginSuccess(
                 id,
@@ -116,7 +119,8 @@ public class AuditLogService {
                 clientIp,
                 loginMethod,
                 userAgent,
-                sessionId
+                sessionId,
+                referer
             );
 
             auditLogMapper.insert(auditLog);

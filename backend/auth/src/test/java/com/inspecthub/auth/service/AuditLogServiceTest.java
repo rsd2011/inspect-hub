@@ -644,6 +644,95 @@ class AuditLogServiceTest {
     }
 
     @Nested
+    @DisplayName("로그인 성공 감사 로그 - Referer 헤더 기록")
+    class RefererRecording {
+
+        @Mock
+        private HttpServletRequest request;
+
+        @Test
+        @DisplayName("Referer 헤더가 있는 경우 기록")
+        void shouldRecordRefererWhenPresent() {
+            // Given (준비)
+            UserId userId = UserId.of("01HN3Z8Q6PXYZ9ABCD1234EFGH");
+            String employeeId = "202401001";
+            String username = "홍길동";
+            String loginMethod = "AD";
+            String referer = "https://intranet.company.com/portal";
+
+            User user = User.builder()
+                .id(userId)
+                .employeeId(employeeId)
+                .name(username)
+                .email("hong@example.com")
+                .loginMethod("AD")
+                .active(true)
+                .locked(false)
+                .failedAttempts(0)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+            given(request.getHeader("X-Forwarded-For")).willReturn(null);
+            given(request.getRemoteAddr()).willReturn("192.168.1.100");
+            given(request.getHeader("User-Agent")).willReturn("Mozilla/5.0");
+            given(request.getSession(false)).willReturn(null);
+            given(request.getHeader("Referer")).willReturn(referer);
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            // When (실행)
+            auditLogService.logLoginSuccess(user, request, loginMethod);
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+            assertThat(savedLog.getReferer()).isEqualTo(referer);
+        }
+
+        @Test
+        @DisplayName("Referer 헤더가 없는 경우 null로 기록")
+        void shouldRecordNullWhenRefererNotPresent() {
+            // Given (준비)
+            UserId userId = UserId.of("01HN3Z8Q6PXYZ9ABCD1234EFGH");
+            String employeeId = "202401001";
+            String username = "홍길동";
+            String loginMethod = "AD";
+
+            User user = User.builder()
+                .id(userId)
+                .employeeId(employeeId)
+                .name(username)
+                .email("hong@example.com")
+                .loginMethod("AD")
+                .active(true)
+                .locked(false)
+                .failedAttempts(0)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+            given(request.getHeader("X-Forwarded-For")).willReturn(null);
+            given(request.getRemoteAddr()).willReturn("192.168.1.100");
+            given(request.getHeader("User-Agent")).willReturn("Mozilla/5.0");
+            given(request.getSession(false)).willReturn(null);
+            given(request.getHeader("Referer")).willReturn(null);
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            // When (실행)
+            auditLogService.logLoginSuccess(user, request, loginMethod);
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+            assertThat(savedLog.getReferer()).isNull();
+        }
+    }
+
+    @Nested
     @DisplayName("로그인 실패 감사 로그")
     class LoginFailureAuditLog {
 

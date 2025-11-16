@@ -19,7 +19,7 @@
 - [ ] 로그인 성공 - 이전 로그인 시간 기록 (lastLoginAt)
 - [ ] 로그인 성공 - 로그인 횟수 증가 (loginCount++)
 - [ ] 로그인 성공 - 지역 정보 기록 (GeoIP lookup, 선택사항)
-- [ ] 로그인 성공 - Referer 헤더 기록 (loginReferrer)
+- [x] 로그인 성공 - Referer 헤더 기록 (loginReferrer)
 
 **보안 정보:**
 - [ ] 로그인 성공 - 이전 실패 횟수 리셋 (failedAttempts = 0)
