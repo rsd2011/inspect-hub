@@ -21,4 +21,20 @@ public class BusinessException extends RuntimeException {
         super(message, cause);
         this.errorCode = errorCode;
     }
+
+    /**
+     * ErrorCode enum으로 예외 생성 (권장)
+     */
+    public BusinessException(ErrorCode errorCode) {
+        super(errorCode.getMessage());
+        this.errorCode = errorCode.getCode();
+    }
+
+    /**
+     * ErrorCode enum + 커스텀 메시지로 예외 생성
+     */
+    public BusinessException(ErrorCode errorCode, String customMessage) {
+        super(customMessage);
+        this.errorCode = errorCode.getCode();
+    }
 }
