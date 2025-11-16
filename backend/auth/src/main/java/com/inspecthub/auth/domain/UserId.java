@@ -1,26 +1,20 @@
 package com.inspecthub.auth.domain;
 
 import com.github.f4b6a3.ulid.UlidCreator;
-import lombok.AccessLevel;
+import com.inspecthub.common.domain.Id;
 import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 /**
  * User ID Value Object (ULID)
  */
-@Getter
-@EqualsAndHashCode
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class UserId {
-
-    private String value;
+@EqualsAndHashCode(callSuper = true)
+public class UserId extends Id<String> {
 
     private UserId(String value) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException("UserId는 null이거나 비어있을 수 없습니다");
+        super(value);
+        if (value.isBlank()) {
+            throw new IllegalArgumentException("UserId는 비어있을 수 없습니다");
         }
-        this.value = value;
     }
 
     public static UserId of(String value) {
@@ -33,6 +27,6 @@ public class UserId {
 
     @Override
     public String toString() {
-        return value;
+        return getValue();
     }
 }
