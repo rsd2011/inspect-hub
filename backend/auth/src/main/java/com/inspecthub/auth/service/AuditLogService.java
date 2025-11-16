@@ -42,7 +42,8 @@ public class AuditLogService {
                 null,  // userId - 나중에 User 정보 추가 시 설정
                 null,  // username - 나중에 User 정보 추가 시 설정
                 null,  // clientIp - 나중에 HttpServletRequest에서 추출
-                loginMethod
+                loginMethod,
+                null   // userAgent - 나중에 HttpServletRequest에서 추출
             );
 
             auditLogMapper.insert(auditLog);
@@ -74,7 +75,8 @@ public class AuditLogService {
                 user.getId().getValue(),  // UserId value object에서 실제 값 추출
                 user.getName(),           // username
                 null,  // clientIp - 나중에 HttpServletRequest에서 추출
-                loginMethod
+                loginMethod,
+                null   // userAgent - 나중에 HttpServletRequest에서 추출
             );
 
             auditLogMapper.insert(auditLog);
@@ -101,6 +103,7 @@ public class AuditLogService {
         try {
             String id = UlidCreator.getUlid().toString();
             String clientIp = extractClientIp(request);
+            String userAgent = request.getHeader("User-Agent");
 
             AuditLog auditLog = AuditLog.createLoginSuccess(
                 id,
@@ -108,7 +111,8 @@ public class AuditLogService {
                 user.getId().getValue(),
                 user.getName(),
                 clientIp,
-                loginMethod
+                loginMethod,
+                userAgent
             );
 
             auditLogMapper.insert(auditLog);

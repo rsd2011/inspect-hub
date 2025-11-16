@@ -286,6 +286,131 @@ class AuditLogServiceTest {
     }
 
     @Nested
+    @DisplayName("로그인 성공 감사 로그 - User-Agent 기록")
+    class UserAgentRecording {
+
+        @Mock
+        private HttpServletRequest request;
+
+        @Test
+        @DisplayName("User-Agent 헤더가 있는 경우 기록")
+        void shouldRecordUserAgentWhenPresent() {
+            // Given (준비)
+            UserId userId = UserId.of("01HN3Z8Q6PXYZ9ABCD1234EFGH");
+            String employeeId = "202401001";
+            String username = "홍길동";
+            String loginMethod = "AD";
+            String userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
+
+            User user = User.builder()
+                .id(userId)
+                .employeeId(employeeId)
+                .name(username)
+                .email("hong@example.com")
+                .loginMethod("AD")
+                .active(true)
+                .locked(false)
+                .failedAttempts(0)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+            given(request.getHeader("X-Forwarded-For")).willReturn(null);
+            given(request.getRemoteAddr()).willReturn("192.168.1.100");
+            given(request.getHeader("User-Agent")).willReturn(userAgent);
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            // When (실행)
+            auditLogService.logLoginSuccess(user, request, loginMethod);
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+            assertThat(savedLog.getUserAgent()).isEqualTo(userAgent);
+        }
+
+        @Test
+        @DisplayName("User-Agent 헤더가 없는 경우 null로 기록")
+        void shouldRecordNullWhenUserAgentNotPresent() {
+            // Given (준비)
+            UserId userId = UserId.of("01HN3Z8Q6PXYZ9ABCD1234EFGH");
+            String employeeId = "202401001";
+            String username = "홍길동";
+            String loginMethod = "AD";
+
+            User user = User.builder()
+                .id(userId)
+                .employeeId(employeeId)
+                .name(username)
+                .email("hong@example.com")
+                .loginMethod("AD")
+                .active(true)
+                .locked(false)
+                .failedAttempts(0)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+            given(request.getHeader("X-Forwarded-For")).willReturn(null);
+            given(request.getRemoteAddr()).willReturn("192.168.1.100");
+            given(request.getHeader("User-Agent")).willReturn(null);
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            // When (실행)
+            auditLogService.logLoginSuccess(user, request, loginMethod);
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+            assertThat(savedLog.getUserAgent()).isNull();
+        }
+
+        @Test
+        @DisplayName("실제 Chrome User-Agent 문자열 기록")
+        void shouldRecordRealChromeUserAgent() {
+            // Given (준비)
+            UserId userId = UserId.of("01HN3Z8Q6PXYZ9ABCD1234EFGH");
+            String employeeId = "202401001";
+            String username = "홍길동";
+            String loginMethod = "AD";
+            String chromeUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
+            User user = User.builder()
+                .id(userId)
+                .employeeId(employeeId)
+                .name(username)
+                .email("hong@example.com")
+                .loginMethod("AD")
+                .active(true)
+                .locked(false)
+                .failedAttempts(0)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+            given(request.getHeader("X-Forwarded-For")).willReturn(null);
+            given(request.getRemoteAddr()).willReturn("192.168.1.100");
+            given(request.getHeader("User-Agent")).willReturn(chromeUserAgent);
+
+            ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
+
+            // When (실행)
+            auditLogService.logLoginSuccess(user, request, loginMethod);
+
+            // Then (검증)
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
+
+            AuditLog savedLog = auditLogCaptor.getValue();
+            assertThat(savedLog.getUserAgent()).isEqualTo(chromeUserAgent);
+            assertThat(savedLog.getUserAgent()).contains("Chrome/120.0.0.0");
+        }
+    }
+
+    @Nested
     @DisplayName("로그인 실패 감사 로그")
     class LoginFailureAuditLog {
 
