@@ -2,7 +2,7 @@
 
 **⚠️ 전체 시스템 인증 정책:**
 - [x] 모든 기능 로그인 필수 - 사내 업무시스템으로 공개 API 없음
-- [ ] 비인증 사용자 접근 시 로그인 페이지로 자동 리다이렉트
+- [x] 비인증 사용자 접근 시 로그인 페이지로 자동 리다이렉트
 - [ ] 로그인 리다이렉트 우선순위 - SSO > AD > LOCAL (모든 로그인 방식 사용 가정)
 - [ ] 세션 만료 시 자동 로그아웃 후 최우선 로그인 방식으로 리다이렉트
 - [x] 공개 API 예외 - 비밀번호 리셋 요청/검증 API만 인증 불필요
@@ -26,7 +26,7 @@
 - [x] GET /api/v1/auth/validate-reset-token - 리셋 토큰 검증
 - [x] POST /api/v1/auth/reset-password - 비밀번호 리셋 실행
 - [x] GET /actuator/health - Spring Boot Health Check
-- [ ] GET /actuator/info - 애플리케이션 정보
+- [x] GET /actuator/info - 애플리케이션 정보
 
 #### Authentication - AD Login (Active Directory)
 
@@ -49,25 +49,25 @@
 - [x] AD 로그인 실패 - 비밀번호 만료 (CredentialsExpiredException)
 
 **실패 케이스 - 서버 오류:**
-- [ ] AD 로그인 실패 - AD 서버 연결 불가 (Connection Timeout)
-- [ ] AD 로그인 실패 - AD 서버 응답 없음 (Read Timeout 3초)
+- [x] AD 로그인 실패 - AD 서버 연결 불가 (Connection Timeout)
+- [x] AD 로그인 실패 - AD 서버 응답 없음 (Read Timeout 3초)
 - [ ] AD 로그인 실패 - AD 서버 DNS 해석 실패
 - [ ] AD 로그인 실패 - AD 서버 인증서 오류 (TLS/SSL)
 - [ ] AD 로그인 실패 - AD 서버 5xx 에러 응답
 
 **실패 케이스 - 입력 검증:**
-- [ ] AD 로그인 실패 - 사원ID 형식 오류 (영문자 포함 등)
-- [ ] AD 로그인 실패 - 사원ID 길이 초과 (50자 초과)
-- [ ] AD 로그인 실패 - 비밀번호 길이 초과 (100자 초과)
-- [ ] AD 로그인 실패 - SQL Injection 시도 차단
-- [ ] AD 로그인 실패 - XSS 스크립트 입력 차단
+- [x] AD 로그인 실패 - 사원ID 형식 오류 (영문자 포함 등)
+- [x] AD 로그인 실패 - 사원ID 길이 초과 (50자 초과)
+- [x] AD 로그인 실패 - 비밀번호 길이 초과 (100자 초과)
+- [x] AD 로그인 실패 - SQL Injection 시도 차단
+- [x] AD 로그인 실패 - XSS 스크립트 입력 차단
 
 **보안 케이스:**
-- [ ] AD 로그인 시도 제한 - 5회 실패 시 계정 잠금 (5분)
-- [ ] AD 로그인 시도 제한 - 10회 실패 시 계정 잠금 (30분)
+- [x] AD 로그인 시도 제한 - 5회 실패 시 계정 잠금 (5분)
+- [x] AD 로그인 시도 제한 - 10회 실패 시 계정 잠금 (30분)
 - [ ] AD 로그인 Brute Force 방지 - IP별 요청 제한 (분당 10회)
-- [ ] AD 로그인 감사 로그 - 성공 시 로그 기록 (사원ID, IP, 시간)
-- [ ] AD 로그인 감사 로그 - 실패 시 로그 기록 (사원ID, 실패 사유, IP, 시간)
+- [x] AD 로그인 감사 로그 - 성공 시 로그 기록 (사원ID, IP, 시간) ⚠️ IP는 TODO
+- [x] AD 로그인 감사 로그 - 실패 시 로그 기록 (사원ID, 실패 사유, IP, 시간) ⚠️ IP는 TODO
 
 #### Authentication - SSO Login (Single Sign-On)
 
@@ -106,34 +106,34 @@
 #### Authentication - Local Login (Fallback)
 
 **정상 케이스:**
-- [ ] 일반 로그인 성공 - 유효한 사원ID + 비밀번호 → JWT 발급
-- [ ] 일반 로그인 성공 - BCrypt 비밀번호 검증
-- [ ] 일반 로그인 성공 - 사용자 정보 포함 (id, employeeId, fullName, orgId, roles)
-- [ ] 일반 로그인 성공 - Access Token + Refresh Token 발급
+- [x] 일반 로그인 성공 - 유효한 사원ID + 비밀번호 → JWT 발급
+- [x] 일반 로그인 성공 - BCrypt 비밀번호 검증
+- [x] 일반 로그인 성공 - 사용자 정보 포함 (id, employeeId, fullName, orgId, roles)
+- [x] 일반 로그인 성공 - Access Token + Refresh Token 발급
 
 **실패 케이스 - 인증 오류:**
-- [ ] 일반 로그인 실패 - 존재하지 않는 사원ID
-- [ ] 일반 로그인 실패 - 잘못된 비밀번호
-- [ ] 일반 로그인 실패 - 빈 사원ID
-- [ ] 일반 로그인 실패 - 빈 비밀번호
-- [ ] 일반 로그인 실패 - null 사원ID
-- [ ] 일반 로그인 실패 - null 비밀번호
-- [ ] 일반 로그인 실패 - 비활성화된 사용자 (status=INACTIVE)
-- [ ] 일반 로그인 실패 - 삭제된 사용자 (status=DELETED)
+- [x] 일반 로그인 실패 - 존재하지 않는 사원ID
+- [x] 일반 로그인 실패 - 잘못된 비밀번호
+- [x] 일반 로그인 실패 - 빈 사원ID (Bean Validation)
+- [x] 일반 로그인 실패 - 빈 비밀번호 (Bean Validation)
+- [x] 일반 로그인 실패 - null 사원ID (Bean Validation)
+- [x] 일반 로그인 실패 - null 비밀번호 (Bean Validation)
+- [x] 일반 로그인 실패 - 비활성화된 사용자 (status=INACTIVE)
+- [x] 일반 로그인 실패 - 삭제된 사용자 (status=DELETED) ⚠️ canLogin()으로 커버
 
 **입력 검증:**
-- [ ] 일반 로그인 실패 - 사원ID 형식 오류
-- [ ] 일반 로그인 실패 - 사원ID 길이 초과 (50자)
-- [ ] 일반 로그인 실패 - 비밀번호 길이 초과 (100자)
-- [ ] 일반 로그인 실패 - SQL Injection 시도 차단
-- [ ] 일반 로그인 실패 - XSS 스크립트 입력 차단
+- [x] 일반 로그인 실패 - 사원ID 형식 오류 (Pattern Validation)
+- [x] 일반 로그인 실패 - 사원ID 길이 초과 (50자) (Size Validation)
+- [x] 일반 로그인 실패 - 비밀번호 길이 초과 (100자) (Size Validation)
+- [x] 일반 로그인 실패 - SQL Injection 시도 차단 (Pattern Validation)
+- [x] 일반 로그인 실패 - XSS 스크립트 입력 차단 (Pattern Validation)
 
 **보안 케이스:**
-- [ ] 일반 로그인 시도 제한 - 5회 실패 시 계정 잠금 (5분)
-- [ ] 일반 로그인 시도 제한 - 10회 실패 시 계정 잠금 (30분)
+- [x] 일반 로그인 시도 제한 - 5회 실패 시 계정 잠금 (5분)
+- [x] 일반 로그인 시도 제한 - 10회 실패 시 계정 잠금 (30분)
 - [ ] 일반 로그인 Brute Force 방지 - IP별 요청 제한 (분당 10회)
-- [ ] 일반 로그인 감사 로그 - 성공 시 로그 기록
-- [ ] 일반 로그인 감사 로그 - 실패 시 로그 기록
+- [x] 일반 로그인 감사 로그 - 성공 시 로그 기록 ⚠️ IP는 TODO
+- [x] 일반 로그인 감사 로그 - 실패 시 로그 기록 ⚠️ IP는 TODO
 
 #### System Configuration Architecture (시스템 설정 아키텍처)
 

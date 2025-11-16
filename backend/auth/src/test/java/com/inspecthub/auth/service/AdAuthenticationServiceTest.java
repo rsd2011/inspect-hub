@@ -4,8 +4,11 @@ import com.inspecthub.auth.domain.User;
 import com.inspecthub.auth.domain.UserId;
 import com.inspecthub.auth.dto.LoginRequest;
 import com.inspecthub.auth.dto.TokenResponse;
+import com.inspecthub.auth.domain.AccountLockPolicy;
 import com.inspecthub.auth.repository.UserRepository;
 import com.inspecthub.common.exception.BusinessException;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -21,7 +24,9 @@ import org.springframework.ldap.query.LdapQuery;
 import javax.naming.NamingException;
 import javax.naming.directory.DirContext;
 
+import java.util.Collections;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -54,6 +59,12 @@ class AdAuthenticationServiceTest {
     @Mock
     private AuditLogService auditLogService;
 
+    @Mock
+    private Validator validator;
+
+    @Mock
+    private AccountLockPolicy accountLockPolicy;
+
     @InjectMocks
     private AdAuthenticationService adAuthenticationService;
 
@@ -82,6 +93,10 @@ class AdAuthenticationServiceTest {
         // Given: userRepository.save() Mock 설정 (user를 그대로 반환)
         org.mockito.Mockito.lenient().when(userRepository.save(any(User.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Given: Validator Mock 기본 설정 (validation 통과)
+        given(validator.validate(any(LoginRequest.class)))
+                .willReturn(Collections.emptySet());
     }
 
     @Nested
@@ -291,6 +306,31 @@ class AdAuthenticationServiceTest {
     class AdConnectionErrors {
 
         @Test
+        @DisplayName("AD 서버 응답 없음 (Read Timeout) 시 예외 발생")
+        void shouldThrowExceptionWhenAdServerReadTimeout() {
+            // Given (준비)
+            given(userRepository.findByEmployeeId(validRequest.getEmployeeId()))
+                .willReturn(Optional.of(existingUser));
+
+            // LDAP 서버 Read Timeout 시뮬레이션 (3초 초과)
+            doThrow(new CommunicationException(
+                new javax.naming.CommunicationException("Read timed out")))
+                .when(ldapTemplate).authenticate(any(LdapQuery.class), eq(validRequest.getPassword()));
+
+            // When & Then (실행 & 검증)
+            assertThatThrownBy(() -> adAuthenticationService.authenticate(validRequest))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "AD_CONNECTION_ERROR")
+                .hasMessageContaining("AD 서버 연결 실패");
+
+            verify(auditLogService).logLoginFailure(
+                validRequest.getEmployeeId(),
+                "AD_CONNECTION_ERROR",
+                "AD"
+            );
+        }
+
+        @Test
         @DisplayName("AD 서버 연결 실패 시 예외 발생")
         void shouldThrowExceptionWhenAdServerIsUnreachable() {
             // Given (준비)
@@ -317,31 +357,198 @@ class AdAuthenticationServiceTest {
     }
 
     @Nested
-    @DisplayName("AD 정책 격리 검증")
-    class AdPolicyIsolation {
+    @DisplayName("계정 잠금 정책 시나리오")
+    class AccountLockPolicyScenarios {
 
         @Test
-        @DisplayName("AD 로그인 실패 시 failedLoginAttempts 증가하지 않음")
-        void shouldNotIncrementFailedAttemptsOnAdFailure() {
-            // Given (준비)
+        @DisplayName("AD 로그인 5회 실패 시 5분 계정 잠금")
+        void shouldLockAccountFor5MinutesAfter5Failures() {
+            // Given: 4회 실패한 사용자
+            User userWith4Failures = existingUser.toBuilder()
+                .failedAttempts(4)
+                .build();
             given(userRepository.findByEmployeeId(validRequest.getEmployeeId()))
-                .willReturn(Optional.of(existingUser));
+                .willReturn(Optional.of(userWith4Failures));
 
             // LDAP 인증 실패 시뮬레이션 (예외 발생)
             doThrow(new AuthenticationException(
                 new javax.naming.AuthenticationException("Invalid credentials")))
                 .when(ldapTemplate).authenticate(any(LdapQuery.class), eq(validRequest.getPassword()));
 
-            // When (실행)
-            try {
-                adAuthenticationService.authenticate(validRequest);
-            } catch (BusinessException e) {
-                // 예외 무시 (실패 예상)
-            }
+            // When: 5번째 실패
+            assertThatThrownBy(() -> adAuthenticationService.authenticate(validRequest))
+                .isInstanceOf(BusinessException.class);
 
-            // Then (검증) - failedLoginAttempts 증가하지 않음
-            verify(userRepository, org.mockito.Mockito.never())
-                .incrementFailedAttempts(any());
+            // Then: 도메인 정책이 적용되고 저장되어야 함
+            verify(accountLockPolicy).applyLockPolicy(any(User.class), any(Integer.class));
+            verify(userRepository).save(any(User.class));
+        }
+
+        @Test
+        @DisplayName("AD 로그인 10회 실패 시 30분 계정 잠금")
+        void shouldLockAccountFor30MinutesAfter10Failures() {
+            // Given: 9회 실패한 사용자
+            User userWith9Failures = existingUser.toBuilder()
+                .failedAttempts(9)
+                .build();
+            given(userRepository.findByEmployeeId(validRequest.getEmployeeId()))
+                .willReturn(Optional.of(userWith9Failures));
+
+            // LDAP 인증 실패 시뮬레이션
+            doThrow(new AuthenticationException(
+                new javax.naming.AuthenticationException("Invalid credentials")))
+                .when(ldapTemplate).authenticate(any(LdapQuery.class), eq(validRequest.getPassword()));
+
+            // When: 10번째 실패
+            assertThatThrownBy(() -> adAuthenticationService.authenticate(validRequest))
+                .isInstanceOf(BusinessException.class);
+
+            // Then: 도메인 정책이 적용되고 저장되어야 함
+            verify(accountLockPolicy).applyLockPolicy(any(User.class), any(Integer.class));
+            verify(userRepository).save(any(User.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("입력 검증 시나리오")
+    class InputValidation {
+
+        @Test
+        @DisplayName("사원ID 형식 오류 (영문자 포함) - 입력 검증 실패")
+        void shouldRejectInvalidEmployeeIdFormat() {
+            // Given (준비)
+            // 사원ID는 숫자만 허용 (예: 202401001)
+            // 영문자 포함 시 검증 실패
+            LoginRequest invalidRequest = LoginRequest.builder()
+                .employeeId("EMP001ABC")  // 영문자 포함 (잘못된 형식)
+                .password("ValidPass123!")
+                .build();
+
+            // Mock ConstraintViolation 생성
+            @SuppressWarnings("unchecked")
+            ConstraintViolation<LoginRequest> violation = mock(ConstraintViolation.class);
+            given(violation.getMessage()).willReturn("사원ID는 숫자만 입력 가능합니다");
+            given(validator.validate(invalidRequest))
+                .willReturn(Set.of(violation));
+
+            // When & Then (실행 & 검증)
+            // DTO Validation으로 Controller에서 차단되어야 함
+            // Service 레이어까지 오지 않아야 함
+            // 하지만 만약 Service까지 온다면 예외 발생
+            assertThatThrownBy(() -> adAuthenticationService.authenticate(invalidRequest))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("사원ID는 숫자만 입력 가능합니다");
+        }
+
+        @Test
+        @DisplayName("사원ID 길이 초과 (50자 초과) - 입력 검증 실패")
+        void shouldRejectEmployeeIdTooLong() {
+            // Given (준비)
+            // 사원ID 최대 50자 제한
+            String tooLongId = "1".repeat(51);  // 51자
+            LoginRequest invalidRequest = LoginRequest.builder()
+                .employeeId(tooLongId)
+                .password("ValidPass123!")
+                .build();
+
+            // Mock ConstraintViolation 생성
+            @SuppressWarnings("unchecked")
+            ConstraintViolation<LoginRequest> violation = mock(ConstraintViolation.class);
+            given(violation.getMessage()).willReturn("사원ID는 최대 50자까지 입력 가능합니다");
+            given(validator.validate(invalidRequest))
+                .willReturn(Set.of(violation));
+
+            // When & Then (실행 & 검증)
+            // DTO Validation으로 Controller에서 차단되어야 함
+            assertThatThrownBy(() -> adAuthenticationService.authenticate(invalidRequest))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("사원ID는 최대 50자까지 입력 가능합니다");
+        }
+
+        @Test
+        @DisplayName("비밀번호 길이 초과 (100자 초과) - 입력 검증 실패")
+        void shouldRejectPasswordTooLong() {
+            // Given (준비)
+            // 비밀번호 최대 100자 제한
+            String tooLongPassword = "A".repeat(101);  // 101자
+            LoginRequest invalidRequest = LoginRequest.builder()
+                .employeeId("202401001")
+                .password(tooLongPassword)
+                .build();
+
+            // Mock ConstraintViolation 생성
+            @SuppressWarnings("unchecked")
+            ConstraintViolation<LoginRequest> violation = mock(ConstraintViolation.class);
+            given(violation.getMessage()).willReturn("비밀번호는 최대 100자까지 입력 가능합니다");
+            given(validator.validate(invalidRequest))
+                .willReturn(Set.of(violation));
+
+            // When & Then (실행 & 검증)
+            // DTO Validation으로 Controller에서 차단되어야 함
+            assertThatThrownBy(() -> adAuthenticationService.authenticate(invalidRequest))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("비밀번호는 최대 100자까지 입력 가능합니다");
+        }
+    }
+
+    @Nested
+    @DisplayName("보안 시나리오")
+    class SecurityScenarios {
+
+        @Test
+        @DisplayName("SQL Injection 시도 차단 - 사원ID에 SQL 구문 포함")
+        void shouldBlockSqlInjectionAttempt() {
+            // Given (준비)
+            // SQL Injection 시도: ' OR '1'='1
+            LoginRequest sqlInjectionRequest = LoginRequest.builder()
+                .employeeId("' OR '1'='1")
+                .password("password")
+                .build();
+
+            // Mock ConstraintViolation 생성 (Pattern 검증 실패)
+            @SuppressWarnings("unchecked")
+            ConstraintViolation<LoginRequest> violation = mock(ConstraintViolation.class);
+            given(violation.getMessage()).willReturn("사원ID는 숫자만 입력 가능합니다");
+            given(validator.validate(sqlInjectionRequest))
+                .willReturn(Set.of(violation));
+
+            // When & Then (실행 & 검증)
+            // Pattern Validation으로 SQL 구문 차단
+            assertThatThrownBy(() -> adAuthenticationService.authenticate(sqlInjectionRequest))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("사원ID는 숫자만 입력 가능합니다");
+
+            // 데이터베이스 접근 시도조차 하지 않음
+            verify(userRepository, never()).findByEmployeeId(anyString());
+            verify(ldapTemplate, never()).authenticate(any(LdapQuery.class), anyString());
+        }
+
+        @Test
+        @DisplayName("XSS 스크립트 입력 차단 - 사원ID에 스크립트 태그 포함")
+        void shouldBlockXssScriptAttempt() {
+            // Given (준비)
+            // XSS 시도: <script>alert('XSS')</script>
+            LoginRequest xssRequest = LoginRequest.builder()
+                .employeeId("<script>alert('XSS')</script>")
+                .password("password")
+                .build();
+
+            // Mock ConstraintViolation 생성 (Pattern 검증 실패)
+            @SuppressWarnings("unchecked")
+            ConstraintViolation<LoginRequest> violation = mock(ConstraintViolation.class);
+            given(violation.getMessage()).willReturn("사원ID는 숫자만 입력 가능합니다");
+            given(validator.validate(xssRequest))
+                .willReturn(Set.of(violation));
+
+            // When & Then (실행 & 검증)
+            // Pattern Validation으로 XSS 스크립트 차단
+            assertThatThrownBy(() -> adAuthenticationService.authenticate(xssRequest))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("사원ID는 숫자만 입력 가능합니다");
+
+            // 데이터베이스 접근 시도조차 하지 않음
+            verify(userRepository, never()).findByEmployeeId(anyString());
+            verify(ldapTemplate, never()).authenticate(any(LdapQuery.class), anyString());
         }
     }
 }

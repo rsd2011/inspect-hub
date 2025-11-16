@@ -2,10 +2,15 @@ package com.inspecthub.auth.service;
 
 import com.inspecthub.auth.dto.LoginRequest;
 import com.inspecthub.auth.dto.TokenResponse;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ldap.core.LdapTemplate;
 import org.springframework.stereotype.Service;
+
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * AD (Active Directory) Authentication Service
@@ -21,6 +26,8 @@ public class AdAuthenticationService {
     private final com.inspecthub.auth.repository.UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuditLogService auditLogService;
+    private final Validator validator;
+    private final com.inspecthub.auth.domain.AccountLockPolicy accountLockPolicy;
 
     /**
      * AD 인증
@@ -30,6 +37,16 @@ public class AdAuthenticationService {
      */
     public TokenResponse authenticate(LoginRequest request) {
         log.debug("AD 인증 시도: employeeId={}", request.getEmployeeId());
+
+        // 0. 입력 검증 (Bean Validation)
+        Set<ConstraintViolation<LoginRequest>> violations = validator.validate(request);
+        if (!violations.isEmpty()) {
+            String errorMessage = violations.stream()
+                .map(ConstraintViolation::getMessage)
+                .collect(Collectors.joining(", "));
+            log.warn("입력 검증 실패: {}", errorMessage);
+            throw new com.inspecthub.common.exception.BusinessException("VALIDATION_ERROR", errorMessage);
+        }
 
         try {
             // 1. 사용자 조회
@@ -58,6 +75,14 @@ public class AdAuthenticationService {
                 log.debug("LDAP 인증 성공: employeeId={}", request.getEmployeeId());
             } catch (org.springframework.ldap.AuthenticationException e) {
                 log.warn("LDAP 인증 실패: employeeId={}", request.getEmployeeId(), e);
+                
+                // AD 인증 실패 시에도 계정 잠금 정책 적용
+                if (user != null) {
+                    user.recordLoginFailure();
+                    accountLockPolicy.applyLockPolicy(user, user.getFailedAttempts());
+                    userRepository.save(user);
+                }
+                
                 auditLogService.logLoginFailure(request.getEmployeeId(), "INVALID_AD_PASSWORD", "AD");
                 throw new com.inspecthub.common.exception.BusinessException("AUTH_002", "비밀번호가 일치하지 않습니다");
             } catch (org.springframework.ldap.CommunicationException e) {
