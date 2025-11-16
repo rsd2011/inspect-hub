@@ -2,7 +2,7 @@ package com.inspecthub.auth.service;
 
 import com.github.f4b6a3.ulid.UlidCreator;
 import com.inspecthub.auth.domain.AuditLog;
-import com.inspecthub.auth.repository.AuditLogRepository;
+import com.inspecthub.auth.mapper.AuditLogMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -21,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AuditLogService {
 
-    private final AuditLogRepository auditLogRepository;
+    private final AuditLogMapper auditLogMapper;
 
     /**
      * 로그인 성공 기록
@@ -44,7 +44,7 @@ public class AuditLogService {
                 loginMethod
             );
 
-            auditLogRepository.save(auditLog);
+            auditLogMapper.insert(auditLog);
 
             log.info("로그인 성공 감사 로그 저장: id={}, employeeId={}, method={}",
                 id, employeeId, loginMethod);
@@ -76,7 +76,7 @@ public class AuditLogService {
                 reason
             );
 
-            auditLogRepository.save(auditLog);
+            auditLogMapper.insert(auditLog);
 
             log.warn("로그인 실패 감사 로그 저장: id={}, employeeId={}, reason={}, method={}",
                 id, employeeId, reason, loginMethod);

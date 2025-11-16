@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.inspecthub.auth.mapper.AuditLogMapper">
+
+    <!-- ResultMap -->
+    <resultMap id="auditLogResultMap" type="com.inspecthub.auth.domain.AuditLog">
+        <id property="id" column="id"/>
+        <result property="action" column="action"/>
+        <result property="userId" column="user_id"/>
+        <result property="employeeId" column="employee_id"/>
+        <result property="username" column="username"/>
+        <result property="timestamp" column="timestamp"/>
+        <result property="clientIp" column="client_ip"/>
+        <result property="success" column="success"/>
+        <result property="method" column="method"/>
+        <result property="sessionId" column="session_id"/>
+        <result property="userAgent" column="user_agent"/>
+        <result property="referer" column="referer"/>
+        <result property="reason" column="reason"/>
+        <result property="details" column="details"/>
+        <result property="orgId" column="org_id"/>
+        <result property="orgName" column="org_name"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <!-- Insert -->
+    <insert id="insert" parameterType="com.inspecthub.auth.domain.AuditLog">
+        INSERT INTO audit_log (
+            id, action, user_id, employee_id, username,
+            timestamp, client_ip, success, method, session_id,
+            user_agent, referer, reason, details, org_id,
+            org_name, created_at
+        ) VALUES (
+            #{id}, #{action}, #{userId}, #{employeeId}, #{username},
+            #{timestamp}, #{clientIp}, #{success}, #{method}, #{sessionId},
+            #{userAgent}, #{referer}, #{reason}, #{details}, #{orgId},
+            #{orgName}, #{createdAt}
+        )
+    </insert>
+
+    <!-- Select by ID -->
+    <select id="findById" resultMap="auditLogResultMap">
+        SELECT *
+        FROM audit_log
+        WHERE id = #{id}
+    </select>
+
+    <!-- Select by UserId -->
+    <select id="findByUserId" resultMap="auditLogResultMap">
+        SELECT *
+        FROM audit_log
+        WHERE user_id = #{userId}
+        ORDER BY timestamp DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- Select by EmployeeId -->
+    <select id="findByEmployeeId" resultMap="auditLogResultMap">
+        SELECT *
+        FROM audit_log
+        WHERE employee_id = #{employeeId}
+        ORDER BY timestamp DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- Select by Timestamp Range -->
+    <select id="findByTimestampBetween" resultMap="auditLogResultMap">
+        SELECT *
+        FROM audit_log
+        WHERE timestamp BETWEEN #{startDate} AND #{endDate}
+        ORDER BY timestamp DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- Select by Action -->
+    <select id="findByAction" resultMap="auditLogResultMap">
+        SELECT *
+        FROM audit_log
+        WHERE action = #{action}
+        ORDER BY timestamp DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- Select by ClientIp -->
+    <select id="findByClientIp" resultMap="auditLogResultMap">
+        SELECT *
+        FROM audit_log
+        WHERE client_ip = #{clientIp}
+        ORDER BY timestamp DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- Select by Success -->
+    <select id="findBySuccess" resultMap="auditLogResultMap">
+        SELECT *
+        FROM audit_log
+        WHERE success = #{success}
+        ORDER BY timestamp DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- Count Login Success by Date Range -->
+    <select id="countLoginSuccessByDateRange" resultType="long">
+        SELECT COUNT(*)
+        FROM audit_log
+        WHERE action = 'LOGIN_SUCCESS'
+          AND timestamp >= #{startDate}
+          AND timestamp <![CDATA[<]]> #{endDate}
+    </select>
+
+    <!-- Count Login Failure by Date Range -->
+    <select id="countLoginFailureByDateRange" resultType="long">
+        SELECT COUNT(*)
+        FROM audit_log
+        WHERE action = 'LOGIN_FAILURE'
+          AND timestamp >= #{startDate}
+          AND timestamp <![CDATA[<]]> #{endDate}
+    </select>
+
+    <!-- Count Login Attempts by IP -->
+    <select id="countLoginAttemptsByIp" resultType="long">
+        SELECT COUNT(*)
+        FROM audit_log
+        WHERE client_ip = #{clientIp}
+          AND action LIKE 'LOGIN%'
+          AND timestamp >= #{startDate}
+    </select>
+
+</mapper>

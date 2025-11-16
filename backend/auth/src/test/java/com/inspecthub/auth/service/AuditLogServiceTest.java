@@ -1,7 +1,7 @@
 package com.inspecthub.auth.service;
 
 import com.inspecthub.auth.domain.AuditLog;
-import com.inspecthub.auth.repository.AuditLogRepository;
+import com.inspecthub.auth.mapper.AuditLogMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.doNothing;
 
 /**
  * AuditLogService Tests
@@ -28,7 +29,7 @@ import static org.mockito.Mockito.verify;
 class AuditLogServiceTest {
 
     @Mock
-    private AuditLogRepository auditLogRepository;
+    private AuditLogMapper auditLogMapper;
 
     @InjectMocks
     private AuditLogService auditLogService;
@@ -45,14 +46,13 @@ class AuditLogServiceTest {
             String loginMethod = "AD";
 
             ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
-            given(auditLogRepository.save(any(AuditLog.class)))
-                .willAnswer(invocation -> invocation.getArgument(0));
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
 
             // When (실행)
             auditLogService.logLoginSuccess(employeeId, loginMethod);
 
             // Then (검증)
-            verify(auditLogRepository).save(auditLogCaptor.capture());
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
 
             AuditLog savedLog = auditLogCaptor.getValue();
             assertThat(savedLog).isNotNull();
@@ -72,14 +72,13 @@ class AuditLogServiceTest {
             String loginMethod = "SSO";
 
             ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
-            given(auditLogRepository.save(any(AuditLog.class)))
-                .willAnswer(invocation -> invocation.getArgument(0));
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
 
             // When (실행)
             auditLogService.logLoginSuccess(employeeId, loginMethod);
 
             // Then (검증)
-            verify(auditLogRepository).save(auditLogCaptor.capture());
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
 
             AuditLog savedLog = auditLogCaptor.getValue();
             assertThat(savedLog).isNotNull();
@@ -97,14 +96,13 @@ class AuditLogServiceTest {
             String loginMethod = "LOCAL";
 
             ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
-            given(auditLogRepository.save(any(AuditLog.class)))
-                .willAnswer(invocation -> invocation.getArgument(0));
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
 
             // When (실행)
             auditLogService.logLoginSuccess(employeeId, loginMethod);
 
             // Then (검증)
-            verify(auditLogRepository).save(auditLogCaptor.capture());
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
 
             AuditLog savedLog = auditLogCaptor.getValue();
             assertThat(savedLog).isNotNull();
@@ -128,14 +126,13 @@ class AuditLogServiceTest {
             String loginMethod = "AD";
 
             ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
-            given(auditLogRepository.save(any(AuditLog.class)))
-                .willAnswer(invocation -> invocation.getArgument(0));
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
 
             // When (실행)
             auditLogService.logLoginFailure(employeeId, reason, loginMethod);
 
             // Then (검증)
-            verify(auditLogRepository).save(auditLogCaptor.capture());
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
 
             AuditLog savedLog = auditLogCaptor.getValue();
             assertThat(savedLog).isNotNull();
@@ -157,14 +154,13 @@ class AuditLogServiceTest {
             String loginMethod = "SSO";
 
             ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
-            given(auditLogRepository.save(any(AuditLog.class)))
-                .willAnswer(invocation -> invocation.getArgument(0));
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
 
             // When (실행)
             auditLogService.logLoginFailure(employeeId, reason, loginMethod);
 
             // Then (검증)
-            verify(auditLogRepository).save(auditLogCaptor.capture());
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
 
             AuditLog savedLog = auditLogCaptor.getValue();
             assertThat(savedLog).isNotNull();
@@ -184,14 +180,13 @@ class AuditLogServiceTest {
             String loginMethod = "LOCAL";
 
             ArgumentCaptor<AuditLog> auditLogCaptor = ArgumentCaptor.forClass(AuditLog.class);
-            given(auditLogRepository.save(any(AuditLog.class)))
-                .willAnswer(invocation -> invocation.getArgument(0));
+            doNothing().when(auditLogMapper).insert(any(AuditLog.class));
 
             // When (실행)
             auditLogService.logLoginFailure(employeeId, reason, loginMethod);
 
             // Then (검증)
-            verify(auditLogRepository).save(auditLogCaptor.capture());
+            verify(auditLogMapper).insert(auditLogCaptor.capture());
 
             AuditLog savedLog = auditLogCaptor.getValue();
             assertThat(savedLog).isNotNull();
