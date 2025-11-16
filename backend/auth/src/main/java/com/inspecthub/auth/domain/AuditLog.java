@@ -140,6 +140,40 @@ public class AuditLog {
     }
 
     /**
+     * 로그인 성공 로그 생성 (details 포함 버전)
+     */
+    public static AuditLog createLoginSuccess(
+        String id,
+        String employeeId,
+        String userId,
+        String username,
+        String clientIp,
+        String method,
+        String userAgent,
+        String sessionId,
+        String referer,
+        String details
+    ) {
+        LocalDateTime now = LocalDateTime.now();
+        return AuditLog.builder()
+            .id(id)
+            .action("LOGIN_SUCCESS")
+            .employeeId(employeeId)
+            .userId(userId)
+            .username(username)
+            .clientIp(clientIp)
+            .method(method)
+            .userAgent(userAgent)
+            .sessionId(sessionId)
+            .referer(referer)
+            .details(details)
+            .success(true)
+            .timestamp(now)
+            .createdAt(now)
+            .build();
+    }
+
+    /**
      * 로그인 실패 로그 생성
      */
     public static AuditLog createLoginFailure(

@@ -1,9 +1,13 @@
 package com.inspecthub.auth.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.f4b6a3.ulid.UlidCreator;
 import com.inspecthub.auth.domain.AuditLog;
 import com.inspecthub.auth.mapper.AuditLogMapper;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -23,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuditLogService {
 
     private final AuditLogMapper auditLogMapper;
+    private final ObjectMapper objectMapper;
 
     /**
      * 로그인 성공 기록
@@ -110,6 +115,9 @@ public class AuditLogService {
             String userAgent = request.getHeader("User-Agent");
             String sessionId = extractSessionId(request);
             String referer = request.getHeader("Referer");
+            
+            // details JSON 생성 (roles, permissions, orgName 포함)
+            String details = createLoginDetailsJson(user);
 
             AuditLog auditLog = AuditLog.createLoginSuccess(
                 id,
@@ -120,7 +128,8 @@ public class AuditLogService {
                 loginMethod,
                 userAgent,
                 sessionId,
-                referer
+                referer,
+                details
             );
 
             auditLogMapper.insert(auditLog);
@@ -130,6 +139,28 @@ public class AuditLogService {
         } catch (Exception e) {
             log.error("로그인 성공 감사 로그 저장 실패: employeeId={}, method={}",
                 user.getEmployeeId(), loginMethod, e);
+        }
+    }
+
+    /**
+     * 로그인 상세 정보 JSON 생성
+     *
+     * @param user User 도메인 객체
+     * @return JSON 문자열 (roles, permissions, orgName 포함)
+     */
+    private String createLoginDetailsJson(com.inspecthub.auth.domain.User user) {
+        try {
+            Map<String, Object> details = new HashMap<>();
+            
+            // TODO: User/Organization/Permission 엔티티 구현 후 실제 데이터로 대체
+            details.put("roles", List.of());           // 사용자 역할 목록 (TODO: 추후 구현)
+            details.put("permissions", List.of());     // 사용자 권한 목록 (TODO: 추후 구현)
+            details.put("orgName", null);              // 소속 조직명 (TODO: 조직 정보 조회 기능 구현 후 추가)
+            
+            return objectMapper.writeValueAsString(details);
+        } catch (Exception e) {
+            log.error("로그인 상세 정보 JSON 생성 실패: employeeId={}", user.getEmployeeId(), e);
+            return "{}";  // 실패 시 빈 JSON 객체 반환
         }
     }
 

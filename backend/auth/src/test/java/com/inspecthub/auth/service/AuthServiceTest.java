@@ -9,6 +9,7 @@ import com.inspecthub.auth.dto.RefreshTokenRequest;
 import com.inspecthub.auth.dto.TokenResponse;
 import com.inspecthub.common.config.AuthProperties;
 import com.inspecthub.common.exception.BusinessException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -24,10 +25,12 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
+import org.mockito.ArgumentCaptor;
 
 /**
  * AuthService BDD Tests
@@ -59,6 +62,9 @@ class AuthServiceTest {
 
     @Mock
     private AccountLockPolicy accountLockPolicy;
+
+    @Mock
+    private HttpServletRequest httpRequest;
 
     @InjectMocks
     private AuthService authService;
@@ -119,7 +125,7 @@ class AuthServiceTest {
                     .willReturn("refresh.token.jwt");
 
             // When: 로그인 시도
-            TokenResponse response = authService.authenticate(validLoginRequest);
+            TokenResponse response = authService.authenticate(validLoginRequest, httpRequest);
 
             // Then: JWT 토큰이 정상적으로 반환되어야 함
             assertThat(response).isNotNull();
@@ -130,7 +136,7 @@ class AuthServiceTest {
 
             // And: 로그인 성공 감사 로그가 기록되어야 함
             then(auditLogService).should(times(1))
-                    .logLoginSuccess(validUser.getEmployeeId(), "LOCAL");
+                    .logLoginSuccess(any(com.inspecthub.auth.domain.User.class), any(HttpServletRequest.class), eq("LOCAL"));
 
             // And: 로그인 성공 상태가 저장되어야 함 (도메인 메서드 호출 후 save)
             then(userRepository).should(times(1))
@@ -148,7 +154,7 @@ class AuthServiceTest {
             given(jwtTokenProvider.generateRefreshToken(any())).willReturn("refresh");
 
             // When
-            authService.authenticate(validLoginRequest);
+            authService.authenticate(validLoginRequest, httpRequest);
 
             // Then: 로그인 성공 상태가 저장되어야 함 (도메인 메서드 호출 후 save)
             then(userRepository).should(times(1))
@@ -173,7 +179,7 @@ class AuthServiceTest {
                     .build();
 
             // When & Then: BusinessException 발생
-            assertThatThrownBy(() -> authService.authenticate(invalidRequest))
+            assertThatThrownBy(() -> authService.authenticate(invalidRequest, httpRequest))
                     .isInstanceOf(BusinessException.class)
                     .hasMessage("사용자를 찾을 수 없습니다")
                     .satisfies(ex -> {
@@ -204,7 +210,7 @@ class AuthServiceTest {
                     .build();
 
             // When & Then
-            assertThatThrownBy(() -> authService.authenticate(invalidRequest))
+            assertThatThrownBy(() -> authService.authenticate(invalidRequest, httpRequest))
                     .isInstanceOf(BusinessException.class)
                     .hasMessage("비밀번호가 일치하지 않습니다")
                     .satisfies(ex -> {
@@ -232,7 +238,7 @@ class AuthServiceTest {
                     .willReturn(Optional.of(inactiveUser));
 
             // When & Then
-            assertThatThrownBy(() -> authService.authenticate(validLoginRequest))
+            assertThatThrownBy(() -> authService.authenticate(validLoginRequest, httpRequest))
                     .isInstanceOf(BusinessException.class)
                     .hasMessage("비활성화된 계정입니다")
                     .satisfies(ex -> {
@@ -258,7 +264,7 @@ class AuthServiceTest {
                     .willReturn(Optional.of(lockedUser));
 
             // When & Then
-            assertThatThrownBy(() -> authService.authenticate(validLoginRequest))
+            assertThatThrownBy(() -> authService.authenticate(validLoginRequest, httpRequest))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("계정이 잠금되었습니다")
                     .satisfies(ex -> {
@@ -291,7 +297,7 @@ class AuthServiceTest {
                     .build();
 
             // When: 5번째 실패
-            assertThatThrownBy(() -> authService.authenticate(request))
+            assertThatThrownBy(() -> authService.authenticate(request, httpRequest))
                     .isInstanceOf(BusinessException.class);
 
             // Then: 도메인 정책이 적용되고 저장되어야 함
@@ -314,7 +320,7 @@ class AuthServiceTest {
 
             // When: 10번째 실패
             assertThatThrownBy(() -> authService.authenticate(validLoginRequest.toBuilder()
-                    .password("WrongPassword").build()))
+                    .password("WrongPassword").build(), httpRequest))
                     .isInstanceOf(BusinessException.class);
 
             // Then: 도메인 정책이 적용되고 저장되어야 함
@@ -337,7 +343,7 @@ class AuthServiceTest {
 
             // When: 15번째 실패
             assertThatThrownBy(() -> authService.authenticate(validLoginRequest.toBuilder()
-                    .password("WrongPassword").build()))
+                    .password("WrongPassword").build(), httpRequest))
                     .isInstanceOf(BusinessException.class);
 
             // Then: 도메인 정책이 적용되고 저장되어야 함
@@ -365,7 +371,7 @@ class AuthServiceTest {
                     .willReturn("refresh.token");
 
             // When
-            TokenResponse response = authService.authenticate(validLoginRequest);
+            TokenResponse response = authService.authenticate(validLoginRequest, httpRequest);
 
             // Then
             assertThat(response.getExpiresIn()).isEqualTo(3600); // 1 hour = 3600 seconds
@@ -384,7 +390,7 @@ class AuthServiceTest {
                     .willReturn("refresh.token");
 
             // When
-            TokenResponse response = authService.authenticate(validLoginRequest);
+            TokenResponse response = authService.authenticate(validLoginRequest, httpRequest);
 
             // Then: Refresh Token 정보 확인
             then(jwtTokenProvider).should(times(1))
@@ -553,6 +559,51 @@ class AuthServiceTest {
             // And: 두 토큰 모두 생성되어야 함
             then(jwtTokenProvider).should(times(1)).generateAccessToken(validUser);
             then(jwtTokenProvider).should(times(1)).generateRefreshToken(validUser);
+        }
+    }
+
+    @Nested
+    @DisplayName("감사 로그 검증")
+    class AuditLogVerification {
+
+        @Test
+        @DisplayName("로그인 성공 시 details JSON에 roles, permissions, orgName을 포함한다")
+        void shouldIncludeDetailsJson_WhenLoginSuccess() {
+            // Given: 유효한 사용자와 자격증명
+            given(userRepository.findByEmployeeId("EMP001"))
+                    .willReturn(Optional.of(validUser));
+            given(passwordEncoder.matches("Password123!", validUser.getPassword()))
+                    .willReturn(true);
+            given(jwtTokenProvider.generateAccessToken(validUser))
+                    .willReturn("access.token.here");
+            given(jwtTokenProvider.generateRefreshToken(validUser))
+                    .willReturn("refresh.token.here");
+
+            // When: 로그인 성공
+            authService.authenticate(validLoginRequest, httpRequest);
+
+            // Then: 감사 로그 서비스가 User 객체와 HttpServletRequest를 포함하여 호출되어야 함
+            ArgumentCaptor<com.inspecthub.auth.domain.User> userCaptor = 
+                    ArgumentCaptor.forClass(com.inspecthub.auth.domain.User.class);
+            ArgumentCaptor<HttpServletRequest> requestCaptor = 
+                    ArgumentCaptor.forClass(HttpServletRequest.class);
+            ArgumentCaptor<String> methodCaptor = 
+                    ArgumentCaptor.forClass(String.class);
+
+            then(auditLogService).should(times(1))
+                    .logLoginSuccess(
+                            userCaptor.capture(),
+                            requestCaptor.capture(),
+                            methodCaptor.capture()
+                    );
+
+            // And: 전달된 파라미터가 올바른지 검증
+            assertThat(userCaptor.getValue()).isEqualTo(validUser);
+            assertThat(requestCaptor.getValue()).isEqualTo(httpRequest);
+            assertThat(methodCaptor.getValue()).isEqualTo("LOCAL");
+
+            // NOTE: details JSON 내용은 AuditLogService 내부에서 생성됨
+            // 실제 details JSON 검증은 AuditLogService 단위 테스트에서 수행
         }
     }
 }

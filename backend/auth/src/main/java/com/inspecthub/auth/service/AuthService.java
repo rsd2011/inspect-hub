@@ -9,6 +9,7 @@ import com.inspecthub.auth.repository.UserRepository;
 import com.inspecthub.common.config.AuthProperties;
 import com.inspecthub.common.exception.BusinessException;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,7 +38,7 @@ public class AuthService {
      * LOCAL 로그인 인증
      */
     @Transactional
-    public TokenResponse authenticate(LoginRequest request) {
+    public TokenResponse authenticate(LoginRequest request, HttpServletRequest httpRequest) {
         // 1. 사용자 조회
         User user = userRepository.findByEmployeeId(request.getEmployeeId())
                 .orElseThrow(() -> {
@@ -99,7 +100,7 @@ public class AuthService {
         String refreshToken = jwtTokenProvider.generateRefreshToken(user);
 
         // 6. 감사 로그 기록
-        auditLogService.logLoginSuccess(user.getEmployeeId(), "LOCAL");
+        auditLogService.logLoginSuccess(user, httpRequest, "LOCAL");
 
         return TokenResponse.builder()
                 .accessToken(accessToken)

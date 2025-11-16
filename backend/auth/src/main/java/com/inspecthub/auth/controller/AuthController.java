@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -64,11 +65,12 @@ public class AuthController {
     })
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<TokenResponse>> login(
-            @Valid @RequestBody LoginRequest request
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest httpRequest
     ) {
         log.info("Login attempt: employeeId={}", request.getEmployeeId());
 
-        TokenResponse tokenResponse = authService.authenticate(request);
+        TokenResponse tokenResponse = authService.authenticate(request, httpRequest);
 
         return ResponseEntity.ok(
                 ApiResponse.success(tokenResponse)

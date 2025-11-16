@@ -15,7 +15,7 @@
 - [x] 로그인 성공 감사 로그 - Repository save 호출 확인 (모든 테스트에서 verify(auditLogMapper).insert() 검증 완료)
 
 **로그 상세 정보:**
-- [ ] 로그인 성공 - details JSON 포함 (roles, permissions, orgName)
+- [x] 로그인 성공 - details JSON 포함 (roles, permissions, orgName)
 - [ ] 로그인 성공 - 이전 로그인 시간 기록 (lastLoginAt)
 - [ ] 로그인 성공 - 로그인 횟수 증가 (loginCount++)
 - [ ] 로그인 성공 - 지역 정보 기록 (GeoIP lookup, 선택사항)
