@@ -33,6 +33,19 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * DomainException 처리 (도메인 불변식 위반)
+     */
+    @ExceptionHandler(DomainException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDomainException(DomainException e) {
+        log.warn("Domain exception: domain={}, rule={}, message={}",
+                e.getDomainName(), e.getRule(), e.getMessage());
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ErrorCode.INVALID_DOMAIN_STATE.getCode(), e.getMessage()));
+    }
+
+    /**
      * Validation 예외 처리
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)

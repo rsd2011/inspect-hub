@@ -1,5 +1,6 @@
 package com.inspecthub.auth.domain;
 
+import com.inspecthub.common.exception.DomainException;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -159,6 +160,10 @@ public class User {
      * @param duration 잠금 기간 (분)
      */
     public void lock(int durationMinutes) {
+        if (durationMinutes <= 0) {
+            throw new DomainException("User", "lock.duration", "잠금 기간은 양수여야 합니다");
+        }
+        
         this.locked = true;
         this.lockedUntil = LocalDateTime.now().plusMinutes(durationMinutes);
         this.updatedAt = LocalDateTime.now();
@@ -217,6 +222,10 @@ public class User {
             String email,
             String encodedPassword
     ) {
+        validateEmployeeId(employeeId);
+        validateName(name);
+        validateEmail(email);
+        
         return User.builder()
                 .id(UserId.generate())
                 .employeeId(employeeId)
@@ -253,6 +262,39 @@ public class User {
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
+    }
+
+    // ==================== 도메인 검증 ====================
+
+    /**
+     * 사원ID 검증
+     */
+    private static void validateEmployeeId(String employeeId) {
+        if (employeeId == null || employeeId.isBlank()) {
+            throw new DomainException("User", "employeeId.required", "사원ID는 필수입니다");
+        }
+    }
+
+    /**
+     * 이름 검증
+     */
+    private static void validateName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new DomainException("User", "name.required", "이름은 필수입니다");
+        }
+    }
+
+    /**
+     * 이메일 검증
+     */
+    private static void validateEmail(String email) {
+        if (email == null || email.isBlank()) {
+            throw new DomainException("User", "email.required", "이메일은 필수입니다");
+        }
+        
+        if (!email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+            throw new DomainException("User", "email.format", "유효하지 않은 이메일 형식입니다");
+        }
     }
 
     /**
