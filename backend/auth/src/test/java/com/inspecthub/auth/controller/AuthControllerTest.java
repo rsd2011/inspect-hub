@@ -188,5 +188,45 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
         }
+
+        @Test
+        @DisplayName("POST /api/v1/auth/login/ad - null 사원ID로 로그인 실패")
+        void shouldFailWithNullEmployeeId() throws Exception {
+            // Given (준비)
+            String requestBody = """
+                {
+                    "employeeId": null,
+                    "password": "ValidPass123!"
+                }
+                """;
+
+            // When & Then (실행 & 검증)
+            mockMvc.perform(post("/api/v1/auth/login/ad")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+        }
+
+        @Test
+        @DisplayName("POST /api/v1/auth/login/ad - null 비밀번호로 로그인 실패")
+        void shouldFailWithNullPassword() throws Exception {
+            // Given (준비)
+            String requestBody = """
+                {
+                    "employeeId": "202401001",
+                    "password": null
+                }
+                """;
+
+            // When & Then (실행 & 검증)
+            mockMvc.perform(post("/api/v1/auth/login/ad")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+        }
     }
 }

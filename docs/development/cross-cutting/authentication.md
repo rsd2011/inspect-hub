@@ -41,8 +41,8 @@
 - [x] AD 로그인 실패 - 잘못된 비밀번호
 - [x] AD 로그인 실패 - 빈 사원ID (InvalidCredentialsException)
 - [x] AD 로그인 실패 - 빈 비밀번호 (InvalidCredentialsException)
-- [ ] AD 로그인 실패 - null 사원ID (InvalidCredentialsException)
-- [ ] AD 로그인 실패 - null 비밀번호 (InvalidCredentialsException)
+- [x] AD 로그인 실패 - null 사원ID (InvalidCredentialsException)
+- [x] AD 로그인 실패 - null 비밀번호 (InvalidCredentialsException)
 - [x] AD 로그인 실패 - 비활성화된 사용자 (AccountDisabledException)
 - [x] AD 로그인 실패 - 잠긴 계정 (AccountLockedException)
 - [ ] AD 로그인 실패 - 만료된 계정 (AccountExpiredException)
